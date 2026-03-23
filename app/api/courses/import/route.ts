@@ -1,0 +1,49 @@
+import { auth } from "@/lib/auth";
+import { getCourseById } from "@/lib/courseApi";
+import { prisma } from "@/lib/prisma";
+import { NextRequest } from "next/server";
+
+export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { externalId } = await req.json();
+  if (!externalId) return Response.json({ error: "externalId required" }, { status: 400 });
+
+  // Return existing course if already imported
+  const existing = await prisma.course.findUnique({ where: { externalId } });
+  if (existing) return Response.json({ course: existing });
+
+  const apiCourse = await getCourseById(externalId);
+
+  const course = await prisma.course.create({
+    data: {
+      name: [apiCourse.club_name, apiCourse.course_name].filter(Boolean).join(" — "),
+      address: apiCourse.location?.address,
+      city: apiCourse.location?.city,
+      state: apiCourse.location?.state,
+      country: apiCourse.location?.country,
+      externalId,
+      tees: {
+        create: (apiCourse.tees ?? []).map((tee) => ({
+          name: tee.tee_name,
+          color: tee.tee_color,
+          rating: tee.course_rating,
+          slope: tee.slope_rating,
+          par: tee.par,
+          holes: {
+            create: (tee.holes ?? []).map((h) => ({
+              number: h.hole_number,
+              par: h.par,
+              strokeIndex: h.handicap,
+              distance: h.yardage,
+            })),
+          },
+        })),
+      },
+    },
+    include: { tees: { include: { holes: true } } },
+  });
+
+  return Response.json({ course });
+}

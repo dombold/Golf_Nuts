@@ -1,0 +1,232 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  passwordHash   String
+  handicapIndex  Float    @default(0)
+  avatarUrl      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  rounds         RoundPlayer[]
+  handicapHistory HandicapHistory[]
+  sentFriendships     Friend[] @relation("FriendRequester")
+  receivedFriendships Friend[] @relation("FriendAddressee")
+  comments       Comment[]
+  likes          Like[]
+
+  @@map("users")
+}
+
+model Course {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  city      String?
+  state     String?
+  country   String?
+  externalId String? @unique
+  createdAt DateTime @default(now())
+
+  tees   Tee[]
+  rounds Round[]
+
+  @@map("courses")
+}
+
+model Tee {
+  id       String  @id @default(cuid())
+  courseId String
+  name     String
+  color    String?
+  rating   Float
+  slope    Int
+  par      Int
+
+  course Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  holes  Hole[]
+  rounds Round[]
+
+  @@unique([courseId, name])
+  @@map("tees")
+}
+
+model Hole {
+  id          String @id @default(cuid())
+  teeId       String
+  number      Int
+  par         Int
+  strokeIndex Int
+  distance    Int?
+
+  tee Tee @relation(fields: [teeId], references: [id], onDelete: Cascade)
+
+  @@unique([teeId, number])
+  @@map("holes")
+}
+
+enum GameFormat {
+  STROKEPLAY
+  STABLEFORD
+  MATCH_PLAY
+  SKINS
+  AMBROSE_2
+  AMBROSE_4
+}
+
+enum RoundStatus {
+  SETUP
+  ACTIVE
+  COMPLETE
+}
+
+model Round {
+  id        String      @id @default(cuid())
+  courseId  String
+  teeId     String
+  date      DateTime    @default(now())
+  format    GameFormat
+  status    RoundStatus @default(SETUP)
+  notes     String?
+  createdAt DateTime    @default(now())
+
+  course   Course        @relation(fields: [courseId], references: [id])
+  tee      Tee           @relation(fields: [teeId], references: [id])
+  players  RoundPlayer[]
+  comments Comment[]
+  likes    Like[]
+  tournamentRounds TournamentRound[]
+
+  @@map("rounds")
+}
+
+model RoundPlayer {
+  id              String  @id @default(cuid())
+  roundId         String
+  userId          String
+  playingHandicap Int     @default(0)
+  teamColor       String?
+  teamNumber      Int?
+
+  round  Round   @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id])
+  scores Score[]
+
+  @@unique([roundId, userId])
+  @@map("round_players")
+}
+
+model Score {
+  id            String  @id @default(cuid())
+  roundPlayerId String
+  holeNumber    Int
+  strokes       Int
+  penalties     Int     @default(0)
+  putts         Int?
+  fairwayHit    Boolean?
+  gir           Boolean?
+
+  roundPlayer RoundPlayer @relation(fields: [roundPlayerId], references: [id], onDelete: Cascade)
+
+  @@unique([roundPlayerId, holeNumber])
+  @@map("scores")
+}
+
+model HandicapHistory {
+  id           String   @id @default(cuid())
+  userId       String
+  index        Float
+  differential Float
+  roundId      String?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("handicap_history")
+}
+
+enum FriendStatus {
+  PENDING
+  ACCEPTED
+}
+
+model Friend {
+  id          String       @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      FriendStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+
+  requester User @relation("FriendRequester", fields: [requesterId], references: [id])
+  addressee User @relation("FriendAddressee", fields: [addresseeId], references: [id])
+
+  @@unique([requesterId, addresseeId])
+  @@map("friends")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  roundId   String
+  userId    String
+  body      String
+  createdAt DateTime @default(now())
+
+  round Round @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@map("comments")
+}
+
+model Like {
+  id      String @id @default(cuid())
+  roundId String
+  userId  String
+
+  round Round @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([roundId, userId])
+  @@map("likes")
+}
+
+enum TournamentStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETE
+}
+
+model Tournament {
+  id        String           @id @default(cuid())
+  name      String
+  format    GameFormat
+  status    TournamentStatus @default(UPCOMING)
+  startDate DateTime?
+  endDate   DateTime?
+  createdAt DateTime         @default(now())
+
+  rounds TournamentRound[]
+
+  @@map("tournaments")
+}
+
+model TournamentRound {
+  id           String @id @default(cuid())
+  tournamentId String
+  roundId      String
+  roundNumber  Int
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  round      Round      @relation(fields: [roundId], references: [id])
+
+  @@unique([tournamentId, roundNumber])
+  @@map("tournament_rounds")
+}

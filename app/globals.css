@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@theme {
+  /* Golf Nuts color system — derived from badge (deep forest green + acorn brown) */
+  --color-fairway-950: #0f2e0f;
+  --color-fairway-900: #1a4a1a;
+  --color-fairway-800: #235c23;
+  --color-fairway-700: #2d6b2d;
+  --color-fairway-600: #3a803a;
+  --color-fairway-500: #4a9b4a;
+  --color-fairway-400: #6db86d;
+  --color-fairway-300: #92ce92;
+  --color-fairway-200: #bbdebb;
+  --color-fairway-100: #e8f5e8;
+  --color-fairway-50: #f4faf4;
+
+  --color-acorn-900: #4a2a0e;
+  --color-acorn-700: #7b4f28;
+  --color-acorn-500: #a0703a;
+  --color-acorn-300: #c4956a;
+  --color-acorn-100: #f0dcc8;
+
+  --color-cream: #faf8f2;
+  --color-scorecard: #ffffff;
+
+  /* Score colors */
+  --color-eagle: #1a4a1a;
+  --color-birdie: #4a9b4a;
+  --color-bogey: #d97706;
+  --color-double: #dc2626;
+
+  /* Typography */
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+:root {
+  --background: var(--color-cream);
+  --foreground: #1a1a1a;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Score badge colors for scorecards */
+.score-eagle  { background: var(--color-eagle);  color: white; border-radius: 50%; }
+.score-birdie { background: var(--color-birdie);  color: white; border-radius: 50%; }
+.score-par    { background: transparent; color: inherit; }
+.score-bogey  { background: var(--color-bogey);  color: white; }
+.score-double { background: var(--color-double);  color: white; }
+
+/* Smooth scrolling */
+html { scroll-behavior: smooth; }
+
+/* Mobile tap highlight removal */
+* { -webkit-tap-highlight-color: transparent; }
