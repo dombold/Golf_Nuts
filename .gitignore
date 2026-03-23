@@ -34,9 +34,13 @@ yarn-error.log*
 .env*
 !.env.example
 
-# Claude Code / AI assistant config
+# Claude Code / AI assistant config (deploy.json contains server credentials)
+.claude/
 CLAUDE.md
 AGENTS.md
+
+# PM2 process manager config — server-specific, not part of the website
+ecosystem.config.js
 
 # Stray assets not served by Next.js (should be in /public if needed)
 Golf_Nuts_Badge.jpg
