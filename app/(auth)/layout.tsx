@@ -16,7 +16,7 @@ export default function AuthLayout({
           className="rounded-full shadow-lg"
         />
         <p className="text-fairway-200 text-sm font-medium tracking-widest uppercase">
-          Older = Wiser
+          Est. 2025
         </p>
       </div>
       <div className="w-full max-w-md bg-scorecard rounded-2xl shadow-xl p-8">
