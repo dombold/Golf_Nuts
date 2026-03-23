@@ -22,13 +22,13 @@ export default function LoginPage() {
       <form action={action} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Email
+            Username or Email
           </label>
           <input
-            name="email"
-            type="email"
+            name="usernameOrEmail"
+            type="text"
             required
-            autoComplete="email"
+            autoComplete="username"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fairway-500 focus:border-transparent"
           />
         </div>

@@ -13,9 +13,10 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/Golf_Nuts_Badge.jpg", sizes: "192x192", type: "image/jpeg" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/golf_nuts_badge.jpg", sizes: "192x192", type: "image/jpeg" },
     ],
-    apple: "/Golf_Nuts_Badge.jpg",
+    apple: "/golf_nuts_badge.jpg",
   },
 };
 

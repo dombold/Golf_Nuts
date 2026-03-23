@@ -44,7 +44,7 @@ async function apiFetch<T>(path: string): Promise<T> {
   }
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: {
-      Authorization: `Bearer ${API_KEY}`,
+      Authorization: `Key ${API_KEY}`,
       "Content-Type": "application/json",
     },
     next: { revalidate: 0 },
@@ -58,7 +58,7 @@ async function apiFetch<T>(path: string): Promise<T> {
 export async function searchCourses(query: string): Promise<ApiCourse[]> {
   const encoded = encodeURIComponent(query);
   const data = await apiFetch<{ courses: ApiCourse[] }>(
-    `/courses/search?search_query=${encoded}`
+    `/courses?search_query=${encoded}`
   );
   return data.courses ?? [];
 }

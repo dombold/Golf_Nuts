@@ -9,7 +9,7 @@ export default function AuthLayout({
     <div className="min-h-screen flex flex-col items-center justify-center bg-fairway-900 px-4">
       <div className="mb-8 flex flex-col items-center gap-3">
         <Image
-          src="/Golf_Nuts_Badge.jpg"
+          src="/golf_nuts_badge.jpg"
           alt="Golf Nuts"
           width={120}
           height={120}

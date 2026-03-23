@@ -4,8 +4,20 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      username: string;
+    };
+  }
+}
+
 const LoginSchema = z.object({
-  email: z.email(),
+  usernameOrEmail: z.string().min(1),
   password: z.string().min(6),
 });
 
@@ -13,15 +25,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       credentials: {
-        email: { label: "Email", type: "email" },
+        usernameOrEmail: { label: "Username or Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         const parsed = LoginSchema.safeParse(credentials);
         if (!parsed.success) return null;
 
-        const user = await prisma.user.findUnique({
-          where: { email: parsed.data.email },
+        const user = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { email: parsed.data.usernameOrEmail },
+              { username: parsed.data.usernameOrEmail },
+            ],
+          },
         });
         if (!user) return null;
 
@@ -36,6 +53,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name,
           email: user.email,
           image: user.avatarUrl,
+          username: user.username,
         };
       },
     }),
@@ -46,11 +64,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.id = user.id;
+      if (user?.id) token.sub = user.id;
+      if ((user as { username?: string })?.username) {
+        token.username = (user as { username?: string }).username;
+      }
       return token;
     },
     async session({ session, token }) {
-      if (token.id) session.user.id = token.id as string;
+      if (token.sub) session.user.id = token.sub;
+      if (token.username) session.user.username = token.username as string;
       return session;
     },
   },

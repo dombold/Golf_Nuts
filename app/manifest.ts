@@ -12,8 +12,14 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait",
     icons: [
       {
-        src: "/Golf_Nuts_Badge.jpg",
+        src: "/golf_nuts_badge.jpg",
         sizes: "192x192",
+        type: "image/jpeg",
+        purpose: "any",
+      },
+      {
+        src: "/golf_nuts_badge.jpg",
+        sizes: "512x512",
         type: "image/jpeg",
         purpose: "maskable",
       },

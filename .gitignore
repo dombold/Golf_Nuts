@@ -45,6 +45,9 @@ ecosystem.config.js
 # Stray assets not served by Next.js (should be in /public if needed)
 Golf_Nuts_Badge.jpg
 
+# Seed / reference data — not used at runtime by the app
+/data
+
 # vercel
 .vercel
 

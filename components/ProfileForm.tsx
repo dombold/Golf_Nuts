@@ -1,19 +1,67 @@
 "use client";
 
 import { useActionState } from "react";
-import { register } from "@/app/actions/auth";
-import Link from "next/link";
+import { updateProfile } from "@/app/actions/auth";
 
-export default function RegisterPage() {
-  const [state, action, pending] = useActionState(register, undefined);
+type ProfileFormProps = {
+  username: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  handicapIndex: number;
+  memberSince: string;
+};
+
+export default function ProfileForm({
+  username,
+  firstName,
+  lastName,
+  email,
+  handicapIndex,
+  memberSince,
+}: ProfileFormProps) {
+  const [state, action, pending] = useActionState(updateProfile, undefined);
 
   return (
-    <>
-      <h1 className="text-2xl font-bold text-fairway-900 mb-6 text-center">
-        Create your account
-      </h1>
+    <div className="space-y-6">
+      {state?.success && (
+        <div className="p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+          {state.message}
+        </div>
+      )}
+      {state?.message && !state.success && (
+        <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          {state.message}
+        </div>
+      )}
 
+      {/* Read-only info */}
+      <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+        <div>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Member Since</p>
+          <p className="text-sm text-gray-800 mt-0.5">{memberSince}</p>
+        </div>
+      </div>
+
+      {/* Editable form */}
       <form action={action} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Email
+          </label>
+          <input
+            name="email"
+            type="email"
+            required
+            defaultValue={email}
+            autoComplete="email"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fairway-500"
+          />
+          {state?.errors?.email && (
+            <p className="text-red-600 text-xs mt-1">{state.errors.email[0]}</p>
+          )}
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Username
@@ -22,8 +70,8 @@ export default function RegisterPage() {
             name="username"
             type="text"
             required
+            defaultValue={username}
             autoComplete="username"
-            placeholder="e.g. golfer_john"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fairway-500"
           />
           {state?.errors?.username && (
@@ -40,6 +88,7 @@ export default function RegisterPage() {
               name="firstName"
               type="text"
               required
+              defaultValue={firstName}
               autoComplete="given-name"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fairway-500"
             />
@@ -55,6 +104,7 @@ export default function RegisterPage() {
               name="lastName"
               type="text"
               required
+              defaultValue={lastName}
               autoComplete="family-name"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fairway-500"
             />
@@ -66,41 +116,7 @@ export default function RegisterPage() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Email
-          </label>
-          <input
-            name="email"
-            type="email"
-            required
-            autoComplete="email"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fairway-500"
-          />
-          {state?.errors?.email && (
-            <p className="text-red-600 text-xs mt-1">{state.errors.email[0]}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Password
-          </label>
-          <input
-            name="password"
-            type="password"
-            required
-            autoComplete="new-password"
-            placeholder="Min 8 chars, letters and numbers"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fairway-500"
-          />
-          {state?.errors?.password && (
-            <p className="text-red-600 text-xs mt-1">{state.errors.password[0]}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Starting Handicap Index
-            <span className="text-gray-400 font-normal ml-1">(optional, 0–54)</span>
+            Handicap Index
           </label>
           <input
             name="handicapIndex"
@@ -108,7 +124,8 @@ export default function RegisterPage() {
             min="0"
             max="54"
             step="0.1"
-            defaultValue="0"
+            required
+            defaultValue={handicapIndex}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fairway-500"
           />
           {state?.errors?.handicapIndex && (
@@ -121,16 +138,9 @@ export default function RegisterPage() {
           disabled={pending}
           className="w-full py-2.5 bg-fairway-700 hover:bg-fairway-800 text-white font-semibold rounded-lg transition-colors disabled:opacity-60"
         >
-          {pending ? "Creating account…" : "Create account"}
+          {pending ? "Saving…" : "Save Changes"}
         </button>
       </form>
-
-      <p className="mt-6 text-center text-sm text-gray-600">
-        Already have an account?{" "}
-        <Link href="/login" className="text-fairway-700 font-medium hover:underline">
-          Sign in
-        </Link>
-      </p>
-    </>
+    </div>
   );
 }

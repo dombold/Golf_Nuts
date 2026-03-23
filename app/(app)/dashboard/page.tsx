@@ -8,7 +8,7 @@ export default async function DashboardPage() {
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { name: true, handicapIndex: true },
+    select: { name: true, firstName: true, handicapIndex: true },
   });
 
   const recentRounds = await prisma.round.findMany({
@@ -31,7 +31,7 @@ export default async function DashboardPage() {
       {/* Welcome */}
       <div className="bg-fairway-900 text-white rounded-2xl p-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold">G&apos;day, {user?.name?.split(" ")[0]} 👋</h1>
+          <h1 className="text-xl font-bold">G&apos;day, {user?.firstName ?? user?.name?.split(" ")[0]} 👋</h1>
           <p className="text-fairway-300 text-sm mt-1">
             Handicap Index:{" "}
             <span className="text-white font-semibold">{user?.handicapIndex?.toFixed(1) ?? "N/A"}</span>
