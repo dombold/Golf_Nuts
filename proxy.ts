@@ -22,6 +22,6 @@ export default auth(function proxy(req: NextRequest & { auth: { user?: unknown }
 
 export const config = {
   matcher: [
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|Golf_Nuts_Badge.jpg|manifest.json).*)",
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|icon.svg|golf_nuts_badge.jpg|manifest.json|.*\\.jpg|.*\\.png|.*\\.svg|.*\\.ico|.*\\.webp).*)",
   ],
 };
