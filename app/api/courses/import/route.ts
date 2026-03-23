@@ -14,7 +14,14 @@ export async function POST(req: NextRequest) {
   const existing = await prisma.course.findUnique({ where: { externalId } });
   if (existing) return Response.json({ course: existing });
 
-  const apiCourse = await getCourseById(externalId);
+  let apiCourse;
+  try {
+    apiCourse = await getCourseById(externalId);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[import] getCourseById failed:", msg);
+    return Response.json({ error: `API error: ${msg}` }, { status: 502 });
+  }
 
   const course = await prisma.course.create({
     data: {

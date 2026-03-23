@@ -41,7 +41,9 @@ export default function CourseSearchPage() {
         body: JSON.stringify({ externalId }),
       });
       const data = await res.json();
-      if (data.course) {
+      if (!res.ok || data.error) {
+        setError(data.error ?? "Import failed. Please try again.");
+      } else if (data.course) {
         router.push(`/courses/${data.course.id}`);
       }
     } catch {
