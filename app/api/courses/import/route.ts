@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
                 number: i + 1,
                 par: h.par,
                 strokeIndex: h.handicap ?? 0,
-                distance: h.yardage,
+                distance: h.yardage != null ? Math.round(h.yardage * 0.9144) : null,
               })),
             },
           })),

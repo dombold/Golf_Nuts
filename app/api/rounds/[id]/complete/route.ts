@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { calcDifferential, calcHandicapIndex } from "@/lib/handicap";
+import { calcDifferential } from "@/lib/handicap";
+import { recalcHandicap } from "@/lib/recalcHandicap";
 import type { NextRequest } from "next/server";
 
 export async function POST(
@@ -52,13 +53,7 @@ export async function POST(
         },
       });
 
-      const allHistory = await prisma.handicapHistory.findMany({
-        where: { userId: rp.userId },
-        orderBy: { createdAt: "asc" },
-        select: { differential: true },
-      });
-
-      const newIndex = calcHandicapIndex(allHistory.map((h) => h.differential));
+      const newIndex = await recalcHandicap(rp.userId);
 
       await prisma.user.update({
         where: { id: rp.userId },

@@ -20,12 +20,13 @@ model User {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  rounds         RoundPlayer[]
-  handicapHistory HandicapHistory[]
-  sentFriendships     Friend[] @relation("FriendRequester")
-  receivedFriendships Friend[] @relation("FriendAddressee")
-  comments       Comment[]
-  likes          Like[]
+  rounds                 RoundPlayer[]
+  handicapHistory        HandicapHistory[]
+  comments               Comment[]
+  likes                  Like[]
+  organisedTournaments   Tournament[]             @relation("OrganiserTournaments")
+  tournamentInvitations  TournamentInvitation[]
+  tournamentGroupMembers TournamentGroupMember[]
 
   @@map("users")
 }
@@ -38,10 +39,12 @@ model Course {
   state     String?
   country   String?
   externalId String? @unique
+  aliases    String[] @default([])
   createdAt DateTime @default(now())
 
-  tees   Tee[]
-  rounds Round[]
+  tees        Tee[]
+  rounds      Round[]
+  tournaments Tournament[]
 
   @@map("courses")
 }
@@ -55,9 +58,11 @@ model Tee {
   slope    Int
   par      Int
 
-  course Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  holes  Hole[]
-  rounds Round[]
+  course           Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  holes            Hole[]
+  rounds           Round[]
+  tournaments      Tournament[]
+  tournamentGroups TournamentGroup[]
 
   @@unique([courseId, name])
   @@map("tees")
@@ -70,6 +75,10 @@ model Hole {
   par         Int
   strokeIndex Int
   distance    Int?
+  teeLat      Float?
+  teeLng      Float?
+  greenLat    Float?
+  greenLng    Float?
 
   tee Tee @relation(fields: [teeId], references: [id], onDelete: Cascade)
 
@@ -99,6 +108,7 @@ model Round {
   date      DateTime    @default(now())
   format    GameFormat
   status    RoundStatus @default(SETUP)
+  holesCount Int         @default(18)
   notes     String?
   createdAt DateTime    @default(now())
 
@@ -113,12 +123,13 @@ model Round {
 }
 
 model RoundPlayer {
-  id              String  @id @default(cuid())
-  roundId         String
-  userId          String
-  playingHandicap Int     @default(0)
-  teamColor       String?
-  teamNumber      Int?
+  id                   String  @id @default(cuid())
+  roundId              String
+  userId               String
+  playingHandicap      Int     @default(0)
+  teamColor            String?
+  teamNumber           Int?
+  excludeFromHandicap  Boolean @default(false)
 
   round  Round   @relation(fields: [roundId], references: [id], onDelete: Cascade)
   user   User    @relation(fields: [userId], references: [id])
@@ -157,25 +168,6 @@ model HandicapHistory {
   @@map("handicap_history")
 }
 
-enum FriendStatus {
-  PENDING
-  ACCEPTED
-}
-
-model Friend {
-  id          String       @id @default(cuid())
-  requesterId String
-  addresseeId String
-  status      FriendStatus @default(PENDING)
-  createdAt   DateTime     @default(now())
-
-  requester User @relation("FriendRequester", fields: [requesterId], references: [id])
-  addressee User @relation("FriendAddressee", fields: [addresseeId], references: [id])
-
-  @@unique([requesterId, addresseeId])
-  @@map("friends")
-}
-
 model Comment {
   id        String   @id @default(cuid())
   roundId   String
@@ -207,16 +199,30 @@ enum TournamentStatus {
   COMPLETE
 }
 
-model Tournament {
-  id        String           @id @default(cuid())
-  name      String
-  format    GameFormat
-  status    TournamentStatus @default(UPCOMING)
-  startDate DateTime?
-  endDate   DateTime?
-  createdAt DateTime         @default(now())
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
 
-  rounds TournamentRound[]
+model Tournament {
+  id          String           @id @default(cuid())
+  name        String
+  format      GameFormat
+  status      TournamentStatus @default(UPCOMING)
+  date        DateTime?
+  createdAt   DateTime         @default(now())
+
+  createdById String
+  courseId    String?
+  teeId       String?
+
+  createdBy   User                   @relation("OrganiserTournaments", fields: [createdById], references: [id])
+  course      Course?                @relation(fields: [courseId], references: [id])
+  tee         Tee?                   @relation(fields: [teeId], references: [id])
+  rounds      TournamentRound[]
+  invitations TournamentInvitation[]
+  groups      TournamentGroup[]
 
   @@map("tournaments")
 }
@@ -232,4 +238,46 @@ model TournamentRound {
 
   @@unique([tournamentId, roundNumber])
   @@map("tournament_rounds")
+}
+
+model TournamentInvitation {
+  id           String           @id @default(cuid())
+  tournamentId String
+  userId       String
+  status       InvitationStatus @default(PENDING)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id])
+
+  @@unique([tournamentId, userId])
+  @@map("tournament_invitations")
+}
+
+model TournamentGroup {
+  id           String @id @default(cuid())
+  tournamentId String
+  groupNumber  Int
+  teeId        String
+
+  tournament Tournament              @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tee        Tee                     @relation(fields: [teeId], references: [id])
+  members    TournamentGroupMember[]
+
+  @@unique([tournamentId, groupNumber])
+  @@map("tournament_groups")
+}
+
+model TournamentGroupMember {
+  id         String @id @default(cuid())
+  groupId    String
+  userId     String
+  teamNumber Int?
+
+  group TournamentGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User            @relation(fields: [userId], references: [id])
+
+  @@unique([groupId, userId])
+  @@map("tournament_group_members")
 }

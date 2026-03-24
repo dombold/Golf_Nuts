@@ -7,6 +7,7 @@ import {
   type PlayerRoundResult,
 } from "@/lib/formats";
 import Link from "next/link";
+import DeleteRoundButton from "@/components/DeleteRoundButton";
 
 export default async function RoundSummaryPage({
   params,
@@ -181,12 +182,15 @@ export default async function RoundSummaryPage({
         </div>
       </div>
 
-      <Link
-        href="/dashboard"
-        className="block w-full text-center py-3 bg-fairway-700 text-white rounded-xl font-semibold hover:bg-fairway-800 transition-colors"
-      >
-        ← Back to Dashboard
-      </Link>
+      <div className="flex gap-3">
+        <Link
+          href="/dashboard"
+          className="flex-1 text-center py-3 bg-fairway-700 text-white rounded-xl font-semibold hover:bg-fairway-800 transition-colors"
+        >
+          ← Back to Dashboard
+        </Link>
+        <DeleteRoundButton roundId={id} />
+      </div>
     </div>
   );
 }

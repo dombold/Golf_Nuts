@@ -57,7 +57,7 @@ async function apiFetch<T>(path: string): Promise<T> {
 export async function searchCourses(query: string): Promise<ApiCourse[]> {
   const encoded = encodeURIComponent(query);
   const data = await apiFetch<{ courses: ApiCourse[] }>(
-    `/courses?search_query=${encoded}`
+    `/courses?club_name=${encoded}`
   );
   return data.courses ?? [];
 }

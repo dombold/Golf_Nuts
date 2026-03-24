@@ -23,13 +23,14 @@ function NewRoundForm() {
 
   const [step, setStep] = useState(1);
   const [courses, setCourses] = useState<Course[]>([]);
-  const [friends, setFriends] = useState<User[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [selectedTee, setSelectedTee] = useState<Tee | null>(null);
+  const [holesCount, setHolesCount] = useState<9 | 18>(18);
   const [format, setFormat] = useState("STABLEFORD");
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
 
@@ -41,8 +42,8 @@ function NewRoundForm() {
         if (c) setSelectedCourse(c);
       }
     });
-    fetch("/api/friends").then((r) => r.json()).then((d) => {
-      setFriends(d.friends ?? []);
+    fetch("/api/users").then((r) => r.json()).then((d) => {
+      setUsers(d.users ?? []);
       setCurrentUser(d.currentUser);
     });
   }, [preselectedCourseId]);
@@ -71,6 +72,7 @@ function NewRoundForm() {
         body: JSON.stringify({
           courseId: selectedCourse.id,
           teeId: selectedTee.id,
+          holesCount,
           format,
           playerIds: selectedPlayers,
         }),
@@ -158,6 +160,25 @@ function NewRoundForm() {
             </div>
           )}
 
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-fairway-800">Holes</p>
+            <div className="flex gap-2">
+              {([9, 18] as const).map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setHolesCount(n)}
+                  className={`flex-1 py-2.5 rounded-xl border font-semibold transition-colors ${
+                    holesCount === n
+                      ? "border-fairway-600 bg-fairway-50 text-fairway-900"
+                      : "border-gray-200 bg-white text-gray-600 hover:border-fairway-300"
+                  }`}
+                >
+                  {n} holes
+                </button>
+              ))}
+            </div>
+          </div>
+
           <button
             onClick={() => setStep(2)}
             disabled={!selectedCourse || !selectedTee}
@@ -214,12 +235,12 @@ function NewRoundForm() {
                 <span className="font-medium text-fairway-900">{currentUser.name} (You)</span>
               </div>
             )}
-            {friends.map((friend) => {
-              const selected = selectedPlayers.includes(friend.id);
+            {users.map((user) => {
+              const selected = selectedPlayers.includes(user.id);
               return (
                 <button
-                  key={friend.id}
-                  onClick={() => togglePlayer(friend.id)}
+                  key={user.id}
+                  onClick={() => togglePlayer(user.id)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors ${
                     selected ? "border-fairway-600 bg-fairway-50" : "border-gray-200 bg-white hover:border-fairway-300"
                   }`}
@@ -231,14 +252,13 @@ function NewRoundForm() {
                       </svg>
                     )}
                   </div>
-                  <span className="font-medium text-fairway-900">{friend.name}</span>
+                  <span className="font-medium text-fairway-900">{user.name}</span>
                 </button>
               );
             })}
-            {friends.length === 0 && (
+            {users.length === 0 && (
               <p className="text-gray-400 text-sm text-center py-4">
-                Add friends to play with them.{" "}
-                <a href="/friends" className="text-fairway-700 hover:underline">Manage friends →</a>
+                No other users registered yet.
               </p>
             )}
           </div>

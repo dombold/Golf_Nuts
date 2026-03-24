@@ -36,6 +36,13 @@ export default async function CourseDetailPage({
         ⛳ Start a round here
       </Link>
 
+      <Link
+        href={`/courses/${course.id}/edit`}
+        className="block w-full text-center border border-fairway-200 text-fairway-700 py-2.5 rounded-xl text-sm font-medium hover:bg-fairway-50 transition-colors"
+      >
+        Edit hole coordinates
+      </Link>
+
       {course.tees.map((tee) => (
         <div key={tee.id} className="bg-white rounded-xl shadow-sm border border-fairway-50 overflow-hidden">
           <div className="bg-fairway-900 text-white px-4 py-3 flex items-center justify-between">

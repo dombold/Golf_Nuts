@@ -7,6 +7,7 @@ import { z } from "zod";
 const CreateRoundSchema = z.object({
   courseId: z.string(),
   teeId: z.string(),
+  holesCount: z.union([z.literal(9), z.literal(18)]).default(18),
   format: z.enum(["STROKEPLAY", "STABLEFORD", "MATCH_PLAY", "SKINS", "AMBROSE_2", "AMBROSE_4"]),
   playerIds: z.array(z.string()).min(1),
   date: z.string().optional(),
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { courseId, teeId, format, playerIds, date } = parsed.data;
+  const { courseId, teeId, holesCount, format, playerIds, date } = parsed.data;
 
   const tee = await prisma.tee.findUnique({ where: { id: teeId } });
   if (!tee) return Response.json({ error: "Tee not found" }, { status: 404 });
@@ -36,6 +37,7 @@ export async function POST(req: NextRequest) {
     data: {
       courseId,
       teeId,
+      holesCount,
       format,
       date: date ? new Date(date) : new Date(),
       status: "ACTIVE",

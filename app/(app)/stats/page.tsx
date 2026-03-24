@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import HandicapChart from "./HandicapChart";
+import ExcludeToggle from "./ExcludeToggle";
 
 export default async function StatsPage() {
   const session = await auth();
@@ -44,6 +45,7 @@ export default async function StatsPage() {
     const girs = rp.scores.filter((s) => s.gir === true).length;
     const putts = rp.scores.reduce((s, sc) => s + (sc.putts ?? 0), 0);
     return {
+      roundId: round.id,
       date: round.date,
       course: round.course.name,
       gross,
@@ -51,6 +53,7 @@ export default async function StatsPage() {
       fairwayPct: fairwayAttempts > 0 ? Math.round((fairways / fairwayAttempts) * 100) : null,
       girPct: Math.round((girs / Math.max(rp.scores.length, 1)) * 100),
       avgPutts: rp.scores.length > 0 ? (putts / rp.scores.length).toFixed(1) : null,
+      excluded: rp.excludeFromHandicap,
     };
   }).filter(Boolean);
 
@@ -121,6 +124,7 @@ export default async function StatsPage() {
                   <th className="px-3 py-2 text-center">FIR%</th>
                   <th className="px-3 py-2 text-center">GIR%</th>
                   <th className="px-3 py-2 text-center">Putts</th>
+                  <th className="px-3 py-2 text-center" title="Include in handicap calculation">HCP</th>
                 </tr>
               </thead>
               <tbody>
@@ -137,6 +141,9 @@ export default async function StatsPage() {
                       <td className="px-3 py-1.5 text-center text-gray-500">{r.fairwayPct !== null ? `${r.fairwayPct}%` : "—"}</td>
                       <td className="px-3 py-1.5 text-center text-gray-500">{r.girPct}%</td>
                       <td className="px-3 py-1.5 text-center text-gray-500">{r.avgPutts ?? "—"}</td>
+                      <td className="px-3 py-1.5 text-center">
+                        <ExcludeToggle roundId={r.roundId} excluded={r.excluded} />
+                      </td>
                     </tr>
                   ) : null
                 )}

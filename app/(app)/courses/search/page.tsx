@@ -2,13 +2,25 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ApiCourse } from "@/lib/courseApi";
+
+interface Tee {
+  id: string;
+  name: string;
+}
+
+interface Course {
+  id: string;
+  name: string;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  tees: Tee[];
+}
 
 export default function CourseSearchPage() {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<ApiCourse[]>([]);
+  const [results, setResults] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
-  const [importing, setImporting] = useState<string | null>(null);
   const [error, setError] = useState("");
   const router = useRouter();
 
@@ -29,33 +41,6 @@ export default function CourseSearchPage() {
       setError("Search failed. Please try again.");
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function importCourse(externalId: string) {
-    setImporting(externalId);
-    try {
-      const res = await fetch("/api/courses/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ externalId }),
-      });
-      if (!res.ok) {
-        let msg = `Import failed (HTTP ${res.status})`;
-        try { const d = await res.json(); if (d.error) msg = d.error; } catch {}
-        setError(msg);
-        return;
-      }
-      const data = await res.json();
-      if (data.error) {
-        setError(data.error);
-      } else if (data.course) {
-        router.push(`/courses/${data.course.id}`);
-      }
-    } catch (err) {
-      setError(`Import failed: ${err}`);
-    } finally {
-      setImporting(null);
     }
   }
 
@@ -95,25 +80,23 @@ export default function CourseSearchPage() {
               className="bg-white rounded-xl p-4 shadow-sm border border-fairway-50 flex items-center justify-between gap-4"
             >
               <div>
-                <p className="font-semibold text-fairway-900">
-                  {[course.club_name, course.course_name].filter(Boolean).join(" — ")}
-                </p>
+                <p className="font-semibold text-fairway-900">{course.name}</p>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {[
-                    course.location?.city,
-                    course.location?.state,
-                    course.location?.country,
-                  ]
+                  {[course.city, course.state, course.country]
                     .filter(Boolean)
                     .join(", ")}
+                  {course.tees.length > 0 && (
+                    <span className="ml-2 text-fairway-600">
+                      · {course.tees.length} tee{course.tees.length !== 1 ? "s" : ""}
+                    </span>
+                  )}
                 </p>
               </div>
               <button
-                onClick={() => importCourse(course.id)}
-                disabled={importing === course.id}
-                className="shrink-0 bg-fairway-100 text-fairway-700 hover:bg-fairway-700 hover:text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
+                onClick={() => router.push(`/courses/${course.id}`)}
+                className="shrink-0 bg-fairway-100 text-fairway-700 hover:bg-fairway-700 hover:text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
               >
-                {importing === course.id ? "Adding…" : "Add"}
+                View
               </button>
             </div>
           ))}

@@ -11,6 +11,10 @@ export default async function DashboardPage() {
     select: { name: true, firstName: true, handicapIndex: true },
   });
 
+  const pendingInvitations = await prisma.tournamentInvitation.count({
+    where: { userId, status: "PENDING" },
+  });
+
   const recentRounds = await prisma.round.findMany({
     where: {
       players: { some: { userId } },
@@ -44,6 +48,21 @@ export default async function DashboardPage() {
           + New Round
         </Link>
       </div>
+
+      {/* Pending tournament invitations */}
+      {pendingInvitations > 0 && (
+        <Link
+          href="/tournaments"
+          className="block rounded-xl bg-acorn-50 border border-acorn-200 px-4 py-3 flex items-center justify-between hover:bg-acorn-100 transition-colors"
+        >
+          <p className="text-sm text-acorn-800 font-medium">
+            🏆 You have {pendingInvitations} pending tournament invitation{pendingInvitations > 1 ? "s" : ""}
+          </p>
+          <svg className="w-4 h-4 text-acorn-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
+      )}
 
       {/* Quick actions */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

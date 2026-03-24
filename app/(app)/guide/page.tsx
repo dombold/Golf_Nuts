@@ -6,7 +6,6 @@ const sections = [
   { id: "scoring", icon: "📋", title: "Live Scoring" },
   { id: "courses", icon: "🗺️", title: "Courses" },
   { id: "stats", icon: "📊", title: "Stats & Handicap" },
-  { id: "friends", icon: "👥", title: "Friends" },
   { id: "tournaments", icon: "🏆", title: "Events & Tournaments" },
 ];
 
@@ -63,6 +62,36 @@ export default function GuidePage() {
               Tap any recent round in the list to view its full scorecard and result summary.
             </li>
           </ul>
+
+          <div className="mt-4 pt-4 border-t border-fairway-50">
+            <p className="font-semibold text-fairway-900 mb-2">📲 Add Golf Nuts to your home screen</p>
+            <p className="mb-3">
+              Golf Nuts works like a native app when installed on your phone — full screen, no browser
+              bar, and quick to launch from your home screen.
+            </p>
+
+            <div className="space-y-3">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="font-semibold text-fairway-800 mb-1">Android (Chrome)</p>
+                <ol className="list-decimal list-inside space-y-1 text-gray-600">
+                  <li>Open Golf Nuts in Chrome.</li>
+                  <li>Tap the <span className="font-semibold">⋮</span> menu in the top-right corner.</li>
+                  <li>Tap <span className="font-semibold">Add to Home screen</span>.</li>
+                  <li>Tap <span className="font-semibold">Add</span> to confirm.</li>
+                </ol>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="font-semibold text-fairway-800 mb-1">iPhone / iPad (Safari)</p>
+                <ol className="list-decimal list-inside space-y-1 text-gray-600">
+                  <li>Open Golf Nuts in Safari.</li>
+                  <li>Tap the <span className="font-semibold">Share</span> button (the box with an arrow pointing up) at the bottom of the screen.</li>
+                  <li>Scroll down and tap <span className="font-semibold">Add to Home Screen</span>.</li>
+                  <li>Tap <span className="font-semibold">Add</span> in the top-right corner.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -128,11 +157,8 @@ export default function GuidePage() {
           <div>
             <p className="font-semibold text-fairway-700 mb-1">Step 3 — Select players</p>
             <p>
-              You are always included. Tap friends to add them to the round — they must be in your{" "}
-              <Link href="/friends" className="text-fairway-700 underline">
-                Friends list
-              </Link>{" "}
-              first. Tap <span className="font-semibold">Tee Off!</span> to begin.
+              You are always included. Tap any other registered user to add them to the round, then tap{" "}
+              <span className="font-semibold">Tee Off!</span> to begin.
             </p>
           </div>
         </div>
@@ -274,36 +300,6 @@ export default function GuidePage() {
             <span className="font-semibold text-fairway-900">Recent Rounds table</span> — Lists up
             to 20 rounds with date, course, gross score (and to-par), FIR%, GIR%, and average putts
             per hole. Scroll horizontally on mobile to see all columns.
-          </p>
-        </div>
-      </div>
-
-      {/* Friends */}
-      <div id="friends" className="bg-white rounded-xl border border-fairway-50 p-4 scroll-mt-20">
-        <h2 className="text-lg font-semibold text-fairway-900 flex items-center gap-2 mb-3">
-          <span>👥</span> Friends
-        </h2>
-        <div className="space-y-3 text-sm text-gray-700 leading-relaxed">
-          <p>
-            <span className="font-semibold text-fairway-900">Adding a friend</span> — Go to the{" "}
-            <Link href="/friends" className="text-fairway-700 underline">
-              Friends page
-            </Link>{" "}
-            and enter your friend&apos;s email address in the{" "}
-            <span className="font-semibold">Add a friend</span> field. They must already have a
-            Golf Nuts account. Tap <span className="font-semibold">Add</span> — if found, they
-            appear in your group immediately.
-          </p>
-          <p>
-            <span className="font-semibold text-fairway-900">Your group list</span> — Shows each
-            friend&apos;s name and their current Handicap Index, so you can quickly see who is
-            playing off what before a round.
-          </p>
-          <p>
-            <span className="font-semibold text-fairway-900">Playing with friends</span> — When you
-            start a new round (Step 3 of the wizard), everyone in your friends list appears as a
-            toggleable option. You cannot add a player to a round who is not in your friends list
-            first — add them here before teeing off.
           </p>
         </div>
       </div>

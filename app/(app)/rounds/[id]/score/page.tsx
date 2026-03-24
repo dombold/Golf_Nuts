@@ -1,15 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import HoleMap from "@/components/HoleMap";
 import { useParams, useRouter } from "next/navigation";
 
-interface Hole { id: string; number: number; par: number; strokeIndex: number; distance?: number }
+interface Hole { id: string; number: number; par: number; strokeIndex: number; distance?: number; teeLat?: number | null; teeLng?: number | null; greenLat?: number | null; greenLng?: number | null; }
 interface ScoreEntry { strokes: number; penalties: number; putts?: number; fairwayHit?: boolean; gir?: boolean }
 interface Player { id: string; userId: string; playingHandicap: number; user: { id: string; name: string }; scores: { holeNumber: number; strokes: number }[] }
 interface Round {
   id: string;
   format: string;
   status: string;
+  holesCount: number;
   course: { name: string };
   tee: { name: string; par: number; holes: Hole[] };
   players: Player[];
@@ -138,7 +140,7 @@ export default function ScoringPage() {
     );
   }
 
-  const holes = round.tee.holes;
+  const holes = round.tee.holes.slice(0, round.holesCount);
   const hole = holes.find((h) => h.number === currentHole);
   const totalHoles = holes.length;
   const allEntered = round.players.every((p) =>
@@ -207,6 +209,9 @@ export default function ScoringPage() {
               {hole.distance && <p>{hole.distance} yds</p>}
             </div>
           </div>
+
+          {/* Hole map */}
+          <HoleMap hole={hole} />
 
           {/* Score entry per player */}
           {round.players.map((player) => {
