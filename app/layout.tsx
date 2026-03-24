@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
+import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 
 export const metadata: Metadata = {
   title: "Golf Nuts",
@@ -12,10 +13,7 @@ export const metadata: Metadata = {
     title: "Golf Nuts",
   },
   icons: {
-    icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/golf_nuts_badge.jpg", sizes: "192x192", type: "image/jpeg" },
-    ],
+    icon: [{ url: "/golf_nuts_badge.jpg", sizes: "192x192", type: "image/jpeg" }],
     apple: "/golf_nuts_badge.jpg",
   },
 };
@@ -36,6 +34,7 @@ export default function RootLayout({
     <html lang="en" className="h-full">
       <body className="min-h-full flex flex-col antialiased">
         <ServiceWorkerRegistrar />
+        <PwaInstallPrompt />
         {children}
       </body>
     </html>
