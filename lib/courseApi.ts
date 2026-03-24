@@ -70,5 +70,7 @@ export async function getCourseById(externalId: string): Promise<ApiCourse> {
 export function flattenTees(tees: ApiCourse["tees"]): ApiTee[] {
   if (!tees) return [];
   if (Array.isArray(tees)) return tees;
-  return [...(tees.male ?? []), ...(tees.female ?? [])];
+  const tag = (group: ApiTee[], suffix: string) =>
+    group.map((t) => ({ ...t, tee_name: `${t.tee_name} (${suffix})` }));
+  return [...tag(tees.male ?? [], "Male"), ...tag(tees.female ?? [], "Female")];
 }
