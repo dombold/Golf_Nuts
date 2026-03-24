@@ -56,3 +56,4 @@ Golf_Nuts_Badge.jpg
 next-env.d.ts
 
 /app/generated/prisma
+.env

@@ -17,7 +17,7 @@ export interface ApiCourse {
     state?: string;
     country?: string;
   };
-  tees?: ApiTee[];
+  tees?: { male?: ApiTee[]; female?: ApiTee[] } | ApiTee[];
 }
 
 export interface ApiTee {
@@ -25,14 +25,13 @@ export interface ApiTee {
   tee_color?: string;
   course_rating: number;
   slope_rating: number;
-  par: number;
+  par_total: number;
   holes?: ApiHole[];
 }
 
 export interface ApiHole {
-  hole_number: number;
   par: number;
-  handicap: number;
+  handicap?: number;
   yardage?: number;
 }
 
@@ -64,5 +63,12 @@ export async function searchCourses(query: string): Promise<ApiCourse[]> {
 }
 
 export async function getCourseById(externalId: string): Promise<ApiCourse> {
-  return apiFetch<ApiCourse>(`/courses/${externalId}`);
+  const data = await apiFetch<{ course: ApiCourse }>(`/courses/${externalId}`);
+  return data.course;
+}
+
+export function flattenTees(tees: ApiCourse["tees"]): ApiTee[] {
+  if (!tees) return [];
+  if (Array.isArray(tees)) return tees;
+  return [...(tees.male ?? []), ...(tees.female ?? [])];
 }

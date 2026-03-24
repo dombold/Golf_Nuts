@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth";
-import { getCourseById } from "@/lib/courseApi";
+import { getCourseById, flattenTees } from "@/lib/courseApi";
 import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 
@@ -27,17 +27,17 @@ export async function POST(req: NextRequest) {
         country: apiCourse.location?.country,
         externalId,
         tees: {
-          create: (apiCourse.tees ?? []).map((tee) => ({
+          create: flattenTees(apiCourse.tees).map((tee) => ({
             name: tee.tee_name,
             color: tee.tee_color,
             rating: tee.course_rating,
             slope: tee.slope_rating,
-            par: tee.par,
+            par: tee.par_total,
             holes: {
-              create: (tee.holes ?? []).map((h) => ({
-                number: h.hole_number,
+              create: (tee.holes ?? []).map((h, i) => ({
+                number: i + 1,
                 par: h.par,
-                strokeIndex: h.handicap,
+                strokeIndex: h.handicap ?? 0,
                 distance: h.yardage,
               })),
             },
