@@ -8,7 +8,8 @@ export async function POST(req: NextRequest) {
     const session = await auth();
     if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { externalId } = await req.json();
+    const body = await req.json();
+    const externalId = body.externalId != null ? String(body.externalId) : null;
     if (!externalId) return Response.json({ error: "externalId required" }, { status: 400 });
 
     // Return existing course if already imported
@@ -16,11 +17,6 @@ export async function POST(req: NextRequest) {
     if (existing) return Response.json({ course: existing });
 
     const apiCourse = await getCourseById(externalId);
-    console.log("[import] apiCourse keys:", Object.keys(apiCourse));
-    console.log("[import] tees count:", apiCourse.tees?.length ?? 0);
-    if (apiCourse.tees?.[0]) {
-      console.log("[import] first tee:", JSON.stringify(apiCourse.tees[0]).slice(0, 300));
-    }
 
     const course = await prisma.course.create({
       data: {
