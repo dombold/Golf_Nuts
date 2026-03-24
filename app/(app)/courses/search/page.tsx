@@ -40,14 +40,20 @@ export default function CourseSearchPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ externalId }),
       });
+      if (!res.ok) {
+        let msg = `Import failed (HTTP ${res.status})`;
+        try { const d = await res.json(); if (d.error) msg = d.error; } catch {}
+        setError(msg);
+        return;
+      }
       const data = await res.json();
-      if (!res.ok || data.error) {
-        setError(data.error ?? "Import failed. Please try again.");
+      if (data.error) {
+        setError(data.error);
       } else if (data.course) {
         router.push(`/courses/${data.course.id}`);
       }
-    } catch {
-      setError("Import failed. Please try again.");
+    } catch (err) {
+      setError(`Import failed: ${err}`);
     } finally {
       setImporting(null);
     }
