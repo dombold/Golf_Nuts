@@ -6,7 +6,6 @@ import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 export const metadata: Metadata = {
   title: "Golf Nuts",
   description: "Older = Wiser — Golf scoring & stats for your group",
-  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
