@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import CourseList from "./CourseList";
 
 export default async function CoursesPage() {
   const courses = await prisma.course.findMany({
@@ -31,28 +32,7 @@ export default async function CoursesPage() {
           </Link>
         </div>
       ) : (
-        <div className="space-y-3">
-          {courses.map((course) => (
-            <Link
-              key={course.id}
-              href={`/courses/${course.id}`}
-              className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow border border-fairway-50 flex items-center justify-between"
-            >
-              <div>
-                <p className="font-semibold text-fairway-900">{course.name}</p>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {[course.city, course.state, course.country].filter(Boolean).join(", ")}
-                </p>
-                <p className="text-xs text-fairway-600 mt-0.5">
-                  {course.tees.length} tee set{course.tees.length !== 1 ? "s" : ""}
-                </p>
-              </div>
-              <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </Link>
-          ))}
-        </div>
+        <CourseList courses={courses} />
       )}
     </div>
   );
