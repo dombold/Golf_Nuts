@@ -1,11 +1,14 @@
 import webpush from "web-push";
 import { prisma } from "@/lib/prisma";
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT!,
-  process.env.VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
+function getWebPush() {
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT!,
+    process.env.VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!
+  );
+  return webpush;
+}
 
 interface PushPayload {
   title: string;
@@ -33,7 +36,7 @@ export async function sendTournamentInviteNotification(
   const results = await Promise.allSettled(
     subscriptions.map(async (sub) => {
       try {
-        await webpush.sendNotification(
+        await getWebPush().sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
           JSON.stringify(payload)
         );
