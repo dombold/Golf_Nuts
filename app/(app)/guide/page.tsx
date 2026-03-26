@@ -7,6 +7,7 @@ const sections = [
   { id: "courses", icon: "🗺️", title: "Courses" },
   { id: "stats", icon: "📊", title: "Stats & Handicap" },
   { id: "tournaments", icon: "🏆", title: "Events & Tournaments" },
+  { id: "notifications", icon: "🔔", title: "Notifications" },
 ];
 
 export default function GuidePage() {
@@ -324,7 +325,12 @@ export default function GuidePage() {
               Events page
             </Link>
             . Give it a name and save. The tournament starts with a{" "}
-            <span className="font-semibold">Pending</span> status badge.
+            <span className="font-semibold">Pending</span> status badge. Any players you invite will
+            receive a push notification on their phone — if they have notifications enabled on their{" "}
+            <Link href="/profile" className="text-fairway-700 underline">
+              Profile
+            </Link>
+            .
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Adding rounds to a tournament</span>{" "}
@@ -350,6 +356,56 @@ export default function GuidePage() {
           <p>
             Tap any round inside a tournament card to view its scorecard or resume scoring if it is
             still in progress.
+          </p>
+        </div>
+      </div>
+      {/* Notifications */}
+      <div
+        id="notifications"
+        className="bg-white rounded-xl border border-fairway-50 p-4 scroll-mt-20"
+      >
+        <h2 className="text-lg font-semibold text-fairway-900 flex items-center gap-2 mb-3">
+          <span>🔔</span> Notifications
+        </h2>
+        <div className="space-y-3 text-sm text-gray-700 leading-relaxed">
+          <p>
+            Golf Nuts can send a push notification directly to your phone when you are invited to a
+            tournament. You can then accept or decline the invitation without even opening the app.
+          </p>
+
+          <p>
+            <span className="font-semibold text-fairway-900">Enabling notifications</span> — Go to
+            your{" "}
+            <Link href="/profile" className="text-fairway-700 underline">
+              Profile page
+            </Link>{" "}
+            and scroll to the <span className="font-semibold">Notifications</span> section. Toggle{" "}
+            <span className="font-semibold">Tournament invitations</span> on. Your browser will ask
+            for permission — tap <span className="font-semibold">Allow</span>.
+          </p>
+
+          <p>
+            <span className="font-semibold text-fairway-900">Responding from a notification</span>:
+          </p>
+          <ul className="list-disc list-inside space-y-1 text-gray-600">
+            <li>
+              <span className="font-semibold">Android (Chrome)</span> — the notification appears in
+              your notification shade with <span className="font-semibold">Accept</span> and{" "}
+              <span className="font-semibold">Decline</span> buttons. Tap either to respond without
+              opening the app, or tap the notification body to open the tournament page directly.
+            </li>
+            <li>
+              <span className="font-semibold">iPhone / iPad (Safari)</span> — you must first add
+              Golf Nuts to your home screen (see the Dashboard section above). Once installed, the
+              notification will appear — tap it to open the tournament page and respond there.
+              Action buttons are not supported on iOS.
+            </li>
+          </ul>
+
+          <p>
+            <span className="font-semibold text-fairway-900">Disabling notifications</span> — Toggle
+            the same switch off on your Profile page. You can also revoke permission in your
+            browser or phone settings at any time.
           </p>
         </div>
       </div>

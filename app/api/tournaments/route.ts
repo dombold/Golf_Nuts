@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { z } from "zod";
+import { sendTournamentInviteNotification } from "@/lib/push";
 
 const CreateSchema = z.object({
   name: z.string().min(2).trim(),
@@ -44,6 +45,13 @@ export async function POST(req: NextRequest) {
       },
     },
   });
+
+  // Fire push notifications to invitees — non-blocking, won't fail the request
+  if (otherInvitees.length > 0) {
+    void Promise.allSettled(
+      otherInvitees.map((id) => sendTournamentInviteNotification(id, name, tournament.id))
+    );
+  }
 
   return Response.json({ tournament }, { status: 201 });
 }

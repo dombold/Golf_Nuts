@@ -27,6 +27,8 @@ model User {
   organisedTournaments   Tournament[]             @relation("OrganiserTournaments")
   tournamentInvitations  TournamentInvitation[]
   tournamentGroupMembers TournamentGroupMember[]
+  userCourses            UserCourse[]
+  pushSubscriptions      PushSubscription[]
 
   @@map("users")
 }
@@ -45,8 +47,22 @@ model Course {
   tees        Tee[]
   rounds      Round[]
   tournaments Tournament[]
+  userCourses UserCourse[]
 
   @@map("courses")
+}
+
+model UserCourse {
+  id       String   @id @default(cuid())
+  userId   String
+  courseId String
+  addedAt  DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("user_courses")
 }
 
 model Tee {
@@ -280,4 +296,17 @@ model TournamentGroupMember {
 
   @@unique([groupId, userId])
   @@map("tournament_group_members")
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_subscriptions")
 }

@@ -1,12 +1,18 @@
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import CourseList from "./CourseList";
 
 export default async function CoursesPage() {
-  const courses = await prisma.course.findMany({
-    include: { tees: true },
-    orderBy: { name: "asc" },
+  const session = await auth();
+
+  const userCourses = await prisma.userCourse.findMany({
+    where: { userId: session!.user.id },
+    include: { course: { include: { tees: true } } },
+    orderBy: { course: { name: "asc" } },
   });
+
+  const courses = userCourses.map((uc) => uc.course);
 
   return (
     <div className="space-y-6">
@@ -28,7 +34,7 @@ export default async function CoursesPage() {
             href="/courses/search"
             className="text-fairway-700 font-medium hover:underline text-sm"
           >
-            Search and import a course
+            Search and add a course
           </Link>
         </div>
       ) : (

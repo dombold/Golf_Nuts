@@ -91,7 +91,16 @@ async function main() {
     const api = entry.apiCourse;
 
     const courseName = api
-      ? [api.club_name, api.course_name].filter(Boolean).join(" — ")
+      ? (() => {
+          const parts = [api.club_name, api.course_name].filter(Boolean) as string[];
+          const raw = parts.length === 2 && parts[0].trim().toLowerCase() === parts[1].trim().toLowerCase()
+            ? parts[0]
+            : parts.join(" — ");
+          return raw
+            .replace(/\bG C\b/g, 'Golf Club')
+            .replace(/\bGc\b/g, 'Golf Club')
+            .replace(/\bCc\b/g, 'Country Club');
+        })()
       : entry.waName;
 
     const teeData = api ? flattenTees(api.tees) : [];

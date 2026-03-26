@@ -20,7 +20,7 @@ function getInitials(name: string): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-export default function NavBar({ user }: { user: { name: string; username: string } }) {
+export default function NavBar({ user }: { user: { name: string; username: string; avatarUrl?: string | null } }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -57,11 +57,15 @@ export default function NavBar({ user }: { user: { name: string; username: strin
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setOpen((v) => !v)}
-              className="flex items-center justify-center w-9 h-9 rounded-full bg-fairway-600 hover:bg-fairway-500 text-white text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className="flex items-center justify-center w-9 h-9 rounded-full bg-fairway-600 hover:bg-fairway-500 text-white text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white overflow-hidden"
               aria-label="Open profile menu"
               aria-expanded={open}
             >
-              {initials}
+              {user.avatarUrl ? (
+                <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+              ) : (
+                initials
+              )}
             </button>
 
             {open && (

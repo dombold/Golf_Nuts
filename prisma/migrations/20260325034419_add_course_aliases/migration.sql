@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "courses" ADD COLUMN IF NOT EXISTS "aliases" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

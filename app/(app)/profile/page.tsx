@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import ProfileForm from "@/components/ProfileForm";
+import AvatarUpload from "@/components/AvatarUpload";
+import PushNotificationToggle from "@/components/push/PushNotificationToggle";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -16,6 +18,7 @@ export default async function ProfilePage() {
       email: true,
       handicapIndex: true,
       createdAt: true,
+      avatarUrl: true,
     },
   });
 
@@ -32,9 +35,7 @@ export default async function ProfilePage() {
   return (
     <div className="max-w-lg mx-auto space-y-6">
       <div className="flex items-center gap-4">
-        <div className="w-16 h-16 rounded-full bg-fairway-600 flex items-center justify-center text-white text-2xl font-bold">
-          {initials}
-        </div>
+        <AvatarUpload currentAvatarUrl={user.avatarUrl ?? null} initials={initials} />
         <div>
           <h1 className="text-2xl font-bold text-fairway-900">
             {user.firstName} {user.lastName}
@@ -53,6 +54,11 @@ export default async function ProfilePage() {
           handicapIndex={user.handicapIndex}
           memberSince={memberSince}
         />
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-fairway-100 p-6">
+        <h2 className="text-lg font-semibold text-fairway-900 mb-4">Notifications</h2>
+        <PushNotificationToggle />
       </div>
     </div>
   );

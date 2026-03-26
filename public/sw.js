@@ -17,6 +17,56 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+  const data = event.data.json();
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: "/golf_nuts_badge.jpg",
+      badge: "/golf_nuts_badge.jpg",
+      data: { tournamentId: data.tournamentId },
+      actions: [
+        { action: "accept", title: "Accept" },
+        { action: "decline", title: "Decline" },
+      ],
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const { tournamentId } = event.notification.data || {};
+  if (!tournamentId) return;
+
+  if (event.action === "accept" || event.action === "decline") {
+    const status = event.action === "accept" ? "ACCEPTED" : "DECLINED";
+    event.waitUntil(
+      fetch(`/api/tournaments/${tournamentId}/invitations`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+        credentials: "include",
+      })
+    );
+  } else {
+    event.waitUntil(
+      self.clients
+        .matchAll({ type: "window", includeUncontrolled: true })
+        .then((clientList) => {
+          const url = `/tournaments/${tournamentId}`;
+          for (const client of clientList) {
+            if ("focus" in client) {
+              client.navigate(url);
+              return client.focus();
+            }
+          }
+          return self.clients.openWindow(url);
+        })
+    );
+  }
+});
+
 self.addEventListener("fetch", (event) => {
   // Only cache GET requests
   if (event.request.method !== "GET") return;

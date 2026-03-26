@@ -12,6 +12,7 @@ A full-stack golf scoring and social web app built with Next.js 16, Prisma 7, an
 - **Stats & charts** — visualise performance trends across rounds and tournaments
 - **Social** — friends, round comments, and likes
 - **Auth** — email/password login with password reset via email
+- **Push notifications** — invitees receive a phone notification when invited to a tournament, with Accept / Decline actions (Android Chrome; iOS when installed as PWA)
 - **PWA** — installable as a Progressive Web App with service worker support
 
 ## Tech Stack
@@ -26,6 +27,7 @@ A full-stack golf scoring and social web app built with Next.js 16, Prisma 7, an
 | Animation | Framer Motion |
 | Validation | Zod |
 | Email | Nodemailer |
+| Push Notifications | web-push (VAPID) |
 
 ## Getting Started
 
@@ -66,7 +68,7 @@ npx prisma db seed
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3001](http://localhost:3001) in your browser.
 
 ## Environment Variables
 
@@ -79,6 +81,10 @@ See [.env.example](.env.example) for all required variables:
 - `GOLF_COURSE_API_BASE_URL` — Golf Course API base URL
 - `GOOGLE_MAPS_API_KEY` — Google Maps API key (server-side only)
 - `SMTP_*` — SMTP credentials for password reset emails
+- `VAPID_PUBLIC_KEY` — VAPID public key for web push notifications (generate once with `web-push`)
+- `VAPID_PRIVATE_KEY` — VAPID private key for web push notifications
+- `VAPID_SUBJECT` — contact email used in VAPID header (e.g. `mailto:you@example.com`)
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY` — same value as `VAPID_PUBLIC_KEY`; exposed to the browser for push subscription
 
 ## Project Structure
 
@@ -92,6 +98,7 @@ app/
 components/
   charts/         # Recharts chart components
   leaderboard/    # Leaderboard UI
+  push/           # Push notification toggle component
   scorecard/      # Scorecard entry UI
   tournament/     # Tournament UI
   ui/             # Shared UI components
@@ -101,6 +108,7 @@ lib/
   courseApi.ts    # Golf Course API client
   handicap.ts     # Handicap calculation logic
   prisma.ts       # Prisma client instance
+  push.ts         # Web push notification utility (VAPID)
 prisma/
   schema.prisma   # Database schema
   seed.ts         # Database seeding script

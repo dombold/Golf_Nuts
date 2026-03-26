@@ -25,7 +25,7 @@ export default function CourseList({ courses }: { courses: Course[] }) {
     setError(null);
     setDeleting(id);
     try {
-      const res = await fetch(`/api/courses/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/user/courses/${id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) {
         setError({ id, msg: data.error ?? "Failed to remove course." });

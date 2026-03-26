@@ -20,7 +20,16 @@ export async function POST(req: NextRequest) {
 
     const course = await prisma.course.create({
       data: {
-        name: [apiCourse.club_name, apiCourse.course_name].filter(Boolean).join(" — "),
+        name: (() => {
+          const parts = [apiCourse.club_name, apiCourse.course_name].filter(Boolean) as string[];
+          const raw = parts.length === 2 && parts[0].trim().toLowerCase() === parts[1].trim().toLowerCase()
+            ? parts[0]
+            : parts.join(" — ");
+          return raw
+            .replace(/\bG C\b/g, 'Golf Club')
+            .replace(/\bGc\b/g, 'Golf Club')
+            .replace(/\bCc\b/g, 'Country Club');
+        })(),
         address: apiCourse.location?.address,
         city: apiCourse.location?.city,
         state: apiCourse.location?.state,

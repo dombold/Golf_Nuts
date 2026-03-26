@@ -12,10 +12,14 @@ export default auth(function proxy(req: NextRequest & { auth: { user?: unknown }
     path.startsWith("/reset-password");
 
   if (!isLoggedIn && !isAuthRoute) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
   }
   if (isLoggedIn && isAuthRoute) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+    const url = req.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
   }
   return NextResponse.next();
 });
