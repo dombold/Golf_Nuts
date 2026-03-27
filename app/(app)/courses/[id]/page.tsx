@@ -28,6 +28,27 @@ export default async function CourseDetailPage({
         <p className="text-gray-500 text-sm mt-1">
           {[course.city, course.state, course.country].filter(Boolean).join(", ")}
         </p>
+        {(course.address || course.phone) && (
+          <div className="mt-2 text-sm text-gray-500 space-y-0.5">
+            {course.address && (
+              <p>
+                {[course.address, course.city, course.postcode]
+                  .filter(Boolean)
+                  .join(", ")}
+              </p>
+            )}
+            {course.phone && (
+              <p>
+                <a
+                  href={`tel:${course.phone}`}
+                  className="text-fairway-600 hover:text-fairway-800 transition-colors"
+                >
+                  {course.phone}
+                </a>
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <Link

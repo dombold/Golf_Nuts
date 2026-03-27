@@ -11,6 +11,9 @@ interface Tee {
 interface Course {
   id: string;
   name: string;
+  address: string | null;
+  postcode: string | null;
+  phone: string | null;
   city: string | null;
   state: string | null;
   country: string | null;
@@ -122,6 +125,12 @@ export default function CourseSearchPage() {
                       </span>
                     )}
                   </p>
+                  {course.address && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {course.address}{course.postcode ? `, ${course.postcode}` : ""}
+                      {course.phone && <span className="ml-2">· {course.phone}</span>}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <Link

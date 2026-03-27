@@ -37,6 +37,8 @@ model Course {
   id        String   @id @default(cuid())
   name      String
   address   String?
+  postcode  String?
+  phone     String?
   city      String?
   state     String?
   country   String?

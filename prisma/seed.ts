@@ -52,6 +52,9 @@ interface DownloadedCourse {
   waRegion: string;
   waType: string;
   waNotes: string;
+  waAddress?: string;
+  waPostcode?: string;
+  waPhone?: string;
   apiCourse: ApiCourse | null;
 }
 
@@ -119,7 +122,9 @@ async function main() {
       await prisma.course.create({
         data: {
           name: courseName,
-          address: api?.location?.address,
+          address: entry.waAddress ?? api?.location?.address,
+          postcode: entry.waPostcode ?? null,
+          phone: entry.waPhone ?? null,
           city: api?.location?.city ?? entry.waCity,
           state: api?.location?.state ?? "Western Australia",
           country: api?.location?.country ?? "Australia",
