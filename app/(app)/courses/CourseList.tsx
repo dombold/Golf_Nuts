@@ -8,9 +8,11 @@ interface Tee { id: string }
 interface Course {
   id: string;
   name: string;
+  suburb: string | null;
   city: string | null;
   state: string | null;
   country: string | null;
+  notes: string | null;
   tees: Tee[];
 }
 
@@ -50,8 +52,11 @@ export default function CourseList({ courses }: { courses: Course[] }) {
             <div>
               <p className="font-semibold text-fairway-900">{course.name}</p>
               <p className="text-xs text-gray-500 mt-0.5">
-                {[course.city, course.state, course.country].filter(Boolean).join(", ")}
+                {[course.suburb ?? course.city, course.state, course.country].filter(Boolean).join(", ")}
               </p>
+              {course.notes && (
+                <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{course.notes}</p>
+              )}
               <p className="text-xs text-fairway-600 mt-0.5">
                 {course.tees.length} tee set{course.tees.length !== 1 ? "s" : ""}
               </p>

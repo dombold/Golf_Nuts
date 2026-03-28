@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
 interface Tee {
@@ -14,9 +14,11 @@ interface Course {
   address: string | null;
   postcode: string | null;
   phone: string | null;
+  suburb: string | null;
   city: string | null;
   state: string | null;
   country: string | null;
+  notes: string | null;
   tees: Tee[];
 }
 
@@ -27,6 +29,7 @@ export default function CourseSearchPage() {
   const [error, setError] = useState("");
   const [myCourseIds, setMyCourseIds] = useState<Set<string>>(new Set());
   const [adding, setAdding] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetch("/api/user/courses")
@@ -36,6 +39,21 @@ export default function CourseSearchPage() {
       })
       .catch(() => {});
   }, []);
+
+  // Dynamic search — fires 300ms after the user stops typing
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (query.trim().length < 2) {
+      setResults([]);
+      setError("");
+      return;
+    }
+    debounceRef.current = setTimeout(() => search(query), 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
 
   async function search(q: string) {
     if (q.trim().length < 2) return;
@@ -116,7 +134,7 @@ export default function CourseSearchPage() {
                 <div>
                   <p className="font-semibold text-fairway-900">{course.name}</p>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    {[course.city, course.state, course.country]
+                    {[course.suburb ?? course.city, course.state, course.country]
                       .filter(Boolean)
                       .join(", ")}
                     {course.tees.length > 0 && (
@@ -125,6 +143,9 @@ export default function CourseSearchPage() {
                       </span>
                     )}
                   </p>
+                  {course.notes && (
+                    <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{course.notes}</p>
+                  )}
                   {course.address && (
                     <p className="text-xs text-gray-400 mt-0.5">
                       {course.address}{course.postcode ? `, ${course.postcode}` : ""}

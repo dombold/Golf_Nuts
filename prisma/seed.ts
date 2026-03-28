@@ -6,7 +6,8 @@
  *   npx prisma db seed
  *   (or: npx tsx prisma/seed.ts)
  *
- * Safe to re-run — uses upsert by name.
+ * Safe to re-run — upserts by externalId (course), [courseId, name] (tee),
+ * and [teeId, number] (hole). Will update stale data on subsequent runs.
  */
 
 import * as fs from "fs";
@@ -20,7 +21,7 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 interface ApiHole {
   par: number;
   handicap?: number;
-  yardage?: number;
+  meters?: number;
 }
 
 interface ApiTee {
@@ -32,38 +33,36 @@ interface ApiTee {
   holes?: ApiHole[];
 }
 
-interface ApiCourse {
-  id: string;
-  club_name: string;
-  course_name?: string;
-  location?: {
-    address?: string;
-    city?: string;
-    state?: string;
-    country?: string;
-  };
-  tees?: { male?: ApiTee[]; female?: ApiTee[] } | ApiTee[];
+interface CourseEntry {
+  id: number;
+  name: string;
+  suburb: string;
+  city: string;
+  region: string;
+  state: string;
+  country: string;
+  type: string;
+  address?: string;
+  postcode?: string;
+  phone?: string;
+  latitude?: number;
+  longitude?: number;
+  notes?: string;
+  tees?: ApiTee[];
 }
 
-interface DownloadedCourse {
-  waName: string;
-  waSuburb: string;
-  waCity: string;
-  waRegion: string;
-  waType: string;
-  waNotes: string;
-  waAddress?: string;
-  waPostcode?: string;
-  waPhone?: string;
-  apiCourse: ApiCourse | null;
-}
-
-function flattenTees(tees: ApiCourse["tees"]): ApiTee[] {
+function flattenTees(tees: ApiTee[] | undefined): ApiTee[] {
   if (!tees) return [];
-  if (Array.isArray(tees)) return tees;
-  const tag = (group: ApiTee[], suffix: string) =>
-    group.map((t) => ({ ...t, tee_name: `${t.tee_name} (${suffix})` }));
-  return [...tag(tees.male ?? [], "Male"), ...tag(tees.female ?? [], "Female")];
+
+  // Deduplicate by tee name: keep the entry with the highest course_rating
+  const best = new Map<string, ApiTee>();
+  for (const t of tees) {
+    const key = t.tee_name.toLowerCase();
+    if (!best.has(key) || t.course_rating > best.get(key)!.course_rating) {
+      best.set(key, t);
+    }
+  }
+  return [...best.values()];
 }
 
 async function main() {
@@ -78,7 +77,7 @@ async function main() {
     process.exit(1);
   }
 
-  const courses: DownloadedCourse[] = JSON.parse(
+  const courses: CourseEntry[] = JSON.parse(
     fs.readFileSync(dataPath, "utf-8")
   );
 
@@ -87,73 +86,93 @@ async function main() {
   });
   const prisma = new PrismaClient({ adapter });
 
-  let seeded = 0;
-  let skipped = 0;
+  let inserted = 0;
+  let updated = 0;
 
   for (const entry of courses) {
-    const api = entry.apiCourse;
-
-    const courseName = api
-      ? (() => {
-          const parts = [api.club_name, api.course_name].filter(Boolean) as string[];
-          const raw = parts.length === 2 && parts[0].trim().toLowerCase() === parts[1].trim().toLowerCase()
-            ? parts[0]
-            : parts.join(" — ");
-          return raw
-            .replace(/\bG C\b/g, 'Golf Club')
-            .replace(/\bGc\b/g, 'Golf Club')
-            .replace(/\bCc\b/g, 'Country Club');
-        })()
-      : entry.waName;
-
-    const teeData = api ? flattenTees(api.tees) : [];
+    const courseName = entry.name;
+    const externalId = String(entry.id);
+    const teeData = flattenTees(entry.tees);
 
     try {
-      // Check if already exists
-      const existing = await prisma.course.findFirst({
-        where: { name: courseName },
+      const courseFields = {
+        name: courseName,
+        address: entry.address ?? null,
+        postcode: entry.postcode ?? null,
+        phone: entry.phone ?? null,
+        suburb: entry.suburb ?? null,
+        city: entry.city,
+        state: entry.state ?? "Western Australia",
+        country: entry.country ?? "Australia",
+        region: entry.region ?? null,
+        type: entry.type ?? null,
+        latitude: entry.latitude ?? null,
+        longitude: entry.longitude ?? null,
+        notes: entry.notes ?? null,
+      };
+
+      // Upsert course by externalId
+      const course = await prisma.course.upsert({
+        where: { externalId },
+        create: { ...courseFields, externalId },
+        update: courseFields,
       });
 
-      if (existing) {
-        skipped++;
-        continue;
+      const isNew = course.createdAt.getTime() > Date.now() - 5000;
+
+      // Upsert tees
+      for (const tee of teeData) {
+        const upsertedTee = await prisma.tee.upsert({
+          where: { courseId_name: { courseId: course.id, name: tee.tee_name } },
+          create: {
+            courseId: course.id,
+            name: tee.tee_name,
+            color: tee.tee_color ?? null,
+            rating: tee.course_rating,
+            slope: tee.slope_rating,
+            par: tee.par_total,
+          },
+          update: {
+            color: tee.tee_color ?? null,
+            rating: tee.course_rating,
+            slope: tee.slope_rating,
+            par: tee.par_total,
+          },
+        });
+
+        // Upsert holes
+        for (let i = 0; i < (tee.holes ?? []).length; i++) {
+          const h = tee.holes![i];
+          await prisma.hole.upsert({
+            where: { teeId_number: { teeId: upsertedTee.id, number: i + 1 } },
+            create: {
+              teeId: upsertedTee.id,
+              number: i + 1,
+              par: h.par,
+              strokeIndex: h.handicap ?? 0,
+              distance: h.meters ?? null,
+            },
+            update: {
+              par: h.par,
+              strokeIndex: h.handicap ?? 0,
+              distance: h.meters ?? null,
+            },
+          });
+        }
       }
 
-      await prisma.course.create({
-        data: {
-          name: courseName,
-          address: entry.waAddress ?? api?.location?.address,
-          postcode: entry.waPostcode ?? null,
-          phone: entry.waPhone ?? null,
-          city: api?.location?.city ?? entry.waCity,
-          state: api?.location?.state ?? "Western Australia",
-          country: api?.location?.country ?? "Australia",
-          externalId: api?.id != null ? String(api.id) : null,
-          tees: {
-            create: teeData.map((tee) => ({
-              name: tee.tee_name,
-              color: tee.tee_color ?? null,
-              rating: tee.course_rating,
-              slope: tee.slope_rating,
-              par: tee.par_total,
-              holes: {
-                create: (tee.holes ?? []).map((h, i) => ({
-                  number: i + 1,
-                  par: h.par,
-                  strokeIndex: h.handicap ?? 0,
-                  distance: h.yardage != null ? Math.round(h.yardage * 0.9144) : null,
-                })),
-              },
-            })),
-          },
-        },
-      });
-
       const teeCount = teeData.length;
-      console.log(
-        `✓ ${courseName}${teeCount > 0 ? ` (${teeCount} tees)` : " (no tees — add manually)"}`
-      );
-      seeded++;
+      if (isNew) {
+        console.log(
+          `✓ [NEW] ${courseName}${teeCount > 0 ? ` (${teeCount} tees)` : " (no tees — add manually)"}`
+        );
+        inserted++;
+      } else {
+        console.log(
+          `↻ [UPD] ${courseName}${teeCount > 0 ? ` (${teeCount} tees)` : " (no tees)"}`
+        );
+        updated++;
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`✗ Failed: ${courseName} — ${msg}`);
@@ -163,7 +182,7 @@ async function main() {
   await prisma.$disconnect();
 
   console.log(`\n──────────────────────────────────────`);
-  console.log(`Seeded: ${seeded}  |  Skipped (already exist): ${skipped}`);
+  console.log(`Inserted: ${inserted}  |  Updated: ${updated}  |  Total: ${inserted + updated}`);
 }
 
 main().catch((err) => {

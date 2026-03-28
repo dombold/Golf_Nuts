@@ -34,17 +34,23 @@ model User {
 }
 
 model Course {
-  id        String   @id @default(cuid())
-  name      String
-  address   String?
-  postcode  String?
-  phone     String?
-  city      String?
-  state     String?
-  country   String?
-  externalId String? @unique
+  id         String   @id @default(cuid())
+  name       String
+  address    String?
+  postcode   String?
+  phone      String?
+  suburb     String?
+  city       String?
+  state      String?
+  country    String?
+  region     String?
+  type       String?
+  latitude   Float?
+  longitude  Float?
+  notes      String?
+  externalId String?  @unique
   aliases    String[] @default([])
-  createdAt DateTime @default(now())
+  createdAt  DateTime @default(now())
 
   tees        Tee[]
   rounds      Round[]

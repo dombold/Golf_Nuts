@@ -15,7 +15,7 @@ export default async function CourseDetailPage({
     include: {
       tees: {
         include: { holes: { orderBy: { number: "asc" } } },
-        orderBy: { name: "asc" },
+        orderBy: { rating: "desc" },
       },
     },
   });
@@ -26,13 +26,16 @@ export default async function CourseDetailPage({
       <div>
         <h1 className="text-2xl font-bold text-fairway-900">{course.name}</h1>
         <p className="text-gray-500 text-sm mt-1">
-          {[course.city, course.state, course.country].filter(Boolean).join(", ")}
+          {[course.suburb ?? course.city, course.state, course.country].filter(Boolean).join(", ")}
         </p>
+        {course.notes && (
+          <p className="text-xs text-gray-400 mt-0.5">{course.notes}</p>
+        )}
         {(course.address || course.phone) && (
           <div className="mt-2 text-sm text-gray-500 space-y-0.5">
             {course.address && (
               <p>
-                {[course.address, course.city, course.postcode]
+                {[course.address, course.postcode]
                   .filter(Boolean)
                   .join(", ")}
               </p>

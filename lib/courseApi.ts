@@ -69,8 +69,17 @@ export async function getCourseById(externalId: string): Promise<ApiCourse> {
 
 export function flattenTees(tees: ApiCourse["tees"]): ApiTee[] {
   if (!tees) return [];
-  if (Array.isArray(tees)) return tees;
-  const tag = (group: ApiTee[], suffix: string) =>
-    group.map((t) => ({ ...t, tee_name: `${t.tee_name} (${suffix})` }));
-  return [...tag(tees.male ?? [], "Male"), ...tag(tees.female ?? [], "Female")];
+  const all: ApiTee[] = Array.isArray(tees)
+    ? tees
+    : [...(tees.male ?? []), ...(tees.female ?? [])];
+
+  // Deduplicate by tee name: keep the entry with the highest course_rating
+  const best = new Map<string, ApiTee>();
+  for (const t of all) {
+    const key = t.tee_name.toLowerCase();
+    if (!best.has(key) || t.course_rating > best.get(key)!.course_rating) {
+      best.set(key, t);
+    }
+  }
+  return [...best.values()];
 }
