@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 const FORMATS = [
@@ -12,8 +12,8 @@ const FORMATS = [
   { value: "AMBROSE_4", label: "4-Player Ambrose", desc: "Best ball scramble (teams of 4)" },
 ];
 
-interface Course { id: string; name: string; tees: Tee[] }
-interface Tee { id: string; name: string; rating: number; slope: number; par: number }
+interface Course { id: string; name: string; suburb: string | null; city: string | null; tees: Tee[] }
+interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
 interface User { id: string; name: string; email: string }
 
 function NewRoundForm() {
@@ -22,11 +22,16 @@ function NewRoundForm() {
   const preselectedCourseId = searchParams.get("courseId");
 
   const [step, setStep] = useState(1);
-  const [courses, setCourses] = useState<Course[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Course search state
+  const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Course[]>([]);
+  const [searching, setSearching] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [selectedTee, setSelectedTee] = useState<Tee | null>(null);
@@ -35,17 +40,16 @@ function NewRoundForm() {
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
 
   useEffect(() => {
-    fetch("/api/courses").then((r) => r.json()).then((d) => {
-      setCourses(d.courses ?? []);
-      if (preselectedCourseId) {
-        const c = d.courses?.find((c: Course) => c.id === preselectedCourseId);
-        if (c) setSelectedCourse(c);
-      }
-    });
     fetch("/api/users").then((r) => r.json()).then((d) => {
       setUsers(d.users ?? []);
       setCurrentUser(d.currentUser);
     });
+    if (preselectedCourseId) {
+      fetch(`/api/courses/${preselectedCourseId}`)
+        .then((r) => r.json())
+        .then((d) => { if (d.course) setSelectedCourse(d.course); })
+        .catch(() => {});
+    }
   }, [preselectedCourseId]);
 
   useEffect(() => {
@@ -54,8 +58,31 @@ function NewRoundForm() {
     }
   }, [currentUser]);
 
+  // Debounced course search
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (query.trim().length < 2) { setSearchResults([]); return; }
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await fetch(`/api/courses/search?q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        setSearchResults(data.courses ?? []);
+      } catch { /* silently fail */ }
+      finally { setSearching(false); }
+    }, 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [query]);
+
+  function selectCourse(course: Course) {
+    setSelectedCourse(course);
+    setSelectedTee(null);
+    setQuery("");
+    setSearchResults([]);
+  }
+
   function togglePlayer(id: string) {
-    if (id === currentUser?.id) return; // can't deselect yourself
+    if (id === currentUser?.id) return;
     setSelectedPlayers((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
     );
@@ -117,46 +144,83 @@ function NewRoundForm() {
         <div className="space-y-4">
           <h2 className="font-semibold text-fairway-800">Select course &amp; tee</h2>
 
-          {courses.length === 0 ? (
-            <div className="bg-fairway-50 rounded-xl p-6 text-center text-gray-500">
-              <p className="mb-2">No courses added yet</p>
-              <a href="/courses/search" className="text-fairway-700 font-medium hover:underline text-sm">
-                Search and add a course first
-              </a>
+          {/* Course search */}
+          <div className="relative">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => { setQuery(e.target.value); setSelectedCourse(null); setSelectedTee(null); }}
+                placeholder="Search by course or club name…"
+                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-fairway-500"
+              />
+              {searching && (
+                <div className="flex items-center px-3 text-gray-400 text-sm">…</div>
+              )}
             </div>
-          ) : (
-            <div className="space-y-2">
-              {courses.map((course) => (
-                <div key={course.id}>
+
+            {/* Search results dropdown */}
+            {searchResults.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                {searchResults.map((course) => (
                   <button
-                    onClick={() => { setSelectedCourse(course); setSelectedTee(null); }}
-                    className={`w-full text-left px-4 py-3 rounded-xl border transition-colors ${
-                      selectedCourse?.id === course.id
-                        ? "border-fairway-600 bg-fairway-50"
-                        : "border-gray-200 bg-white hover:border-fairway-300"
-                    }`}
+                    key={course.id}
+                    onClick={() => selectCourse(course)}
+                    className="w-full text-left px-4 py-3 hover:bg-fairway-50 transition-colors border-b border-gray-100 last:border-0"
                   >
-                    <p className="font-medium text-fairway-900">{course.name}</p>
+                    <p className="font-medium text-fairway-900 text-sm">{course.name}</p>
+                    {(course.suburb || course.city) && (
+                      <p className="text-xs text-gray-500 mt-0.5">{course.suburb ?? course.city}</p>
+                    )}
                   </button>
-                  {selectedCourse?.id === course.id && (
-                    <div className="mt-2 ml-4 space-y-2">
-                      {course.tees.map((tee) => (
-                        <button
-                          key={tee.id}
-                          onClick={() => setSelectedTee(tee)}
-                          className={`w-full text-left px-3 py-2 rounded-lg border text-sm transition-colors ${
-                            selectedTee?.id === tee.id
-                              ? "border-fairway-600 bg-fairway-100 text-fairway-900"
-                              : "border-gray-100 bg-white hover:border-fairway-200"
-                          }`}
-                        >
-                          {tee.name} — CR {tee.rating} / Slope {tee.slope} / Par {tee.par}
-                        </button>
-                      ))}
-                    </div>
+                ))}
+              </div>
+            )}
+
+            {!searching && query.trim().length >= 2 && searchResults.length === 0 && (
+              <p className="text-sm text-gray-400 mt-2 px-1">No courses found for &quot;{query}&quot;</p>
+            )}
+          </div>
+
+          {/* Selected course & tees */}
+          {selectedCourse && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-fairway-600 bg-fairway-50">
+                <div>
+                  <p className="font-medium text-fairway-900">{selectedCourse.name}</p>
+                  {(selectedCourse.suburb || selectedCourse.city) && (
+                    <p className="text-xs text-gray-500 mt-0.5">{selectedCourse.suburb ?? selectedCourse.city}</p>
                   )}
                 </div>
-              ))}
+                <button
+                  onClick={() => { setSelectedCourse(null); setSelectedTee(null); }}
+                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  Change
+                </button>
+              </div>
+
+              <p className="text-sm font-medium text-fairway-800 pt-1">Select tee</p>
+              <div className="space-y-2">
+                {selectedCourse.tees.length === 0 ? (
+                  <p className="text-sm text-gray-400 px-1">No tees available for this course.</p>
+                ) : (
+                  selectedCourse.tees.map((tee) => (
+                    <button
+                      key={tee.id}
+                      onClick={() => setSelectedTee(tee)}
+                      className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm transition-colors ${
+                        selectedTee?.id === tee.id
+                          ? "border-fairway-600 bg-fairway-100 text-fairway-900"
+                          : "border-gray-200 bg-white hover:border-fairway-300"
+                      }`}
+                    >
+                      <span className="font-medium">{tee.name}</span>
+                      <span className="text-gray-500 ml-2">CR {tee.rating} / Slope {tee.slope} / Par {tee.par}</span>
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
           )}
 

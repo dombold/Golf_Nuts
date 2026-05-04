@@ -6,7 +6,7 @@ export async function GET() {
   if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const courses = await prisma.course.findMany({
-    include: { tees: { orderBy: { name: "asc" } } },
+    include: { tees: { orderBy: [{ totalMeters: "desc" }, { rating: "desc" }] } },
     orderBy: { name: "asc" },
   });
 

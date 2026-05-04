@@ -30,6 +30,7 @@ interface ApiTee {
   course_rating: number;
   slope_rating: number;
   par_total: number;
+  total_meters?: number;
   holes?: ApiHole[];
 }
 
@@ -122,6 +123,10 @@ async function main() {
 
       // Upsert tees
       for (const tee of teeData) {
+        const totalMeters =
+          tee.total_meters ??
+          (tee.holes ? tee.holes.reduce((sum, h) => sum + (h.meters ?? 0), 0) || null : null);
+
         const upsertedTee = await prisma.tee.upsert({
           where: { courseId_name: { courseId: course.id, name: tee.tee_name } },
           create: {
@@ -131,12 +136,14 @@ async function main() {
             rating: tee.course_rating,
             slope: tee.slope_rating,
             par: tee.par_total,
+            totalMeters,
           },
           update: {
             color: tee.tee_color ?? null,
             rating: tee.course_rating,
             slope: tee.slope_rating,
             par: tee.par_total,
+            totalMeters,
           },
         });
 

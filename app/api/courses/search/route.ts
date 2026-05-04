@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
           { id: { in: aliasIds } },
         ],
       },
-      include: { tees: true },
+      include: { tees: { orderBy: [{ totalMeters: "desc" }, { rating: "desc" }] } },
       orderBy: { name: "asc" },
       take: 20,
     });
