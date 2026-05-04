@@ -20,11 +20,7 @@ export default function HoleMap({ hole }: { hole: HoleCoords }) {
     hole.greenLng != null;
 
   if (!hasCoords) {
-    return (
-      <div className="w-full aspect-video rounded-xl bg-fairway-50 border border-fairway-100 flex items-center justify-center">
-        <p className="text-sm text-gray-400">No map available</p>
-      </div>
-    );
+    return null;
   }
 
   const src = `/api/maps/hole-image?teeLat=${hole.teeLat}&teeLng=${hole.teeLng}&greenLat=${hole.greenLat}&greenLng=${hole.greenLng}`;

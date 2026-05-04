@@ -199,19 +199,16 @@ export default function ScoringPage() {
       {tab === "score" && hole && (
         <div className="space-y-4">
           {/* Hole info */}
-          <div className="bg-fairway-700 text-white rounded-xl px-4 py-3 flex items-center justify-between">
-            <div>
-              <span className="text-xs text-fairway-300 uppercase tracking-wider">Hole {hole.number}</span>
-              <p className="text-lg font-bold">Par {hole.par}</p>
+          <div className="bg-fairway-700 text-white rounded-xl px-4 py-3">
+            <div className="flex items-baseline gap-4">
+              <p className="text-3xl font-bold">Hole {hole.number}</p>
+              <p className="text-3xl font-bold text-fairway-200">Par {hole.par}</p>
             </div>
-            <div className="text-right text-sm text-fairway-200">
-              <p>SI: {hole.strokeIndex}</p>
-              {hole.distance && <p>{hole.distance} yds</p>}
+            <div className="flex gap-4 mt-1 text-sm text-fairway-300">
+              <span>SI: {hole.strokeIndex}</span>
+              {hole.distance && <span>{hole.distance}m</span>}
             </div>
           </div>
-
-          {/* Hole map */}
-          <HoleMap hole={hole} />
 
           {/* Score entry per player */}
           {round.players.map((player) => {
@@ -284,6 +281,9 @@ export default function ScoringPage() {
               </div>
             );
           })}
+
+          {/* Hole map */}
+          <HoleMap hole={hole} />
 
           {/* Hole navigation */}
           <div className="flex gap-3">

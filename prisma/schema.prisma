@@ -74,13 +74,14 @@ model UserCourse {
 }
 
 model Tee {
-  id       String  @id @default(cuid())
-  courseId String
-  name     String
-  color    String?
-  rating   Float
-  slope    Int
-  par      Int
+  id          String  @id @default(cuid())
+  courseId    String
+  name        String
+  color       String?
+  rating      Float
+  slope       Int
+  par         Int
+  totalMeters Int?
 
   course           Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
   holes            Hole[]
@@ -98,7 +99,7 @@ model Hole {
   number      Int
   par         Int
   strokeIndex Int
-  distance    Int?
+  distance    Int?   // metres
   teeLat      Float?
   teeLng      Float?
   greenLat    Float?
