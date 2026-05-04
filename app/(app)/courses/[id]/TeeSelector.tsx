@@ -16,6 +16,7 @@ interface Tee {
   rating: number;
   slope: number;
   par: number;
+  totalMeters: number | null;
   holes: Hole[];
 }
 
@@ -45,7 +46,7 @@ export default function TeeSelector({ tees }: { tees: Tee[] }) {
             >
               <span className="font-semibold">{tee.name} Tees</span>
               <span className={`text-sm ${isSelected ? "text-fairway-300" : "text-gray-400"}`}>
-                CR {tee.rating} / Slope {tee.slope} / Par {tee.par}
+                CR {tee.rating} / Length {tee.totalMeters != null ? `${tee.totalMeters}m` : "—"} / Par {tee.par}
               </span>
             </button>
           );

@@ -216,7 +216,7 @@ function NewRoundForm() {
                       }`}
                     >
                       <span className="font-medium">{tee.name}</span>
-                      <span className="text-gray-500 ml-2">CR {tee.rating} / Slope {tee.slope} / Par {tee.par}</span>
+                      <span className="text-gray-500 ml-2">CR {tee.rating} / Length {tee.totalMeters != null ? `${tee.totalMeters}m` : "—"} / Par {tee.par}</span>
                     </button>
                   ))
                 )}

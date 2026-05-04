@@ -9,7 +9,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   const course = await prisma.course.findUnique({
     where: { id },
-    include: { tees: { orderBy: [{ totalMeters: "desc" }, { rating: "desc" }] } },
+    include: { tees: { orderBy: [{ totalMeters: { sort: "desc", nulls: "last" } }, { rating: "desc" }] } },
   });
 
   if (!course) return Response.json({ error: "Not found" }, { status: 404 });

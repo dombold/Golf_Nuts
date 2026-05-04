@@ -13,7 +13,7 @@ const FORMATS = [
 ];
 
 interface Course { id: string; name: string; tees: Tee[] }
-interface Tee { id: string; name: string; rating: number; slope: number; par: number }
+interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
 interface User { id: string; name: string; email: string; handicapIndex?: number }
 
 export default function NewTournamentPage() {
@@ -171,7 +171,7 @@ export default function NewTournamentPage() {
                               : "border-gray-100 bg-white hover:border-fairway-200"
                           }`}
                         >
-                          {tee.name} — CR {tee.rating} / Slope {tee.slope} / Par {tee.par}
+                          {tee.name} — CR {tee.rating} / Length {tee.totalMeters != null ? `${tee.totalMeters}m` : "—"} / Par {tee.par}
                         </button>
                       ))}
                     </div>
