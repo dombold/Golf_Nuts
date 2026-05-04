@@ -182,7 +182,14 @@ export default async function TournamentDetailPage({
           {/* Organiser view */}
           {isOrganiser && (
             <>
-              {/* Player invitation list */}
+              <Link
+              href={`/tournaments/${id}/edit`}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-fairway-700 hover:text-fairway-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500 rounded"
+            >
+              Edit event details →
+            </Link>
+
+            {/* Player invitation list */}
               <div className="space-y-2">
                 <h2 className="text-base font-semibold text-fairway-900">Players</h2>
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm divide-y divide-gray-50">
