@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 const FORMATS = [
@@ -27,7 +27,10 @@ export default function NewTournamentPage() {
   const [date, setDate] = useState("");
 
   // Step 2 — Course & Tee
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [courseQuery, setCourseQuery] = useState("");
+  const [courseResults, setCourseResults] = useState<Course[]>([]);
+  const [courseLoading, setCourseLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [selectedTee, setSelectedTee] = useState<Tee | null>(null);
 
@@ -39,9 +42,29 @@ export default function NewTournamentPage() {
   const [inviteeIds, setInviteeIds] = useState<string[]>([]);
 
   useEffect(() => {
-    fetch("/api/courses").then((r) => r.json()).then((d) => setCourses(d.courses ?? []));
     fetch("/api/users").then((r) => r.json()).then((d) => setUsers(d.users ?? []));
   }, []);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (courseQuery.trim().length < 2) {
+      setCourseResults([]);
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      setCourseLoading(true);
+      try {
+        const res = await fetch(`/api/courses/search?q=${encodeURIComponent(courseQuery)}`);
+        const data = await res.json();
+        setCourseResults(data.courses ?? []);
+      } catch {
+        setCourseResults([]);
+      } finally {
+        setCourseLoading(false);
+      }
+    }, 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [courseQuery]);
 
   function toggleInvitee(id: string) {
     setInviteeIds((prev) =>
@@ -138,16 +161,30 @@ export default function NewTournamentPage() {
         <div className="space-y-4">
           <h2 className="font-semibold text-fairway-800">Select course &amp; tee</h2>
 
-          {courses.length === 0 ? (
-            <div className="bg-fairway-50 rounded-xl p-6 text-center text-gray-500">
-              <p className="mb-2">No courses added yet</p>
-              <a href="/courses/search" className="text-fairway-700 font-medium hover:underline text-sm">
-                Search and add a course first
-              </a>
-            </div>
-          ) : (
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={courseQuery}
+              onChange={(e) => { setCourseQuery(e.target.value); setSelectedCourse(null); setSelectedTee(null); }}
+              placeholder="Search by course or club name…"
+              className="flex-1 px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-fairway-500 text-sm"
+            />
+            {courseLoading && (
+              <span className="self-center text-gray-400 text-sm px-2">…</span>
+            )}
+          </div>
+
+          {courseQuery.trim().length < 2 && (
+            <p className="text-sm text-gray-400 text-center py-4">Type at least 2 characters to search</p>
+          )}
+
+          {courseQuery.trim().length >= 2 && !courseLoading && courseResults.length === 0 && (
+            <p className="text-sm text-gray-400 text-center py-4">No courses found for &quot;{courseQuery}&quot;</p>
+          )}
+
+          {courseResults.length > 0 && (
             <div className="space-y-2">
-              {courses.map((course) => (
+              {courseResults.map((course) => (
                 <div key={course.id}>
                   <button
                     onClick={() => { setSelectedCourse(course); setSelectedTee(null); }}
