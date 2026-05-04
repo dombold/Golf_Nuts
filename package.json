@@ -20,7 +20,7 @@
     "framer-motion": "^12.38.0",
     "idb": "^8.0.3",
     "jsonwebtoken": "^9.0.3",
-    "next": "16.2.1",
+    "next": "^16.2.4",
     "next-auth": "^5.0.0-beta.30",
     "nodemailer": "^7.0.13",
     "pg": "^8.20.0",

@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import ActiveRoundCard from "@/components/ActiveRoundCard";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -13,6 +14,12 @@ export default async function DashboardPage() {
 
   const pendingInvitations = await prisma.tournamentInvitation.count({
     where: { userId, status: "PENDING" },
+  });
+
+  const activeRounds = await prisma.round.findMany({
+    where: { players: { some: { userId } }, status: "ACTIVE" },
+    include: { course: { select: { name: true } } },
+    orderBy: { date: "desc" },
   });
 
   const recentRounds = await prisma.round.findMany({
@@ -48,6 +55,11 @@ export default async function DashboardPage() {
           + New Round
         </Link>
       </div>
+
+      {/* Active rounds — resume banner */}
+      {activeRounds.map((round) => (
+        <ActiveRoundCard key={round.id} roundId={round.id} courseName={round.course.name} />
+      ))}
 
       {/* Pending tournament invitations */}
       {pendingInvitations > 0 && (

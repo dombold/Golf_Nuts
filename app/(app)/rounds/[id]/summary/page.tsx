@@ -189,6 +189,12 @@ export default async function RoundSummaryPage({
         >
           ← Back to Dashboard
         </Link>
+        <Link
+          href={`/rounds/${id}/score`}
+          className="flex-1 text-center py-3 bg-white border border-fairway-200 text-fairway-800 rounded-xl font-semibold hover:bg-fairway-50 transition-colors"
+        >
+          Edit Scores
+        </Link>
         <DeleteRoundButton roundId={id} />
       </div>
     </div>

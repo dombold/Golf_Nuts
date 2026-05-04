@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import HoleMap from "@/components/HoleMap";
 import { useParams, useRouter } from "next/navigation";
 
@@ -54,6 +54,7 @@ export default function ScoringPage() {
   const [scores, setScores] = useState<Record<string, Record<number, ScoreEntry>>>({});
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<"score" | "leaderboard">("score");
+  const firstLoadRef = useRef(true);
 
   const fetchRound = useCallback(async () => {
     const res = await fetch(`/api/rounds/${id}/score`);
@@ -66,6 +67,14 @@ export default function ScoringPage() {
         for (const s of player.scores) {
           existing[player.id][s.holeNumber] = { strokes: s.strokes, penalties: 0 };
         }
+      }
+      if (firstLoadRef.current) {
+        firstLoadRef.current = false;
+        const holes: Hole[] = data.round.tee.holes.slice(0, data.round.holesCount);
+        const nextHole = holes.find((h) =>
+          !data.round.players.every((p: Player) => (existing[p.id]?.[h.number]?.strokes ?? 0) > 0)
+        );
+        if (nextHole) setCurrentHole(nextHole.number);
       }
       setScores((prev) => {
         const merged = { ...existing };
@@ -128,8 +137,14 @@ export default function ScoringPage() {
   }
 
   async function finishRound() {
-    await fetch(`/api/rounds/${id}/complete`, { method: "POST" });
-    router.push(`/rounds/${id}/summary`);
+    if (round?.status === "COMPLETE") {
+      await saveHole();
+      router.push(`/rounds/${id}/summary`);
+    } else {
+      await saveHole();
+      await fetch(`/api/rounds/${id}/complete`, { method: "POST" });
+      router.push(`/rounds/${id}/summary`);
+    }
   }
 
   if (!round) {
@@ -173,6 +188,9 @@ export default function ScoringPage() {
         <div>
           <p className="font-bold">{round.course.name}</p>
           <p className="text-fairway-300 text-xs">{round.tee.name} tees · {round.format.replace(/_/g, " ")}</p>
+          {round.status === "COMPLETE" && (
+            <p className="text-xs text-acorn-400 mt-0.5">Editing saved round</p>
+          )}
         </div>
         <div className="text-right">
           <p className="text-2xl font-bold">{currentHole}<span className="text-fairway-400 text-base">/{totalHoles}</span></p>
@@ -200,13 +218,13 @@ export default function ScoringPage() {
         <div className="space-y-4">
           {/* Hole info */}
           <div className="bg-fairway-700 text-white rounded-xl px-4 py-3">
-            <div className="flex items-baseline gap-4">
+            <div className="flex items-baseline justify-between">
               <p className="text-3xl font-bold">Hole {hole.number}</p>
               <p className="text-3xl font-bold text-fairway-200">Par {hole.par}</p>
+              {hole.distance && <p className="text-3xl font-bold text-fairway-200">{hole.distance}m</p>}
             </div>
-            <div className="flex gap-4 mt-1 text-sm text-fairway-300">
+            <div className="mt-1 text-sm text-fairway-300">
               <span>SI: {hole.strokeIndex}</span>
-              {hole.distance && <span>{hole.distance}m</span>}
             </div>
           </div>
 
@@ -220,7 +238,13 @@ export default function ScoringPage() {
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <p className="font-semibold text-fairway-900">{player.user.name}</p>
-                    <p className="text-xs text-gray-400">Hcap {player.playingHandicap} · +{handi} shot{handi !== 1 ? "s" : ""} · Net par {netPar}</p>
+                    <p className="text-sm font-medium text-fairway-700 mt-0.5">
+                      Hcap {player.playingHandicap}
+                      <span className="mx-1.5 text-fairway-300">·</span>
+                      +{handi} shot{handi !== 1 ? "s" : ""}
+                      <span className="mx-1.5 text-fairway-300">·</span>
+                      Net par {netPar}
+                    </p>
                   </div>
                   {s.strokes > 0 && (
                     <span className={`w-9 h-9 flex items-center justify-center font-bold text-sm ${scoreBadgeClass(s.strokes, hole.par, player.playingHandicap, hole.strokeIndex)}`}>
@@ -303,12 +327,12 @@ export default function ScoringPage() {
             </button>
           </div>
 
-          {currentHole === totalHoles && (
+          {(currentHole === totalHoles || round.status === "COMPLETE") && (
             <button
               onClick={finishRound}
               className="w-full py-3 bg-acorn-700 text-white rounded-xl font-semibold hover:bg-acorn-900 transition-colors"
             >
-              🏁 Finish Round
+              {round.status === "COMPLETE" ? "✓ Save & Return to Summary" : "🏁 Finish Round"}
             </button>
           )}
 
