@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
 
-function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = atob(base64);
-  const arr = new Uint8Array(rawData.length);
+  const arr = new Uint8Array(new ArrayBuffer(rawData.length));
   for (let i = 0; i < rawData.length; i++) arr[i] = rawData.charCodeAt(i);
-  return arr.buffer as ArrayBuffer;
+  return arr;
 }
 
 type PermissionState = "default" | "granted" | "denied" | "unsupported";
