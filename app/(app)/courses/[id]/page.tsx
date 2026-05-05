@@ -15,7 +15,7 @@ export default async function CourseDetailPage({
     include: {
       tees: {
         include: { holes: { orderBy: { number: "asc" } } },
-        orderBy: { rating: "desc" },
+        orderBy: [{ totalMeters: { sort: "desc", nulls: "last" } }, { rating: "desc" }],
       },
     },
   });
