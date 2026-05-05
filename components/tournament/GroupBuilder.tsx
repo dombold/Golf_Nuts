@@ -51,6 +51,9 @@ export default function GroupBuilder({
   );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [randomising, setRandomising] = useState(false);
+  const [wasRandomised, setWasRandomised] = useState(false);
+  const [randomiseError, setRandomiseError] = useState<string | null>(null);
 
   // Players not yet assigned to any group
   const assignedIds = new Set(groups.flatMap((g) => g.members.map((m) => m.userId)));
@@ -132,6 +135,24 @@ export default function GroupBuilder({
     });
     setSaving(false);
     if (res.ok) setSaved(true);
+  }
+
+  async function randomiseTeams() {
+    setRandomising(true);
+    setWasRandomised(false);
+    setRandomiseError(null);
+    try {
+      const res = await fetch(`/api/tournaments/${tournamentId}/groups/randomise`);
+      if (!res.ok) throw new Error("Randomisation failed");
+      const data = await res.json();
+      setGroups(data.groups);
+      setSaved(false);
+      setWasRandomised(true);
+    } catch {
+      setRandomiseError("Could not randomise teams. Please try again.");
+    } finally {
+      setRandomising(false);
+    }
   }
 
   function playerName(id: string) {
@@ -248,27 +269,47 @@ export default function GroupBuilder({
         </div>
       ))}
 
-      <div className="flex gap-3">
+      <div className="space-y-3">
         <button
-          onClick={addGroup}
-          className="flex-1 py-2.5 border border-dashed border-fairway-400 text-fairway-700 rounded-xl text-sm font-medium hover:bg-fairway-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-400"
+          onClick={randomiseTeams}
+          disabled={randomising || saving}
+          className="w-full py-2.5 border border-acorn-300 text-acorn-700 rounded-xl text-sm font-medium hover:bg-acorn-100 transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-acorn-300"
         >
-          + Add group
+          {randomising ? "Randomising…" : "Randomise Teams"}
         </button>
-        <button
-          onClick={saveGroups}
-          disabled={saving || unassigned.length > 0}
-          className="flex-1 py-2.5 bg-fairway-700 text-white rounded-xl text-sm font-semibold hover:bg-fairway-800 transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500"
-        >
-          {saving ? "Saving…" : saved ? "Saved ✓" : "Save groups"}
-        </button>
-      </div>
 
-      {unassigned.length > 0 && (
-        <p className="text-xs text-amber-600 text-center">
-          {unassigned.length} player{unassigned.length > 1 ? "s" : ""} must be assigned before saving
-        </p>
-      )}
+        <div className="flex gap-3">
+          <button
+            onClick={addGroup}
+            className="flex-1 py-2.5 border border-dashed border-fairway-400 text-fairway-700 rounded-xl text-sm font-medium hover:bg-fairway-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-400"
+          >
+            + Add group
+          </button>
+          <button
+            onClick={saveGroups}
+            disabled={saving || unassigned.length > 0}
+            className="flex-1 py-2.5 bg-fairway-700 text-white rounded-xl text-sm font-semibold hover:bg-fairway-800 transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500"
+          >
+            {saving ? "Saving…" : saved ? "Saved ✓" : "Save groups"}
+          </button>
+        </div>
+
+        {wasRandomised && !saved && (
+          <p className="text-xs text-acorn-700 text-center">
+            Groups auto-generated — adjust as needed, then save
+          </p>
+        )}
+
+        {randomiseError && (
+          <p className="text-xs text-red-600 text-center">{randomiseError}</p>
+        )}
+
+        {unassigned.length > 0 && (
+          <p className="text-xs text-amber-600 text-center">
+            {unassigned.length} player{unassigned.length > 1 ? "s" : ""} must be assigned before saving
+          </p>
+        )}
+      </div>
     </div>
   );
 }
