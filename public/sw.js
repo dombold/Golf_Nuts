@@ -1,5 +1,5 @@
 const CACHE_NAME = "golf-nuts-v1";
-const STATIC_ASSETS = ["/", "/dashboard", "/golf_nuts_badge.jpg", "/manifest.json"];
+const STATIC_ASSETS = ["/", "/dashboard", "/golf_nuts_badge.jpg", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

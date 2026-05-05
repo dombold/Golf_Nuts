@@ -183,11 +183,11 @@ export default async function TournamentDetailPage({
           {isOrganiser && (
             <>
               <Link
-              href={`/tournaments/${id}/edit`}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-fairway-700 hover:text-fairway-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500 rounded"
-            >
-              Edit event details →
-            </Link>
+                href={`/tournaments/${id}/edit`}
+                className="block w-full text-center py-2.5 border border-fairway-300 text-fairway-700 rounded-xl text-sm font-medium hover:bg-fairway-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500"
+              >
+                Edit event details
+              </Link>
 
             {/* Player invitation list */}
               <div className="space-y-2">

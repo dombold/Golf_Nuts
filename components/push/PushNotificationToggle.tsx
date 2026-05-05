@@ -19,6 +19,7 @@ export default function PushNotificationToggle() {
   const [permission, setPermission] = useState<PermissionState>("default");
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!("Notification" in window) || !("serviceWorker" in navigator)) {
@@ -27,7 +28,6 @@ export default function PushNotificationToggle() {
     }
     setPermission(Notification.permission as PermissionState);
 
-    // Check if already subscribed
     navigator.serviceWorker.ready.then((reg) => {
       reg.pushManager.getSubscription().then((sub) => {
         setSubscribed(!!sub);
@@ -37,6 +37,7 @@ export default function PushNotificationToggle() {
 
   async function handleEnable() {
     setLoading(true);
+    setError(null);
     try {
       const result = await Notification.requestPermission();
       setPermission(result as PermissionState);
@@ -48,13 +49,16 @@ export default function PushNotificationToggle() {
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
 
-      await fetch("/api/push/subscribe", {
+      const res = await fetch("/api/push/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(sub.toJSON()),
       });
 
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
       setSubscribed(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to enable notifications");
     } finally {
       setLoading(false);
     }
@@ -96,6 +100,8 @@ export default function PushNotificationToggle() {
   }
 
   return (
+    <div className="space-y-2">
+    {error && <p className="text-sm text-red-600">{error}</p>}
     <div className="flex items-center justify-between">
       <div>
         <p className="font-medium text-gray-800">Tournament invitations</p>
@@ -121,6 +127,7 @@ export default function PushNotificationToggle() {
           }`}
         />
       </button>
+    </div>
     </div>
   );
 }

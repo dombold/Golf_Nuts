@@ -44,7 +44,7 @@ export default function EditEventForm({ tournament }: { tournament: TournamentDa
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!changingCourse) return;
+    if (!changingCourse && !!selectedCourse) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (courseQuery.trim().length < 2) {
       setCourseResults([]);
@@ -63,7 +63,7 @@ export default function EditEventForm({ tournament }: { tournament: TournamentDa
       }
     }, 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [courseQuery, changingCourse]);
+  }, [courseQuery, changingCourse, selectedCourse]);
 
   function handleChangeCourse() {
     setSelectedCourse(null);

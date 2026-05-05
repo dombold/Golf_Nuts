@@ -5,15 +5,15 @@ A full-stack golf scoring and social web app built with Next.js 16, Prisma 7, an
 ## Features
 
 - **Round tracking** — log rounds across multiple game formats: Strokeplay, Stableford, Match Play, Skins, Ambrose (2/4 player)
-- **Scorecards** — per-hole scoring with strokes, penalties, putts, fairways hit, and GIR
+- **Scorecards** — per-hole scoring with strokes, penalties, putts, fairways hit, and GIR; hole info panel shows hole number, par, stroke index, and distance; Google Maps hole view displayed below the score entry cards
 - **Handicap system** — automatic handicap index tracking and history
-- **Courses** — search and import courses via the Golf Course API, with full tee data (rating, slope, par, hole distances)
-- **Tournaments** — create and manage multi-round tournaments with groups, invitations, and leaderboards
+- **Courses** — search and import courses via the Golf Course API, with full tee data (rating, slope, par, hole distances in metres); courses display address, postcode, and phone number on search results and detail pages; tees sorted by total length descending; remove course button on the courses page
+- **Tournaments** — create and manage multi-round tournaments with groups, invitations, and leaderboards; course search available during event creation (step 2)
 - **Stats & charts** — visualise performance trends across rounds and tournaments
 - **Social** — friends, round comments, and likes
 - **Auth** — email/password login with password reset via email
 - **Push notifications** — invitees receive a phone notification when invited to a tournament, with Accept / Decline actions (Android Chrome; iOS when installed as PWA)
-- **PWA** — installable as a Progressive Web App with service worker support
+- **PWA** — installable as a Progressive Web App with service worker support and in-app install prompt banner
 
 ## Tech Stack
 
