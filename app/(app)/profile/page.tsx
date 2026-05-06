@@ -39,7 +39,7 @@ export default async function ProfilePage() {
     year: "numeric",
   });
 
-  const initials = (user.firstName[0] + user.lastName[0]).toUpperCase();
+  const initials = `${user.firstName?.[0] ?? "?"}${user.lastName?.[0] ?? "?"}`.toUpperCase();
 
   const fromReset = session.user.loginMethod === "reset_token";
 
