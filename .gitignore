@@ -24,6 +24,9 @@
 .DS_Store
 *.pem
 
+# temporary screenshots
+/temporary screenshots
+
 # scripts
 /scripts
 

@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { z } from "zod";
 
 declare module "next-auth" {
@@ -12,6 +13,7 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       username: string;
+      loginMethod?: string;
     };
   }
 }
@@ -28,8 +30,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         usernameOrEmail: { label: "Username or Email", type: "text" },
         password: { label: "Password", type: "password" },
+        resetToken: { label: "Reset Token", type: "text" },
       },
       async authorize(credentials) {
+        // Reset-token sign-in path
+        if (credentials?.resetToken) {
+          const token = credentials.resetToken as string;
+          const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+          const record = await prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+          if (!record || record.expiresAt < new Date()) return null;
+          // Consume the token — it's now bound to this session
+          await prisma.passwordResetToken.delete({ where: { tokenHash } });
+          const user = await prisma.user.findUnique({ where: { id: record.userId } });
+          if (!user) return null;
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.avatarUrl,
+            username: user.username,
+            loginMethod: "reset_token",
+          };
+        }
+
+        // Regular credentials path
         const parsed = LoginSchema.safeParse(credentials);
         if (!parsed.success) return null;
 
@@ -43,10 +67,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         });
         if (!user) return null;
 
-        const valid = await bcrypt.compare(
-          parsed.data.password,
-          user.passwordHash
-        );
+        const valid = await bcrypt.compare(parsed.data.password, user.passwordHash);
         if (!valid) return null;
 
         return {
@@ -55,6 +76,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           image: user.avatarUrl,
           username: user.username,
+          loginMethod: "credentials",
         };
       },
     }),
@@ -66,14 +88,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user?.id) token.sub = user.id;
-      if ((user as { username?: string })?.username) {
-        token.username = (user as { username?: string }).username;
-      }
+      const u = user as { username?: string; loginMethod?: string } | undefined;
+      if (u?.username) token.username = u.username;
+      if (u?.loginMethod) token.loginMethod = u.loginMethod;
       return token;
     },
     async session({ session, token }) {
       if (token.sub) session.user.id = token.sub;
       if (token.username) session.user.username = token.username as string;
+      if (token.loginMethod) session.user.loginMethod = token.loginMethod as string;
       return session;
     },
   },

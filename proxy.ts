@@ -6,12 +6,15 @@ export default auth(function proxy(req: NextRequest & { auth: { user?: unknown }
   const isLoggedIn = !!req.auth?.user;
   const path = req.nextUrl.pathname;
 
+  // /reset-password/[token] must be reachable by both guests and logged-in users
   const isAuthRoute =
     path.startsWith("/login") ||
     path.startsWith("/register") ||
-    path.startsWith("/reset-password");
+    path === "/reset-password";
 
-  if (!isLoggedIn && !isAuthRoute) {
+  const isPublicRoute = isAuthRoute || path.startsWith("/reset-password/");
+
+  if (!isLoggedIn && !isPublicRoute) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

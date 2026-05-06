@@ -4,23 +4,32 @@ import { redirect } from "next/navigation";
 import ProfileForm from "@/components/ProfileForm";
 import AvatarUpload from "@/components/AvatarUpload";
 import PushNotificationToggle from "@/components/push/PushNotificationToggle";
+import ChangePasswordForm from "@/components/ChangePasswordForm";
+import PasskeyManager from "@/components/PasskeyManager";
 
 export default async function ProfilePage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: {
-      username: true,
-      firstName: true,
-      lastName: true,
-      email: true,
-      handicapIndex: true,
-      createdAt: true,
-      avatarUrl: true,
-    },
-  });
+  const [user, passkeys] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        username: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        handicapIndex: true,
+        createdAt: true,
+        avatarUrl: true,
+      },
+    }),
+    prisma.webAuthnCredential.findMany({
+      where: { userId: session.user.id },
+      select: { id: true, name: true, createdAt: true, lastUsedAt: true },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
 
   if (!user) redirect("/login");
 
@@ -31,6 +40,8 @@ export default async function ProfilePage() {
   });
 
   const initials = (user.firstName[0] + user.lastName[0]).toUpperCase();
+
+  const fromReset = session.user.loginMethod === "reset_token";
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
@@ -57,8 +68,24 @@ export default async function ProfilePage() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-fairway-100 p-6">
+        <h2 className="text-lg font-semibold text-fairway-900 mb-4">Password</h2>
+        <ChangePasswordForm fromReset={fromReset} />
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-fairway-100 p-6">
         <h2 className="text-lg font-semibold text-fairway-900 mb-4">Notifications</h2>
         <PushNotificationToggle />
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-fairway-100 p-6">
+        <h2 className="text-lg font-semibold text-fairway-900 mb-4">Biometric Login</h2>
+        <PasskeyManager
+          passkeys={passkeys.map((p) => ({
+            ...p,
+            createdAt: p.createdAt.toISOString(),
+            lastUsedAt: p.lastUsedAt.toISOString(),
+          }))}
+        />
       </div>
     </div>
   );

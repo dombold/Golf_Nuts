@@ -11,7 +11,7 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setPending(true);
     const email = (e.currentTarget.elements.namedItem("email") as HTMLInputElement).value;
-    await fetch("/api/auth/reset-password", {
+    await fetch("/api/password-reset", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),

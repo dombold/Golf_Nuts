@@ -108,10 +108,13 @@ export default function GuidePage() {
           </p>
 
           <div>
-            <p className="font-semibold text-fairway-700 mb-1">Step 1 — Select course and tees</p>
+            <p className="font-semibold text-fairway-700 mb-1">Step 1 — Select course and tee</p>
             <p>
-              Choose from your saved courses. Tap a course to expand its tee sets — each tee shows
-              the Course Rating, Slope, and Par. Select the tee you are playing from, then tap{" "}
+              Type at least two characters in the search box to find your course. Tap the course to
+              select it, then choose the tee you are playing from — each tee shows the Course
+              Rating, total length in metres, and Par. Tees are listed longest first. Select{" "}
+              <span className="font-semibold">9 holes</span> or{" "}
+              <span className="font-semibold">18 holes</span>, then tap{" "}
               <span className="font-semibold">Next</span>. If no courses appear,{" "}
               <Link href="/courses" className="text-fairway-700 underline">
                 import one first
@@ -241,8 +244,9 @@ export default function GuidePage() {
               Courses page
             </Link>{" "}
             lists every course your group has imported, sorted alphabetically. Tap a course to view
-            all its tee sets (with Course Rating, Slope, and Par) and a full hole-by-hole breakdown
-            of distances and pars.
+            all its tee sets and a full hole-by-hole breakdown of distances and pars. Tees are
+            listed longest first. The detail page also shows the course address, postcode, and phone
+            number where available — tap the phone number to call.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Importing a course</span> — Tap{" "}
@@ -252,10 +256,17 @@ export default function GuidePage() {
             permanently. Once imported, it is available to everyone in your group.
           </p>
           <p>
+            <span className="font-semibold text-fairway-900">Removing a course</span> — On the{" "}
+            <Link href="/courses" className="text-fairway-700 underline">
+              Courses page
+            </Link>
+            , swipe or tap the remove button next to any course to remove it from your list.
+          </p>
+          <p>
             <span className="font-semibold text-fairway-900">Starting a round from a course</span>{" "}
             — On the course detail page, tap{" "}
-            <span className="font-semibold">Play this Course</span> to jump straight into the round
-            wizard with that course pre-selected.
+            <span className="font-semibold">⛳ Start a round here</span> to jump straight into the
+            round wizard with that course pre-selected.
           </p>
         </div>
       </div>
@@ -315,8 +326,9 @@ export default function GuidePage() {
         </h2>
         <div className="space-y-3 text-sm text-gray-700 leading-relaxed">
           <p>
-            A tournament groups multiple rounds under a single competition — useful for club events,
-            weekends away, or a multi-round match-play bracket.
+            A tournament groups a set of players under a single competition — the organiser
+            arranges them into groups, each group plays their own round, and a shared leaderboard
+            tracks the results.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Creating an event</span> — Tap{" "}
@@ -324,39 +336,75 @@ export default function GuidePage() {
             <Link href="/tournaments" className="text-fairway-700 underline">
               Events page
             </Link>
-            . Give it a name and save. The tournament starts with a{" "}
-            <span className="font-semibold">Pending</span> status badge. Any players you invite will
-            receive a push notification on their phone — if they have notifications enabled on their{" "}
-            <Link href="/profile" className="text-fairway-700 underline">
-              Profile
-            </Link>
-            .
+            . A four-step wizard walks you through:
+          </p>
+          <ol className="list-decimal list-inside space-y-1 text-gray-600 ml-1">
+            <li>
+              <span className="font-semibold">Event details</span> — give the event a name and an
+              optional date.
+            </li>
+            <li>
+              <span className="font-semibold">Course &amp; tee</span> — search for the course and
+              choose the default tee. Tees show Course Rating, length, and Par.
+            </li>
+            <li>
+              <span className="font-semibold">Format</span> — choose the scoring format (same
+              options as a regular round).
+            </li>
+            <li>
+              <span className="font-semibold">Invite players</span> — select who to invite.
+              Invited players receive a push notification if they have notifications enabled on their{" "}
+              <Link href="/profile" className="text-fairway-700 underline">
+                Profile
+              </Link>
+              .
+            </li>
+          </ol>
+          <p>
+            The tournament opens with an{" "}
+            <span className="font-semibold">UPCOMING</span> status badge while you wait for players
+            to accept.
           </p>
           <p>
-            <span className="font-semibold text-fairway-900">Adding rounds to a tournament</span>{" "}
-            — When creating a new round via the Play tab, you will have the option to attach it to
-            an active tournament. Each round you add increments the round count shown on the
-            tournament card.
+            <span className="font-semibold text-fairway-900">Arranging groups</span> — Once
+            players have accepted, the organiser assigns them into groups on the tournament page.
+            Use the <span className="font-semibold">+ Add player</span> dropdown to manually fill
+            each group (up to four players), or tap{" "}
+            <span className="font-semibold">Randomise Teams</span> to auto-assign everyone at once.
+            Each group can be given its own tee if the course has multiple tee sets. When all
+            accepted players are assigned, tap{" "}
+            <span className="font-semibold">Save groups</span>.
+          </p>
+          <p>
+            <span className="font-semibold text-fairway-900">Starting the round</span> — After
+            groups are saved, tap <span className="font-semibold">Start Round</span>. This creates
+            a live round for each group simultaneously. Each group scores their own round
+            independently via the Score tab.
+          </p>
+          <p>
+            <span className="font-semibold text-fairway-900">Live leaderboard</span> — While the
+            tournament is{" "}
+            <span className="font-semibold">ACTIVE</span>, the tournament page shows a live
+            leaderboard across all groups. Once all rounds are finished the organiser can tap{" "}
+            <span className="font-semibold">Mark tournament complete</span> to lock the final
+            results.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Status badges</span>:
           </p>
           <ul className="list-disc list-inside space-y-1 text-gray-600">
             <li>
-              <span className="font-semibold">Pending</span> — tournament created but no rounds
-              started yet.
+              <span className="font-semibold">UPCOMING</span> — event created, waiting for players
+              to accept and groups to be arranged.
             </li>
             <li>
-              <span className="font-semibold">Active</span> — at least one round is underway.
+              <span className="font-semibold">ACTIVE</span> — rounds are underway.
             </li>
             <li>
-              <span className="font-semibold">Complete</span> — all rounds have been finished.
+              <span className="font-semibold">COMPLETE</span> — all rounds finished and results
+              locked.
             </li>
           </ul>
-          <p>
-            Tap any round inside a tournament card to view its scorecard or resume scoring if it is
-            still in progress.
-          </p>
         </div>
       </div>
       {/* Notifications */}

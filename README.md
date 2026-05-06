@@ -8,10 +8,10 @@ A full-stack golf scoring and social web app built with Next.js 16, Prisma 7, an
 - **Scorecards** — per-hole scoring with strokes, penalties, putts, fairways hit, and GIR; hole info panel shows hole number, par, stroke index, and distance; Google Maps hole view displayed below the score entry cards
 - **Handicap system** — automatic handicap index tracking and history
 - **Courses** — search and import courses via the Golf Course API, with full tee data (rating, slope, par, hole distances in metres); courses display address, postcode, and phone number on search results and detail pages; tees sorted by total length descending; remove course button on the courses page
-- **Tournaments** — create and manage multi-round tournaments with groups, invitations, and leaderboards; course search available during event creation (step 2)
+- **Tournaments** — create and manage multi-round tournaments with groups, invitations, and leaderboards; course search available during event creation (step 2); randomise teams button in the group builder
 - **Stats & charts** — visualise performance trends across rounds and tournaments
 - **Social** — friends, round comments, and likes
-- **Auth** — email/password login with password reset via email
+- **Auth** — email/password login; password reset via emailed token link (auto-signs in, no current password required); password change on profile page with collapse toggle and per-field show/hide; password visibility toggle on login page; welcome email sent on registration
 - **Push notifications** — invitees receive a phone notification when invited to a tournament, with Accept / Decline actions (Android Chrome; iOS when installed as PWA)
 - **PWA** — installable as a Progressive Web App with service worker support and in-app install prompt banner
 
@@ -80,7 +80,7 @@ See [.env.example](.env.example) for all required variables:
 - `GOLF_COURSE_API_KEY` — API key for the Golf Course API
 - `GOLF_COURSE_API_BASE_URL` — Golf Course API base URL
 - `GOOGLE_MAPS_API_KEY` — Google Maps API key (server-side only)
-- `SMTP_*` — SMTP credentials for password reset emails
+- `SMTP_*` — SMTP credentials for transactional emails (password reset and welcome email)
 - `VAPID_PUBLIC_KEY` — VAPID public key for web push notifications (generate once with `web-push`)
 - `VAPID_PRIVATE_KEY` — VAPID private key for web push notifications
 - `VAPID_SUBJECT` — contact email used in VAPID header (e.g. `mailto:you@example.com`)
@@ -104,8 +104,9 @@ components/
   ui/             # Shared UI components
 data/             # Static JSON data (courses)
 lib/
-  auth.ts         # NextAuth config
+  auth.ts         # NextAuth config (credentials + reset-token sign-in, loginMethod JWT claim)
   courseApi.ts    # Golf Course API client
+  email.ts        # Nodemailer transactional email (welcome email, password reset)
   handicap.ts     # Handicap calculation logic
   prisma.ts       # Prisma client instance
   push.ts         # Web push notification utility (VAPID)

@@ -29,6 +29,9 @@ model User {
   tournamentGroupMembers TournamentGroupMember[]
   userCourses            UserCourse[]
   pushSubscriptions      PushSubscription[]
+  passwordResetTokens    PasswordResetToken[]
+  webAuthnCredentials    WebAuthnCredential[]
+  webAuthnChallenges     WebAuthnChallenge[]
 
   @@map("users")
 }
@@ -318,4 +321,48 @@ model PushSubscription {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("push_subscriptions")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  email     String
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+model WebAuthnCredential {
+  id           String   @id @default(cuid())
+  userId       String
+  credentialId String   @unique
+  publicKey    Bytes
+  counter      BigInt   @default(0)
+  deviceType   String
+  backedUp     Boolean  @default(false)
+  transports   String[]
+  name         String   @default("Biometric")
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("webauthn_credentials")
+}
+
+model WebAuthnChallenge {
+  id        String    @id @default(cuid())
+  userId    String?
+  challenge String    @unique
+  type      String
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("webauthn_challenges")
 }

@@ -18,10 +18,23 @@ export async function recalcHandicap(userId: string): Promise<number> {
     }),
   ]);
 
+  // Only STROKEPLAY rounds count under WHS — look up the format for each roundId
+  const roundIds = allHistory.map((h) => h.roundId).filter((id): id is string => id !== null);
+  const strokeplayRounds = await prisma.round.findMany({
+    where: { id: { in: roundIds }, format: "STROKEPLAY" },
+    select: { id: true },
+  });
+  const strokeplayIds = new Set(strokeplayRounds.map((r) => r.id));
+
   const excludedRoundIds = new Set(excludedPlayers.map((p) => p.roundId));
 
   const differentials = allHistory
-    .filter((h) => !h.roundId || !excludedRoundIds.has(h.roundId))
+    .filter(
+      (h) =>
+        h.roundId !== null &&
+        strokeplayIds.has(h.roundId) &&
+        !excludedRoundIds.has(h.roundId)
+    )
     .map((h) => h.differential);
 
   return calcHandicapIndex(differentials);

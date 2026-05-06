@@ -32,35 +32,37 @@ export async function POST(
     data: { status: "COMPLETE" },
   });
 
-  // Update handicap for each player
-  await Promise.all(
-    round.players.map(async (rp) => {
-      const grossScore = rp.scores.reduce((sum, s) => sum + s.strokes, 0);
-      if (grossScore === 0) return;
+  // Only strokeplay rounds count toward handicap under WHS
+  if (round.format === "STROKEPLAY") {
+    await Promise.all(
+      round.players.map(async (rp) => {
+        const grossScore = rp.scores.reduce((sum, s) => sum + s.strokes, 0);
+        if (grossScore === 0) return;
 
-      const differential = calcDifferential({
-        adjustedGrossScore: grossScore,
-        courseRating: round.tee.rating,
-        slopeRating: round.tee.slope,
-      });
+        const differential = calcDifferential({
+          adjustedGrossScore: grossScore,
+          courseRating: round.tee.rating,
+          slopeRating: round.tee.slope,
+        });
 
-      await prisma.handicapHistory.create({
-        data: {
-          userId: rp.userId,
-          index: rp.user.handicapIndex,
-          differential,
-          roundId,
-        },
-      });
+        await prisma.handicapHistory.create({
+          data: {
+            userId: rp.userId,
+            index: rp.user.handicapIndex,
+            differential,
+            roundId,
+          },
+        });
 
-      const newIndex = await recalcHandicap(rp.userId);
+        const newIndex = await recalcHandicap(rp.userId);
 
-      await prisma.user.update({
-        where: { id: rp.userId },
-        data: { handicapIndex: newIndex },
-      });
-    })
-  );
+        await prisma.user.update({
+          where: { id: rp.userId },
+          data: { handicapIndex: newIndex },
+        });
+      })
+    );
+  }
 
   return Response.json({ success: true });
 }
