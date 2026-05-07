@@ -31,11 +31,15 @@ export default async function RoundSummaryPage({
   });
   if (!round) notFound();
 
+  const playedHoles = round.tee.holes.filter(
+    (h) => h.number >= round.startingHole && h.number < round.startingHole + round.holesCount
+  );
+
   const players: PlayerRoundResult[] = round.players.map((rp) => ({
     playerId: rp.id,
     name: rp.user.name,
     playingHandicap: rp.playingHandicap,
-    holes: round.tee.holes.map((hole) => {
+    holes: playedHoles.map((hole) => {
       const score = rp.scores.find((s) => s.holeNumber === hole.number);
       return {
         holeNumber: hole.number,
@@ -80,7 +84,7 @@ export default async function RoundSummaryPage({
     }));
   }
 
-  const totalPar = round.tee.par;
+  const totalPar = playedHoles.reduce((sum, h) => sum + h.par, 0);
 
   return (
     <div className="space-y-6">
@@ -144,7 +148,7 @@ export default async function RoundSummaryPage({
               </tr>
             </thead>
             <tbody>
-              {round.tee.holes.map((hole, i) => (
+              {playedHoles.map((hole, i) => (
                 <tr key={hole.id} className={i % 2 === 0 ? "" : "bg-fairway-50/40"}>
                   <td className="px-2 py-1.5 font-medium text-fairway-800 sticky left-0 bg-inherit">{hole.number}</td>
                   <td className="px-2 py-1.5 text-center text-gray-600">{hole.par}</td>

@@ -4,13 +4,19 @@ import { NextRequest } from "next/server";
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user?.email) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
 
+  const dbUser = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true },
+  });
+  if (!dbUser) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
   // Verify the current user is a player in this round
   const round = await prisma.round.findFirst({
-    where: { id, players: { some: { userId: session.user.id } } },
+    where: { id, players: { some: { userId: dbUser.id } } },
   });
   if (!round) return Response.json({ error: "Round not found" }, { status: 404 });
 

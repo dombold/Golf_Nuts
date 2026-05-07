@@ -136,7 +136,8 @@ model Round {
   date      DateTime    @default(now())
   format    GameFormat
   status    RoundStatus @default(SETUP)
-  holesCount Int         @default(18)
+  holesCount   Int @default(18)
+  startingHole Int @default(1)
   notes     String?
   createdAt DateTime    @default(now())
 

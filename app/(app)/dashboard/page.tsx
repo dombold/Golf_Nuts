@@ -5,12 +5,11 @@ import ActiveRoundCard from "@/components/ActiveRoundCard";
 
 export default async function DashboardPage() {
   const session = await auth();
-  const userId = session!.user.id;
-
   const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { name: true, firstName: true, handicapIndex: true },
+    where: { email: session!.user.email! },
+    select: { id: true, name: true, firstName: true, handicapIndex: true },
   });
+  const userId = user!.id;
 
   const pendingInvitations = await prisma.tournamentInvitation.count({
     where: { userId, status: "PENDING" },

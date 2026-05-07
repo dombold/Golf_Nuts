@@ -12,6 +12,7 @@ interface Round {
   format: string;
   status: string;
   holesCount: number;
+  startingHole: number;
   course: { name: string };
   tee: { name: string; par: number; holes: Hole[] };
   players: Player[];
@@ -70,7 +71,10 @@ export default function ScoringPage() {
       }
       if (firstLoadRef.current) {
         firstLoadRef.current = false;
-        const holes: Hole[] = data.round.tee.holes.slice(0, data.round.holesCount);
+        const holes: Hole[] = data.round.tee.holes.slice(
+        data.round.startingHole - 1,
+        data.round.startingHole - 1 + data.round.holesCount
+      );
         const nextHole = holes.find((h) =>
           !data.round.players.every((p: Player) => (existing[p.id]?.[h.number]?.strokes ?? 0) > 0)
         );
@@ -133,7 +137,9 @@ export default function ScoringPage() {
       })
     );
     setSaving(false);
-    if (currentHole < 18) setCurrentHole((h) => h + 1);
+    if (round && currentHole < round.startingHole - 1 + round.holesCount) {
+      setCurrentHole((h) => h + 1);
+    }
   }
 
   async function finishRound() {
@@ -155,9 +161,13 @@ export default function ScoringPage() {
     );
   }
 
-  const holes = round.tee.holes.slice(0, round.holesCount);
+  const holes = round.tee.holes.slice(
+    round.startingHole - 1,
+    round.startingHole - 1 + round.holesCount
+  );
   const hole = holes.find((h) => h.number === currentHole);
   const totalHoles = holes.length;
+  const lastHoleNumber = holes[holes.length - 1]?.number ?? 18;
   const allEntered = round.players.every((p) =>
     (scores[p.id]?.[currentHole]?.strokes ?? 0) > 0
   );
@@ -193,7 +203,7 @@ export default function ScoringPage() {
           )}
         </div>
         <div className="text-right">
-          <p className="text-2xl font-bold">{currentHole}<span className="text-fairway-400 text-base">/{totalHoles}</span></p>
+          <p className="text-2xl font-bold">{currentHole}<span className="text-fairway-400 text-base">/{lastHoleNumber}</span></p>
           <p className="text-fairway-300 text-xs">hole</p>
         </div>
       </div>
@@ -312,8 +322,8 @@ export default function ScoringPage() {
           {/* Hole navigation */}
           <div className="flex gap-3">
             <button
-              onClick={() => setCurrentHole((h) => Math.max(1, h - 1))}
-              disabled={currentHole === 1}
+              onClick={() => setCurrentHole((h) => Math.max(holes[0]?.number ?? 1, h - 1))}
+              disabled={currentHole === (holes[0]?.number ?? 1)}
               className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 disabled:opacity-30"
             >
               ← Hole {currentHole - 1}
@@ -323,11 +333,11 @@ export default function ScoringPage() {
               disabled={saving || !allEntered}
               className="flex-1 py-3 bg-fairway-700 text-white rounded-xl font-semibold hover:bg-fairway-800 disabled:opacity-40 transition-colors"
             >
-              {saving ? "Saving…" : currentHole < totalHoles ? `Save & Hole ${currentHole + 1} →` : "Save →"}
+              {saving ? "Saving…" : currentHole < lastHoleNumber ? `Save & Hole ${currentHole + 1} →` : "Save →"}
             </button>
           </div>
 
-          {(currentHole === totalHoles || round.status === "COMPLETE") && (
+          {(currentHole === lastHoleNumber || round.status === "COMPLETE") && (
             <button
               onClick={finishRound}
               className="w-full py-3 bg-acorn-700 text-white rounded-xl font-semibold hover:bg-acorn-900 transition-colors"

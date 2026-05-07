@@ -16,6 +16,11 @@ interface Course { id: string; name: string; suburb: string | null; city: string
 interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
 interface User { id: string; name: string; email: string }
 
+function parseNineNames(teeName: string): { front: string; back: string } | null {
+  const parts = teeName.split("/");
+  return parts.length === 2 ? { front: parts[0].trim(), back: parts[1].trim() } : null;
+}
+
 function NewRoundForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -36,6 +41,7 @@ function NewRoundForm() {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [selectedTee, setSelectedTee] = useState<Tee | null>(null);
   const [holesCount, setHolesCount] = useState<9 | 18>(18);
+  const [startingHole, setStartingHole] = useState<1 | 10>(1);
   const [format, setFormat] = useState("STABLEFORD");
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
 
@@ -100,6 +106,7 @@ function NewRoundForm() {
           courseId: selectedCourse.id,
           teeId: selectedTee.id,
           holesCount,
+          startingHole,
           format,
           playerIds: selectedPlayers,
         }),
@@ -230,7 +237,7 @@ function NewRoundForm() {
               {([9, 18] as const).map((n) => (
                 <button
                   key={n}
-                  onClick={() => setHolesCount(n)}
+                  onClick={() => { setHolesCount(n); if (n === 18) setStartingHole(1); }}
                   className={`flex-1 py-2.5 rounded-xl border font-semibold transition-colors ${
                     holesCount === n
                       ? "border-fairway-600 bg-fairway-50 text-fairway-900"
@@ -242,6 +249,33 @@ function NewRoundForm() {
               ))}
             </div>
           </div>
+
+          {holesCount === 9 && selectedTee && (() => {
+            const names = parseNineNames(selectedTee.name);
+            const options: { label: string; value: 1 | 10 }[] = names
+              ? [{ label: names.front, value: 1 }, { label: names.back, value: 10 }]
+              : [{ label: "Front 9", value: 1 }, { label: "Back 9", value: 10 }];
+            return (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-fairway-800">Which 9?</p>
+                <div className="flex gap-2">
+                  {options.map((o) => (
+                    <button
+                      key={o.value}
+                      onClick={() => setStartingHole(o.value)}
+                      className={`flex-1 py-2.5 rounded-xl border font-semibold transition-colors ${
+                        startingHole === o.value
+                          ? "border-fairway-600 bg-fairway-50 text-fairway-900"
+                          : "border-gray-200 bg-white text-gray-600 hover:border-fairway-300"
+                      }`}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           <button
             onClick={() => setStep(2)}
