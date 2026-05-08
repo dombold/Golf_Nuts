@@ -43,6 +43,7 @@ export async function POST(
           adjustedGrossScore: grossScore,
           courseRating: round.tee.rating,
           slopeRating: round.tee.slope,
+          holesCount: round.holesCount as 9 | 18,
         });
 
         await prisma.handicapHistory.create({
@@ -51,6 +52,7 @@ export async function POST(
             index: rp.user.handicapIndex,
             differential,
             roundId,
+            isNineHole: round.holesCount === 9,
           },
         });
 

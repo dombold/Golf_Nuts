@@ -141,12 +141,13 @@ model Round {
   notes     String?
   createdAt DateTime    @default(now())
 
-  course   Course        @relation(fields: [courseId], references: [id])
-  tee      Tee           @relation(fields: [teeId], references: [id])
-  players  RoundPlayer[]
-  comments Comment[]
-  likes    Like[]
+  course          Course           @relation(fields: [courseId], references: [id])
+  tee             Tee              @relation(fields: [teeId], references: [id])
+  players         RoundPlayer[]
+  comments        Comment[]
+  likes           Like[]
   tournamentRounds TournamentRound[]
+  handicapHistory HandicapHistory[]
 
   @@map("rounds")
 }
@@ -190,9 +191,11 @@ model HandicapHistory {
   index        Float
   differential Float
   roundId      String?
+  isNineHole   Boolean  @default(false)
   createdAt    DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user  User   @relation(fields: [userId], references: [id])
+  round Round? @relation(fields: [roundId], references: [id], onDelete: Cascade)
 
   @@map("handicap_history")
 }

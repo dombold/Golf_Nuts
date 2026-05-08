@@ -6,13 +6,14 @@ export interface RoundData {
   adjustedGrossScore: number;
   courseRating: number;
   slopeRating: number;
+  holesCount: 9 | 18;
 }
 
-/** Score Differential = (AGS − Course Rating) × (113 / Slope Rating) */
+/** Score Differential = (AGS − Course Rating) × (113 / Slope Rating)
+ *  For 9-hole rounds, Course Rating is halved per WHS spec. */
 export function calcDifferential(round: RoundData): number {
-  const diff =
-    (round.adjustedGrossScore - round.courseRating) *
-    (113 / round.slopeRating);
+  const cr = round.holesCount === 9 ? round.courseRating / 2 : round.courseRating;
+  const diff = (round.adjustedGrossScore - cr) * (113 / round.slopeRating);
   return Math.round(diff * 10) / 10;
 }
 
@@ -20,7 +21,7 @@ export function calcDifferential(round: RoundData): number {
  * Handicap Index = average of the best 8 score differentials from the last 20 rounds.
  * Fewer rounds use a sliding scale.
  */
-export function calcHandicapIndex(differentials: number[]): number {
+export function calcHandicapIndex(differentials: number[]): number | null {
   const recent = differentials.slice(-20);
   const sorted = [...recent].sort((a, b) => a - b);
 
@@ -37,7 +38,7 @@ export function calcHandicapIndex(differentials: number[]): number {
   else if (count >= 7) bestCount = 1;
   else if (count >= 5) bestCount = 1;
   else if (count >= 3) bestCount = 1;
-  else return 0;
+  else return null;
 
   const best = sorted.slice(0, bestCount);
   const avg = best.reduce((a, b) => a + b, 0) / best.length;
