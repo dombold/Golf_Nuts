@@ -45,6 +45,10 @@ export default async function EditTournamentPage({
           ? {
               id: tournament.course.id,
               name: tournament.course.name,
+              suburb: tournament.course.suburb,
+              city: tournament.course.city,
+              address: tournament.course.address,
+              phone: tournament.course.phone,
               tees: tournament.course.tees.map((t) => ({
                 id: t.id,
                 name: t.name,

@@ -13,7 +13,7 @@ const FORMATS = [
 ];
 
 interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
-interface Course { id: string; name: string; tees: Tee[] }
+interface Course { id: string; name: string; tees: Tee[]; suburb?: string | null; city?: string | null; address?: string | null; phone?: string | null }
 
 interface TournamentData {
   id: string;
@@ -160,11 +160,22 @@ export default function EditEventForm({ tournament }: { tournament: TournamentDa
 
         {selectedCourse && !changingCourse ? (
           <div className="space-y-2">
-            <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-fairway-600 bg-fairway-50">
-              <p className="font-medium text-fairway-900">{selectedCourse.name}</p>
+            <div className="flex items-start justify-between px-4 py-3 rounded-xl border border-fairway-600 bg-fairway-50">
+              <div>
+                <p className="font-medium text-fairway-900">{selectedCourse.name}</p>
+                {(selectedCourse.suburb || selectedCourse.city) && (
+                  <p className="text-xs text-gray-500 mt-0.5">{selectedCourse.suburb ?? selectedCourse.city}</p>
+                )}
+                {selectedCourse.address && (
+                  <p className="text-xs text-gray-500 mt-0.5">{selectedCourse.address}</p>
+                )}
+                {selectedCourse.phone && (
+                  <p className="text-xs text-gray-500 mt-0.5">{selectedCourse.phone}</p>
+                )}
+              </div>
               <button
                 onClick={handleChangeCourse}
-                className="text-sm text-fairway-600 hover:text-fairway-800 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500 rounded"
+                className="text-sm text-fairway-600 hover:text-fairway-800 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500 rounded ml-3 shrink-0"
               >
                 Change
               </button>
@@ -188,46 +199,42 @@ export default function EditEventForm({ tournament }: { tournament: TournamentDa
           </div>
         ) : (
           <>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={courseQuery}
-                onChange={(e) => { setCourseQuery(e.target.value); setSelectedTee(null); }}
-                placeholder="Search by course or club name…"
-                className="flex-1 px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-fairway-500 text-sm"
-                autoFocus
-              />
-              {courseLoading && (
-                <span className="self-center text-gray-400 text-sm px-2">…</span>
+            <div className="relative">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={courseQuery}
+                  onChange={(e) => { setCourseQuery(e.target.value); setSelectedTee(null); }}
+                  placeholder="Search by course or club name…"
+                  className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-fairway-500"
+                  autoFocus
+                />
+                {courseLoading && (
+                  <div className="flex items-center px-3 text-gray-400 text-sm">…</div>
+                )}
+              </div>
+
+              {courseResults.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                  {courseResults.map((course) => (
+                    <button
+                      key={course.id}
+                      onClick={() => { setSelectedCourse(course); setSelectedTee(null); setChangingCourse(false); }}
+                      className="w-full text-left px-4 py-3 hover:bg-fairway-50 transition-colors border-b border-gray-100 last:border-0"
+                    >
+                      <p className="font-medium text-fairway-900 text-sm">{course.name}</p>
+                      {(course.suburb || course.city) && (
+                        <p className="text-xs text-gray-500 mt-0.5">{course.suburb ?? course.city}</p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {!courseLoading && courseQuery.trim().length >= 2 && courseResults.length === 0 && (
+                <p className="text-sm text-gray-400 mt-2 px-1">No courses found for &quot;{courseQuery}&quot;</p>
               )}
             </div>
-
-            {courseQuery.trim().length < 2 && (
-              <p className="text-sm text-gray-400 text-center py-2">Type at least 2 characters to search</p>
-            )}
-
-            {courseQuery.trim().length >= 2 && !courseLoading && courseResults.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-2">No courses found for &quot;{courseQuery}&quot;</p>
-            )}
-
-            {courseResults.length > 0 && (
-              <div className="space-y-2">
-                {courseResults.map((course) => (
-                  <div key={course.id}>
-                    <button
-                      onClick={() => { setSelectedCourse(course); setSelectedTee(null); setChangingCourse(false); }}
-                      className={`w-full text-left px-4 py-3 rounded-xl border transition-colors ${
-                        selectedCourse?.id === course.id
-                          ? "border-fairway-600 bg-fairway-50"
-                          : "border-gray-200 bg-white hover:border-fairway-300"
-                      }`}
-                    >
-                      <p className="font-medium text-fairway-900">{course.name}</p>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
           </>
         )}
       </div>

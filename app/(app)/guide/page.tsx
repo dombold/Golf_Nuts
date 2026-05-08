@@ -7,6 +7,7 @@ const sections = [
   { id: "courses", icon: "🗺️", title: "Courses & Tees" },
   { id: "stats", icon: "📊", title: "Stats & Handicap" },
   { id: "tournaments", icon: "🏆", title: "Events & Tournaments" },
+  { id: "countback", icon: "🔢", title: "Tie-Breaking (Countback)" },
   { id: "notifications", icon: "🔔", title: "Notifications" },
 ];
 
@@ -436,6 +437,58 @@ export default function GuidePage() {
           </ul>
         </div>
       </div>
+      {/* Tie-Breaking (Countback) */}
+      <div id="countback" className="bg-white rounded-xl border border-fairway-50 p-4 scroll-mt-20">
+        <h2 className="text-lg font-semibold text-fairway-900 flex items-center gap-2 mb-3">
+          <span>🔢</span> Tie-Breaking (Countback)
+        </h2>
+        <div className="space-y-3 text-sm text-gray-700 leading-relaxed">
+          <p>
+            When two or more players or teams finish with the same{" "}
+            <span className="font-semibold text-fairway-900">net total</span>, Golf Nuts
+            automatically applies the standard{" "}
+            <span className="font-semibold text-fairway-900">scorecard countback</span> to
+            decide the winner. This applies to Strokeplay, Stableford, and Ambrose events.
+          </p>
+
+          <div className="bg-fairway-50 rounded-lg p-3 space-y-2">
+            <p className="font-semibold text-fairway-900">Countback order (18-hole round)</p>
+            <ol className="list-decimal list-inside space-y-1 text-gray-700">
+              <li>
+                <span className="font-semibold">Back 9</span> — best net score on holes 10–18
+              </li>
+              <li>
+                <span className="font-semibold">Last 6 holes</span> — best net score on holes 13–18
+              </li>
+              <li>
+                <span className="font-semibold">Last 3 holes</span> — best net score on holes 16–18
+              </li>
+              <li>
+                <span className="font-semibold">Last hole</span> — hole 18, then hole 17, 16… back
+                up the card
+              </li>
+            </ol>
+          </div>
+
+          <p>
+            For <span className="font-semibold text-fairway-900">9-hole rounds</span> the same
+            principle applies using the available holes — last 5, last 3, last hole, and so on.
+          </p>
+
+          <p>
+            When a tie is broken this way, the winner&apos;s result will show a label such as{" "}
+            <span className="font-semibold text-fairway-900">&ldquo;Won on back 9&rdquo;</span> or{" "}
+            <span className="font-semibold text-fairway-900">&ldquo;Won on hole 18&rdquo;</span> in
+            the round summary and in the tournament leaderboard.
+          </p>
+
+          <p>
+            If every hole is identical and the tie still cannot be broken, both players or teams
+            share the position — no countback winner is declared.
+          </p>
+        </div>
+      </div>
+
       {/* Notifications */}
       <div
         id="notifications"

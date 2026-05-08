@@ -3,6 +3,8 @@
  * All functions are pure — no side effects, no DB access.
  */
 
+import { applyCountback } from "./countback";
+
 export interface HoleScore {
   holeNumber: number;
   par: number;
@@ -43,26 +45,35 @@ export interface StrokeplayResult {
   gross: number;
   net: number;
   toPar: number;
+  countbackLabel?: string;
 }
 
 export function calcStrokeplay(players: PlayerRoundResult[]): StrokeplayResult[] {
-  return players
-    .map((p) => {
-      const gross = p.holes.reduce((sum, h) => sum + h.strokes, 0);
-      const net = p.holes.reduce(
-        (sum, h) => sum + netStrokes(h, p.playingHandicap),
-        0
-      );
-      const totalPar = p.holes.reduce((sum, h) => sum + h.par, 0);
-      return {
-        playerId: p.playerId,
-        name: p.name,
-        gross,
-        net,
-        toPar: net - totalPar,
-      };
-    })
-    .sort((a, b) => a.net - b.net);
+  const allHoles = players[0]?.holes.map((h) => h.holeNumber) ?? [];
+
+  const raw: StrokeplayResult[] = players.map((p) => {
+    const gross = p.holes.reduce((sum, h) => sum + h.strokes, 0);
+    const net = p.holes.reduce(
+      (sum, h) => sum + netStrokes(h, p.playingHandicap),
+      0
+    );
+    const totalPar = p.holes.reduce((sum, h) => sum + h.par, 0);
+    return { playerId: p.playerId, name: p.name, gross, net, toPar: net - totalPar };
+  });
+
+  const sorted = raw.sort((a, b) => a.net - b.net);
+
+  // Build per-player, per-hole net score map for countback
+  const holeNetMap = new Map<string, Map<number, number>>();
+  for (const p of players) {
+    const holeMap = new Map<number, number>();
+    for (const h of p.holes) {
+      holeMap.set(h.holeNumber, netStrokes(h, p.playingHandicap));
+    }
+    holeNetMap.set(p.playerId, holeMap);
+  }
+
+  return applyCountback(sorted, holeNetMap, true, allHoles, (r) => r.net);
 }
 
 // ─── Stableford ──────────────────────────────────────────────────────────────
@@ -77,6 +88,7 @@ export interface StablefordResult {
   name: string;
   totalPoints: number;
   holes: StablefordHoleResult[];
+  countbackLabel?: string;
 }
 
 /** Points: Double eagle=5, Eagle=4, Birdie=3, Par=2, Bogey=1, Double bogey+=0 */
@@ -94,23 +106,34 @@ export function stablefordPoints(
 }
 
 export function calcStableford(players: PlayerRoundResult[]): StablefordResult[] {
-  return players
-    .map((p) => {
-      const holes: StablefordHoleResult[] = p.holes.map((h) => ({
-        holeNumber: h.holeNumber,
-        points: stablefordPoints(
-          netStrokes(h, p.playingHandicap),
-          h.par
-        ),
-      }));
-      return {
-        playerId: p.playerId,
-        name: p.name,
-        totalPoints: holes.reduce((sum, h) => sum + h.points, 0),
-        holes,
-      };
-    })
-    .sort((a, b) => b.totalPoints - a.totalPoints);
+  const allHoles = players[0]?.holes.map((h) => h.holeNumber) ?? [];
+
+  const raw: StablefordResult[] = players.map((p) => {
+    const holes: StablefordHoleResult[] = p.holes.map((h) => ({
+      holeNumber: h.holeNumber,
+      points: stablefordPoints(netStrokes(h, p.playingHandicap), h.par),
+    }));
+    return {
+      playerId: p.playerId,
+      name: p.name,
+      totalPoints: holes.reduce((sum, h) => sum + h.points, 0),
+      holes,
+    };
+  });
+
+  const sorted = raw.sort((a, b) => b.totalPoints - a.totalPoints);
+
+  // Build per-player, per-hole points map for countback
+  const holePointsMap = new Map<string, Map<number, number>>();
+  for (const r of sorted) {
+    const holeMap = new Map<number, number>();
+    for (const h of r.holes) {
+      holeMap.set(h.holeNumber, h.points);
+    }
+    holePointsMap.set(r.playerId, holeMap);
+  }
+
+  return applyCountback(sorted, holePointsMap, false, allHoles, (r) => r.totalPoints);
 }
 
 // ─── Match Play (2 players) ───────────────────────────────────────────────────
@@ -230,17 +253,19 @@ export interface AmbroseTeam {
   teamId: string;
   name: string;
   players: PlayerRoundResult[];
-  /** Scores submitted as team best-ball per hole */
-  teamHoles: { holeNumber: number; par: number; strokes: number }[];
+  /** Best-ball score per hole, with strokeIndex for per-hole handicap application */
+  teamHoles: { holeNumber: number; par: number; strokeIndex: number; strokes: number }[];
 }
 
 export interface AmbroseResult {
   teamId: string;
+  playerId: string; // alias for teamId, satisfies applyCountback constraint
   name: string;
   teamHandicap: number;
   gross: number;
   net: number;
   toPar: number;
+  countbackLabel?: string;
 }
 
 /**
@@ -257,21 +282,43 @@ export function ambroseTeamHandicap(
 }
 
 export function calcAmbrose(teams: AmbroseTeam[], teamSize: 2 | 4): AmbroseResult[] {
-  return teams
-    .map((team) => {
-      const handicaps = team.players.map((p) => p.playingHandicap);
-      const teamHandicap = ambroseTeamHandicap(handicaps, teamSize);
-      const gross = team.teamHoles.reduce((sum, h) => sum + h.strokes, 0);
-      const net = gross - teamHandicap;
-      const totalPar = team.teamHoles.reduce((sum, h) => sum + h.par, 0);
-      return {
-        teamId: team.teamId,
-        name: team.name,
-        teamHandicap,
-        gross,
-        net,
-        toPar: net - totalPar,
-      };
-    })
-    .sort((a, b) => a.net - b.net);
+  const allHoles = teams[0]?.teamHoles.map((h) => h.holeNumber) ?? [];
+
+  const raw: AmbroseResult[] = teams.map((team) => {
+    const handicaps = team.players.map((p) => p.playingHandicap);
+    const teamHandicap = ambroseTeamHandicap(handicaps, teamSize);
+    const gross = team.teamHoles.reduce((sum, h) => sum + h.strokes, 0);
+    // Per-hole handicap application (same WHS stroke-index distribution as individual)
+    const net = team.teamHoles.reduce(
+      (sum, h) => sum + (h.strokes - strokesOnHole(teamHandicap, h.strokeIndex)),
+      0
+    );
+    const totalPar = team.teamHoles.reduce((sum, h) => sum + h.par, 0);
+    return {
+      teamId: team.teamId,
+      // playerId alias so applyCountback can key on it
+      playerId: team.teamId,
+      name: team.name,
+      teamHandicap,
+      gross,
+      net,
+      toPar: net - totalPar,
+    };
+  });
+
+  const sorted = raw.sort((a, b) => a.net - b.net);
+
+  // Build per-team, per-hole net map for countback
+  const holeNetMap = new Map<string, Map<number, number>>();
+  for (const team of teams) {
+    const handicaps = team.players.map((p) => p.playingHandicap);
+    const teamHandicap = ambroseTeamHandicap(handicaps, teamSize);
+    const holeMap = new Map<number, number>();
+    for (const h of team.teamHoles) {
+      holeMap.set(h.holeNumber, h.strokes - strokesOnHole(teamHandicap, h.strokeIndex));
+    }
+    holeNetMap.set(team.teamId, holeMap);
+  }
+
+  return applyCountback(sorted, holeNetMap, true, allHoles, (r) => r.net);
 }

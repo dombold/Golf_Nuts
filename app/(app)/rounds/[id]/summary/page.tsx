@@ -4,7 +4,9 @@ import {
   calcStrokeplay,
   calcStableford,
   calcSkins,
+  calcAmbrose,
   type PlayerRoundResult,
+  type AmbroseTeam,
 } from "@/lib/formats";
 import Link from "next/link";
 import DeleteRoundButton from "@/components/DeleteRoundButton";
@@ -53,22 +55,32 @@ export default async function RoundSummaryPage({
   const format = round.format;
   let results: { name: string; score: string; sub?: string }[] = [];
   let winner = "";
+  let winnerCountbackLabel: string | undefined;
 
   if (format === "STROKEPLAY") {
     const r = calcStrokeplay(players);
     results = r.map((p) => ({
       name: p.name,
       score: `${p.net} net`,
-      sub: `${p.gross} gross · ${p.toPar >= 0 ? "+" : ""}${p.toPar} to par`,
+      sub: [
+        `${p.gross} gross`,
+        `${p.toPar >= 0 ? "+" : ""}${p.toPar} to par`,
+        p.countbackLabel,
+      ]
+        .filter(Boolean)
+        .join(" · "),
     }));
     winner = r[0]?.name ?? "";
+    winnerCountbackLabel = r[0]?.countbackLabel;
   } else if (format === "STABLEFORD") {
     const r = calcStableford(players);
     results = r.map((p) => ({
       name: p.name,
       score: `${p.totalPoints} pts`,
+      sub: p.countbackLabel,
     }));
     winner = r[0]?.name ?? "";
+    winnerCountbackLabel = r[0]?.countbackLabel;
   } else if (format === "SKINS") {
     const r = calcSkins(players);
     results = r.totals.map((t) => ({
@@ -77,6 +89,76 @@ export default async function RoundSummaryPage({
     }));
     const top = [...r.totals].sort((a, b) => b.skins - a.skins);
     winner = top[0]?.name ?? "";
+  } else if (format === "AMBROSE_2" || format === "AMBROSE_4") {
+    const teamSize = format === "AMBROSE_2" ? 2 : 4;
+
+    // Group players by teamNumber
+    const teamMap = new Map<number, typeof round.players>();
+    for (const rp of round.players) {
+      const tn = rp.teamNumber ?? 0;
+      if (!teamMap.has(tn)) teamMap.set(tn, []);
+      teamMap.get(tn)!.push(rp);
+    }
+
+    const teams: AmbroseTeam[] = [];
+    for (const [teamNumber, members] of teamMap) {
+      const teamPlayers: PlayerRoundResult[] = members.map((rp) => ({
+        playerId: rp.id,
+        name: rp.user.name,
+        playingHandicap: rp.playingHandicap,
+        holes: playedHoles.map((hole) => {
+          const score = rp.scores.find((s) => s.holeNumber === hole.number);
+          return {
+            holeNumber: hole.number,
+            par: hole.par,
+            strokeIndex: hole.strokeIndex,
+            strokes: score?.strokes ?? 0,
+          };
+        }),
+      }));
+
+      // Best-ball per hole across team members
+      const teamHoles = playedHoles.map((hole) => {
+        const bestBall = Math.min(
+          ...members.map((rp) => {
+            const sc = rp.scores.find((s) => s.holeNumber === hole.number);
+            return sc?.strokes ?? 0;
+          })
+        );
+        return {
+          holeNumber: hole.number,
+          par: hole.par,
+          strokeIndex: hole.strokeIndex,
+          strokes: bestBall,
+        };
+      });
+
+      const teamName =
+        members.map((m) => m.user.name.split(" ")[0]).join(" & ") +
+        ` (Team ${teamNumber})`;
+
+      teams.push({
+        teamId: `team-${teamNumber}`,
+        name: teamName,
+        players: teamPlayers,
+        teamHoles,
+      });
+    }
+
+    const r = calcAmbrose(teams, teamSize as 2 | 4);
+    results = r.map((t) => ({
+      name: t.name,
+      score: `${t.net} net`,
+      sub: [
+        `${t.gross} gross`,
+        `Hcp ${t.teamHandicap}`,
+        t.countbackLabel,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    }));
+    winner = r[0]?.name ?? "";
+    winnerCountbackLabel = r[0]?.countbackLabel;
   } else {
     results = players.map((p) => ({
       name: p.name,
@@ -105,6 +187,9 @@ export default async function RoundSummaryPage({
         <div className="bg-fairway-900 text-white rounded-2xl p-5 text-center">
           <p className="text-fairway-300 text-xs uppercase tracking-widest mb-1">Winner</p>
           <p className="text-2xl font-bold">🏆 {winner}</p>
+          {winnerCountbackLabel && (
+            <p className="text-fairway-400 text-xs mt-1">{winnerCountbackLabel}</p>
+          )}
         </div>
       )}
 

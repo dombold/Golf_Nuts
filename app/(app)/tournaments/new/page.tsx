@@ -12,7 +12,7 @@ const FORMATS = [
   { value: "AMBROSE_4", label: "4-Player Ambrose", desc: "Best ball scramble (teams of 4)" },
 ];
 
-interface Course { id: string; name: string; tees: Tee[] }
+interface Course { id: string; name: string; tees: Tee[]; suburb?: string | null; city?: string | null; address?: string | null; phone?: string | null }
 interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
 interface User { id: string; name: string; email: string; handicapIndex?: number }
 interface TeeHole { id: string; number: number; par: number; strokeIndex: number }
@@ -203,60 +203,79 @@ export default function NewTournamentPage() {
         <div className="space-y-4">
           <h2 className="font-semibold text-fairway-800">Select course &amp; tee</h2>
 
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={courseQuery}
-              onChange={(e) => { setCourseQuery(e.target.value); setSelectedCourse(null); setSelectedTee(null); setTeeHoles([]); }}
-              placeholder="Search by course or club name…"
-              className="flex-1 px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-fairway-500 text-sm"
-            />
-            {courseLoading && (
-              <span className="self-center text-gray-400 text-sm px-2">…</span>
+          <div className="relative">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={courseQuery}
+                onChange={(e) => { setCourseQuery(e.target.value); setSelectedCourse(null); setSelectedTee(null); setTeeHoles([]); }}
+                placeholder="Search by course or club name…"
+                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-fairway-500"
+              />
+              {courseLoading && (
+                <div className="flex items-center px-3 text-gray-400 text-sm">…</div>
+              )}
+            </div>
+
+            {courseResults.length > 0 && !selectedCourse && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                {courseResults.map((course) => (
+                  <button
+                    key={course.id}
+                    onClick={() => { setSelectedCourse(course); setSelectedTee(null); setTeeHoles([]); setCourseResults([]); }}
+                    className="w-full text-left px-4 py-3 hover:bg-fairway-50 transition-colors border-b border-gray-100 last:border-0"
+                  >
+                    <p className="font-medium text-fairway-900 text-sm">{course.name}</p>
+                    {(course.suburb || course.city) && (
+                      <p className="text-xs text-gray-500 mt-0.5">{course.suburb ?? course.city}</p>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {!courseLoading && courseQuery.trim().length >= 2 && courseResults.length === 0 && !selectedCourse && (
+              <p className="text-sm text-gray-400 mt-2 px-1">No courses found for &quot;{courseQuery}&quot;</p>
             )}
           </div>
 
-          {courseQuery.trim().length < 2 && (
-            <p className="text-sm text-gray-400 text-center py-4">Type at least 2 characters to search</p>
-          )}
-
-          {courseQuery.trim().length >= 2 && !courseLoading && courseResults.length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-4">No courses found for &quot;{courseQuery}&quot;</p>
-          )}
-
-          {courseResults.length > 0 && (
+          {selectedCourse && (
             <div className="space-y-2">
-              {courseResults.map((course) => (
-                <div key={course.id}>
-                  <button
-                    onClick={() => { setSelectedCourse(course); setSelectedTee(null); setTeeHoles([]); }}
-                    className={`w-full text-left px-4 py-3 rounded-xl border transition-colors ${
-                      selectedCourse?.id === course.id
-                        ? "border-fairway-600 bg-fairway-50"
-                        : "border-gray-200 bg-white hover:border-fairway-300"
-                    }`}
-                  >
-                    <p className="font-medium text-fairway-900">{course.name}</p>
-                  </button>
-                  {selectedCourse?.id === course.id && (
-                    <div className="mt-2 ml-4 space-y-2">
-                      {course.tees.map((tee) => (
-                        <button
-                          key={tee.id}
-                          onClick={() => { setSelectedTee(tee); setTeeHoles([]); }}
-                          className={`w-full text-left px-3 py-2 rounded-lg border text-sm transition-colors ${
-                            selectedTee?.id === tee.id
-                              ? "border-fairway-600 bg-fairway-100 text-fairway-900"
-                              : "border-gray-100 bg-white hover:border-fairway-200"
-                          }`}
-                        >
-                          {tee.name} — CR {tee.rating} / Length {tee.totalMeters != null ? `${tee.totalMeters}m` : "—"} / Par {tee.par}
-                        </button>
-                      ))}
-                    </div>
+              <div className="flex items-start justify-between px-4 py-3 rounded-xl border border-fairway-600 bg-fairway-50">
+                <div>
+                  <p className="font-medium text-fairway-900">{selectedCourse.name}</p>
+                  {(selectedCourse.suburb || selectedCourse.city) && (
+                    <p className="text-xs text-gray-500 mt-0.5">{selectedCourse.suburb ?? selectedCourse.city}</p>
+                  )}
+                  {selectedCourse.address && (
+                    <p className="text-xs text-gray-500 mt-0.5">{selectedCourse.address}</p>
+                  )}
+                  {selectedCourse.phone && (
+                    <p className="text-xs text-gray-500 mt-0.5">{selectedCourse.phone}</p>
                   )}
                 </div>
-              ))}
+                <button
+                  onClick={() => { setSelectedCourse(null); setSelectedTee(null); setCourseQuery(""); }}
+                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors ml-3 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500 rounded"
+                >
+                  Change
+                </button>
+              </div>
+              <div className="ml-4 space-y-2">
+                {selectedCourse.tees.map((tee) => (
+                  <button
+                    key={tee.id}
+                    onClick={() => { setSelectedTee(tee); setTeeHoles([]); }}
+                    className={`w-full text-left px-3 py-2 rounded-lg border text-sm transition-colors ${
+                      selectedTee?.id === tee.id
+                        ? "border-fairway-600 bg-fairway-100 text-fairway-900"
+                        : "border-gray-100 bg-white hover:border-fairway-200"
+                    }`}
+                  >
+                    {tee.name} — CR {tee.rating} / Length {tee.totalMeters != null ? `${tee.totalMeters}m` : "—"} / Par {tee.par}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 

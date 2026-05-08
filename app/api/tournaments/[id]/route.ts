@@ -36,12 +36,20 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
           round: {
             include: {
               course: { select: { name: true } },
-              players: {
-              include: {
-                user: { select: { id: true, name: true } },
-                scores: { select: { holeNumber: true, strokes: true } },
+              tee: {
+                select: {
+                  holes: {
+                    select: { number: true, strokeIndex: true },
+                    orderBy: { number: "asc" },
+                  },
+                },
               },
-            },
+              players: {
+                include: {
+                  user: { select: { id: true, name: true } },
+                  scores: { select: { holeNumber: true, strokes: true } },
+                },
+              },
             },
           },
         },
