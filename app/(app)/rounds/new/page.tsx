@@ -12,7 +12,7 @@ const FORMATS = [
   { value: "AMBROSE_4", label: "4-Player Ambrose", desc: "Best ball scramble (teams of 4)" },
 ];
 
-interface Course { id: string; name: string; suburb: string | null; city: string | null; tees: Tee[] }
+interface Course { id: string; name: string; suburb: string | null; city: string | null; address?: string | null; phone?: string | null; tees: Tee[] }
 interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
 interface User { id: string; name: string; email: string }
 
@@ -197,6 +197,12 @@ function NewRoundForm() {
                   <p className="font-medium text-fairway-900">{selectedCourse.name}</p>
                   {(selectedCourse.suburb || selectedCourse.city) && (
                     <p className="text-xs text-gray-500 mt-0.5">{selectedCourse.suburb ?? selectedCourse.city}</p>
+                  )}
+                  {selectedCourse.address && (
+                    <p className="text-xs text-gray-500 mt-0.5">{selectedCourse.address}</p>
+                  )}
+                  {selectedCourse.phone && (
+                    <p className="text-xs text-gray-500 mt-0.5">{selectedCourse.phone}</p>
                   )}
                 </div>
                 <button
