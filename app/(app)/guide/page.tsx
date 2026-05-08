@@ -270,13 +270,48 @@ export default function GuidePage() {
             <Link href="/stats" className="text-fairway-700 underline">
               Stats page
             </Link>
-            . Calculated from your best 8 of your last 20 scores using the World Handicap System
-            formula. It updates automatically after every completed round.
+            . Calculated using the World Handicap System (WHS) formula — the best differentials
+            from your last 20 rounds, on a sliding scale:
+          </p>
+          <ul className="list-disc list-inside space-y-1 text-gray-600">
+            <li>3–4 rounds: best 1 differential</li>
+            <li>5–8 rounds: best 1–2 differentials (scales up)</li>
+            <li>9–18 rounds: best 2–6 differentials (scales up)</li>
+            <li>19–20 rounds: best 7–8 differentials</li>
+          </ul>
+          <p>
+            A minimum of <span className="font-semibold">3 completed Strokeplay rounds</span> is
+            required before a Handicap Index is assigned. Only Strokeplay rounds count — Stableford,
+            Match Play, Skins, and Ambrose rounds do not affect your index.
+          </p>
+
+          <div className="bg-fairway-50/60 rounded-lg p-3 space-y-2">
+            <p className="font-semibold text-fairway-900">9-hole rounds</p>
+            <p>
+              9-hole rounds are fully supported and follow the WHS specification. Each 9-hole
+              Strokeplay round is stored as a <span className="font-semibold">half-differential</span>{" "}
+              — it does not count toward your index on its own. Once you have completed{" "}
+              <span className="font-semibold">two 9-hole rounds</span>, they are combined into a
+              single 18-hole equivalent differential and enter your index calculation as one score.
+              An unpaired 9-hole round is held in reserve until your next 9-hole round is submitted.
+            </p>
+            <p className="text-gray-500 text-xs">
+              Example: 6 × 9-hole Strokeplay rounds = 3 combined differentials, which meets the
+              3-round minimum. 7 × 9-hole rounds = 3 combined differentials (the 7th is held in
+              reserve).
+            </p>
+          </div>
+
+          <p>
+            <span className="font-semibold text-fairway-900">Excluding a round</span> — On any
+            completed round&apos;s summary page, you can toggle{" "}
+            <span className="font-semibold">Exclude from handicap</span>. The round stays in your
+            history but its differential is removed from the index calculation immediately.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Handicap Trend chart</span> — Shows
-            your Handicap Index over time. A falling line means you are improving. The chart only
-            appears after two or more completed rounds.
+            your Handicap Index over time. A falling line means you are improving. The chart appears
+            once your index has been established (minimum 3 qualifying rounds).
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Summary tiles</span> — Three tiles
