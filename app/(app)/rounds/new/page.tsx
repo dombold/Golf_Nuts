@@ -42,7 +42,7 @@ function NewRoundForm() {
   const [selectedTee, setSelectedTee] = useState<Tee | null>(null);
   const [holesCount, setHolesCount] = useState<9 | 18>(18);
   const [startingHole, setStartingHole] = useState<1 | 10>(1);
-  const [format, setFormat] = useState("STABLEFORD");
+  const [format, setFormat] = useState("STROKEPLAY");
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
 
   useEffect(() => {

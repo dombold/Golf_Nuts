@@ -5,7 +5,7 @@ import { calcHandicapIndex } from "@/lib/handicap";
  * Recalculates a user's handicap index from their full HandicapHistory,
  * excluding any rounds the user has opted out of.
  */
-export async function recalcHandicap(userId: string): Promise<number> {
+export async function recalcHandicap(userId: string): Promise<number | null> {
   const [allHistory, excludedPlayers] = await Promise.all([
     prisma.handicapHistory.findMany({
       where: { userId },
@@ -37,5 +37,6 @@ export async function recalcHandicap(userId: string): Promise<number> {
     )
     .map((h) => h.differential);
 
+  if (differentials.length < 8) return null;
   return calcHandicapIndex(differentials);
 }

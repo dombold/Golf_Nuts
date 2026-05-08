@@ -25,10 +25,12 @@ export async function PATCH(
 
   const newIndex = await recalcHandicap(session.user.id);
 
-  await prisma.user.update({
-    where: { id: session.user.id },
-    data: { handicapIndex: newIndex },
-  });
+  if (newIndex !== null) {
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { handicapIndex: newIndex },
+    });
+  }
 
   return Response.json({ handicapIndex: newIndex });
 }

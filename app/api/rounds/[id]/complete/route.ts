@@ -56,10 +56,12 @@ export async function POST(
 
         const newIndex = await recalcHandicap(rp.userId);
 
-        await prisma.user.update({
-          where: { id: rp.userId },
-          data: { handicapIndex: newIndex },
-        });
+        if (newIndex !== null) {
+          await prisma.user.update({
+            where: { id: rp.userId },
+            data: { handicapIndex: newIndex },
+          });
+        }
       })
     );
   }
