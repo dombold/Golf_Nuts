@@ -4,6 +4,11 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { sendTournamentInviteNotification } from "@/lib/push";
 
+const PrizeHoleSchema = z.object({
+  holeNumber: z.number().int().min(1).max(18),
+  type: z.enum(["LONGEST_DRIVE", "NEAREST_PIN"]),
+});
+
 const CreateSchema = z.object({
   name: z.string().min(2).trim(),
   format: z.enum(["STROKEPLAY", "STABLEFORD", "MATCH_PLAY", "SKINS", "AMBROSE_2", "AMBROSE_4"]),
@@ -11,6 +16,7 @@ const CreateSchema = z.object({
   teeId: z.string(),
   date: z.string().optional(),
   inviteeIds: z.array(z.string()).default([]),
+  prizeHoles: z.array(PrizeHoleSchema).default([]),
 });
 
 export async function POST(req: NextRequest) {
@@ -21,11 +27,17 @@ export async function POST(req: NextRequest) {
   const parsed = CreateSchema.safeParse(body);
   if (!parsed.success) return Response.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const { name, format, courseId, teeId, date, inviteeIds } = parsed.data;
+  const { name, format, courseId, teeId, date, inviteeIds, prizeHoles } = parsed.data;
   const organiserId = session.user.id;
 
   // Deduplicate invitees and exclude the organiser (they're auto-accepted separately)
   const otherInvitees = [...new Set(inviteeIds)].filter((id) => id !== organiserId);
+
+  // Verify the organiser exists — catches stale JWT sessions
+  const organiserExists = await prisma.user.findUnique({ where: { id: organiserId }, select: { id: true } });
+  if (!organiserExists) {
+    return Response.json({ error: { message: "Session expired — please sign out and sign back in." } }, { status: 401 });
+  }
 
   const tournament = await prisma.tournament.create({
     data: {
@@ -43,6 +55,7 @@ export async function POST(req: NextRequest) {
           ...otherInvitees.map((userId) => ({ userId, status: "PENDING" as const })),
         ],
       },
+      prizeHoles: prizeHoles.length > 0 ? { create: prizeHoles } : undefined,
     },
   });
 

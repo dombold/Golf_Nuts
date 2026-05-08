@@ -6,6 +6,7 @@ import InvitationResponseCard from "@/components/tournament/InvitationResponseCa
 import GroupBuilder from "@/components/tournament/GroupBuilder";
 import StartRoundButton from "@/components/tournament/StartRoundButton";
 import TournamentLeaderboard from "@/components/tournament/TournamentLeaderboard";
+import PrizeHolesCard from "@/components/tournament/PrizeHolesCard";
 
 const FORMAT_LABELS: Record<string, string> = {
   STROKEPLAY: "Strokeplay",
@@ -68,6 +69,10 @@ export default async function TournamentDetailPage({
             },
           },
         },
+      },
+      prizeHoles: {
+        select: { holeNumber: true, type: true },
+        orderBy: { holeNumber: "asc" },
       },
     },
   });
@@ -150,6 +155,26 @@ export default async function TournamentDetailPage({
         </div>
       </dl>
 
+      {/* Edit event details — organiser only, UPCOMING only */}
+      {isOrganiser && tournament.status === "UPCOMING" && (
+        <Link
+          href={`/tournaments/${id}/edit`}
+          className="block w-full text-center py-2.5 border border-fairway-300 text-fairway-700 rounded-xl text-sm font-medium hover:bg-fairway-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500"
+        >
+          Edit event details
+        </Link>
+      )}
+
+      {/* Prize Holes card — visible whenever holes exist, or to organiser so they can add/edit */}
+      {(tournament.prizeHoles.length > 0 || isOrganiser) && (
+        <PrizeHolesCard
+          tournamentId={id}
+          teeId={tournament.teeId ?? null}
+          prizeHoles={tournament.prizeHoles as { holeNumber: number; type: "LONGEST_DRIVE" | "NEAREST_PIN" }[]}
+          canEdit={isOrganiser && tournament.status === "UPCOMING"}
+        />
+      )}
+
       {/* ── UPCOMING STATE ── */}
       {tournament.status === "UPCOMING" && (
         <>
@@ -182,13 +207,6 @@ export default async function TournamentDetailPage({
           {/* Organiser view */}
           {isOrganiser && (
             <>
-              <Link
-                href={`/tournaments/${id}/edit`}
-                className="block w-full text-center py-2.5 border border-fairway-300 text-fairway-700 rounded-xl text-sm font-medium hover:bg-fairway-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500"
-              >
-                Edit event details
-              </Link>
-
             {/* Player invitation list */}
               <div className="space-y-2">
                 <h2 className="text-base font-semibold text-fairway-900">Players</h2>

@@ -7,6 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 interface Hole { id: string; number: number; par: number; strokeIndex: number; distance?: number; teeLat?: number | null; teeLng?: number | null; greenLat?: number | null; greenLng?: number | null; }
 interface ScoreEntry { strokes: number; penalties: number; putts?: number; fairwayHit?: boolean; gir?: boolean }
 interface Player { id: string; userId: string; playingHandicap: number; user: { id: string; name: string }; scores: { holeNumber: number; strokes: number }[] }
+interface PrizeHole { holeNumber: number; type: "LONGEST_DRIVE" | "NEAREST_PIN" }
 interface Round {
   id: string;
   format: string;
@@ -16,6 +17,7 @@ interface Round {
   course: { name: string };
   tee: { name: string; par: number; holes: Hole[] };
   players: Player[];
+  prizeHoles?: PrizeHole[];
 }
 
 function strokesReceived(handicap: number, strokeIndex: number) {
@@ -56,11 +58,16 @@ export default function ScoringPage() {
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<"score" | "leaderboard">("score");
   const firstLoadRef = useRef(true);
+  const [prizeHolePopup, setPrizeHolePopup] = useState<PrizeHole | null>(null);
+  const [popupDismissedForHole, setPopupDismissedForHole] = useState<number | null>(null);
 
   const fetchRound = useCallback(async () => {
     const res = await fetch(`/api/rounds/${id}/score`);
     const data = await res.json();
     if (data.round) {
+      // Flatten prize holes from the tournament relation onto the round
+      data.round.prizeHoles =
+        data.round.tournamentRounds?.[0]?.tournament?.prizeHoles ?? [];
       setRound(data.round);
       const existing: typeof scores = {};
       for (const player of data.round.players) {
@@ -97,6 +104,19 @@ export default function ScoringPage() {
     const interval = setInterval(fetchRound, 10000);
     return () => clearInterval(interval);
   }, [fetchRound]);
+
+  // Reset dismissed flag when moving to a new hole
+  useEffect(() => {
+    setPopupDismissedForHole(null);
+  }, [currentHole]);
+
+  // Show prize hole popup when on a designated hole (unless already dismissed)
+  useEffect(() => {
+    if (!round?.prizeHoles?.length) return;
+    if (popupDismissedForHole === currentHole) return;
+    const match = round.prizeHoles.find((p) => p.holeNumber === currentHole);
+    setPrizeHolePopup(match ?? null);
+  }, [currentHole, round?.prizeHoles, popupDismissedForHole]);
 
   function updateScore(roundPlayerId: string, holeNumber: number, field: keyof ScoreEntry, value: number | boolean) {
     setScores((prev) => ({
@@ -151,6 +171,11 @@ export default function ScoringPage() {
       await fetch(`/api/rounds/${id}/complete`, { method: "POST" });
       router.push(`/rounds/${id}/summary`);
     }
+  }
+
+  function dismissPrizeHolePopup() {
+    setPopupDismissedForHole(currentHole);
+    setPrizeHolePopup(null);
   }
 
   if (!round) {
@@ -396,6 +421,31 @@ export default function ScoringPage() {
               </span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Prize Hole Popup */}
+      {prizeHolePopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+          <div className="absolute inset-0 bg-black/40" onClick={dismissPrizeHolePopup} />
+          <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center space-y-4">
+            <div className="text-4xl">
+              {prizeHolePopup.type === "LONGEST_DRIVE" ? "🏌️" : "🎯"}
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-fairway-500 mb-1">Prize Hole</p>
+              <h2 className="text-xl font-bold text-fairway-900">
+                {prizeHolePopup.type === "LONGEST_DRIVE" ? "Longest Drive" : "Nearest to Pin"}
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">Hole {prizeHolePopup.holeNumber}</p>
+            </div>
+            <button
+              onClick={dismissPrizeHolePopup}
+              className="w-full py-3 bg-fairway-700 text-white rounded-xl font-semibold hover:bg-fairway-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500"
+            >
+              Got it!
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -65,6 +65,19 @@ export async function GET(
           scores: { orderBy: { holeNumber: "asc" } },
         },
       },
+      tournamentRounds: {
+        take: 1,
+        include: {
+          tournament: {
+            select: {
+              prizeHoles: {
+                select: { holeNumber: true, type: true },
+                orderBy: { holeNumber: "asc" },
+              },
+            },
+          },
+        },
+      },
     },
   });
 

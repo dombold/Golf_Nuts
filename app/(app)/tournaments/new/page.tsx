@@ -15,6 +15,8 @@ const FORMATS = [
 interface Course { id: string; name: string; tees: Tee[] }
 interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
 interface User { id: string; name: string; email: string; handicapIndex?: number }
+interface TeeHole { id: string; number: number; par: number; strokeIndex: number }
+interface SelectedPrizeHole { holeNumber: number; type: "LONGEST_DRIVE" | "NEAREST_PIN" }
 
 export default function NewTournamentPage() {
   const router = useRouter();
@@ -37,7 +39,15 @@ export default function NewTournamentPage() {
   // Step 3 — Format
   const [format, setFormat] = useState("STABLEFORD");
 
-  // Step 4 — Invite players
+  // Step 3 — Prize Holes toggle
+  const [prizeHolesEnabled, setPrizeHolesEnabled] = useState(false);
+
+  // Step 4 — Prize Hole selection
+  const [teeHoles, setTeeHoles] = useState<TeeHole[]>([]);
+  const [teeHolesLoading, setTeeHolesLoading] = useState(false);
+  const [selectedPrizeHoles, setSelectedPrizeHoles] = useState<SelectedPrizeHole[]>([]);
+
+  // Step 5 — Invite players
   const [users, setUsers] = useState<User[]>([]);
   const [inviteeIds, setInviteeIds] = useState<string[]>([]);
 
@@ -66,10 +76,39 @@ export default function NewTournamentPage() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [courseQuery]);
 
+  // Lazy-fetch tee holes when entering the prize holes step
+  useEffect(() => {
+    if (step !== 4 || !prizeHolesEnabled || !selectedTee || teeHoles.length > 0) return;
+    setTeeHolesLoading(true);
+    fetch(`/api/tees/${selectedTee.id}/holes`)
+      .then((r) => r.json())
+      .then((d) => setTeeHoles(d.holes ?? []))
+      .catch(() => setTeeHoles([]))
+      .finally(() => setTeeHolesLoading(false));
+  }, [step, prizeHolesEnabled, selectedTee, teeHoles.length]);
+
   function toggleInvitee(id: string) {
     setInviteeIds((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
     );
+  }
+
+  function togglePrizeHole(holeNumber: number, type: "LONGEST_DRIVE" | "NEAREST_PIN") {
+    const isFront = holeNumber <= 9;
+    setSelectedPrizeHoles((prev) => {
+      // Already selected — deselect
+      if (prev.find((p) => p.holeNumber === holeNumber)) {
+        return prev.filter((p) => p.holeNumber !== holeNumber);
+      }
+      // Replace any existing selection of the same type in the same nine
+      const filtered = prev.filter((p) => !(p.type === type && (p.holeNumber <= 9) === isFront));
+      return [...filtered, { holeNumber, type }];
+    });
+  }
+
+  function handlePrizeHolesToggle(checked: boolean) {
+    setPrizeHolesEnabled(checked);
+    if (!checked) setSelectedPrizeHoles([]);
   }
 
   async function createTournament() {
@@ -87,6 +126,7 @@ export default function NewTournamentPage() {
           teeId: selectedTee.id,
           date: date || undefined,
           inviteeIds,
+          prizeHoles: selectedPrizeHoles,
         }),
       });
       const data = await res.json();
@@ -102,13 +142,15 @@ export default function NewTournamentPage() {
     }
   }
 
+  const totalSteps = prizeHolesEnabled ? 5 : 4;
+
   return (
     <div className="space-y-6 max-w-xl">
       <h1 className="text-2xl font-bold text-fairway-900">New Event</h1>
 
       {/* Step indicator */}
       <div className="flex gap-2">
-        {[1, 2, 3, 4].map((s) => (
+        {Array.from({ length: totalSteps }, (_, i) => i + 1).map((s) => (
           <div
             key={s}
             className={`h-1.5 flex-1 rounded-full transition-colors ${
@@ -165,7 +207,7 @@ export default function NewTournamentPage() {
             <input
               type="text"
               value={courseQuery}
-              onChange={(e) => { setCourseQuery(e.target.value); setSelectedCourse(null); setSelectedTee(null); }}
+              onChange={(e) => { setCourseQuery(e.target.value); setSelectedCourse(null); setSelectedTee(null); setTeeHoles([]); }}
               placeholder="Search by course or club name…"
               className="flex-1 px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-fairway-500 text-sm"
             />
@@ -187,7 +229,7 @@ export default function NewTournamentPage() {
               {courseResults.map((course) => (
                 <div key={course.id}>
                   <button
-                    onClick={() => { setSelectedCourse(course); setSelectedTee(null); }}
+                    onClick={() => { setSelectedCourse(course); setSelectedTee(null); setTeeHoles([]); }}
                     className={`w-full text-left px-4 py-3 rounded-xl border transition-colors ${
                       selectedCourse?.id === course.id
                         ? "border-fairway-600 bg-fairway-50"
@@ -201,7 +243,7 @@ export default function NewTournamentPage() {
                       {course.tees.map((tee) => (
                         <button
                           key={tee.id}
-                          onClick={() => setSelectedTee(tee)}
+                          onClick={() => { setSelectedTee(tee); setTeeHoles([]); }}
                           className={`w-full text-left px-3 py-2 rounded-lg border text-sm transition-colors ${
                             selectedTee?.id === tee.id
                               ? "border-fairway-600 bg-fairway-100 text-fairway-900"
@@ -233,7 +275,7 @@ export default function NewTournamentPage() {
         </div>
       )}
 
-      {/* Step 3: Format */}
+      {/* Step 3: Format + Prize Holes */}
       {step === 3 && (
         <div className="space-y-4">
           <h2 className="font-semibold text-fairway-800">Choose format</h2>
@@ -253,12 +295,33 @@ export default function NewTournamentPage() {
               </button>
             ))}
           </div>
+
+          {/* Prize Holes checkbox */}
+          <div
+            className="flex items-start gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white cursor-pointer hover:border-fairway-300 transition-colors"
+            onClick={() => handlePrizeHolesToggle(!prizeHolesEnabled)}
+          >
+            <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+              prizeHolesEnabled ? "bg-fairway-600 border-fairway-600" : "border-gray-300"
+            }`}>
+              {prizeHolesEnabled && (
+                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              )}
+            </div>
+            <div>
+              <p className="font-medium text-fairway-900">Prize Holes</p>
+              <p className="text-xs text-gray-500 mt-0.5">Designate Longest Drive and Nearest to Pin holes</p>
+            </div>
+          </div>
+
           <div className="flex gap-3">
             <button onClick={() => setStep(2)} className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400">
               ← Back
             </button>
             <button
-              onClick={() => setStep(4)}
+              onClick={() => prizeHolesEnabled ? setStep(4) : setStep(5)}
               className="flex-1 py-3 bg-fairway-700 text-white rounded-xl font-semibold hover:bg-fairway-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500"
             >
               Next →
@@ -267,8 +330,99 @@ export default function NewTournamentPage() {
         </div>
       )}
 
-      {/* Step 4: Invite players */}
-      {step === 4 && (
+      {/* Step 4: Prize Hole Selection */}
+      {step === 4 && prizeHolesEnabled && (
+        <div className="space-y-4">
+          <h2 className="font-semibold text-fairway-800">Prize Holes</h2>
+          <p className="text-sm text-gray-500">
+            Select which holes to designate as prize holes. One Longest Drive and one Nearest to Pin per nine is recommended.
+          </p>
+
+          {teeHolesLoading && (
+            <p className="text-sm text-gray-400 text-center py-6">Loading holes…</p>
+          )}
+
+          {!teeHolesLoading && teeHoles.length > 0 && (() => {
+            const frontNine = teeHoles.filter((h) => h.number <= 9);
+            const backNine  = teeHoles.filter((h) => h.number >= 10);
+            const par5s = (nine: TeeHole[]) => nine.filter((h) => h.par === 5);
+            const par3s = (nine: TeeHole[]) => nine.filter((h) => h.par === 3);
+
+            const renderGroup = (
+              holes: TeeHole[],
+              type: "LONGEST_DRIVE" | "NEAREST_PIN",
+              label: string
+            ) => {
+              if (holes.length === 0) return null;
+              return (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {holes.map((h) => {
+                      const active = selectedPrizeHoles.some((p) => p.holeNumber === h.number);
+                      return (
+                        <button
+                          key={h.number}
+                          onClick={() => togglePrizeHole(h.number, type)}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500 ${
+                            active
+                              ? "bg-fairway-600 text-white border-fairway-600"
+                              : "bg-white text-fairway-800 border-gray-200 hover:border-fairway-400"
+                          }`}
+                        >
+                          Hole {h.number}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            };
+
+            const hasFront = par5s(frontNine).length > 0 || par3s(frontNine).length > 0;
+            const hasBack  = par5s(backNine).length  > 0 || par3s(backNine).length  > 0;
+
+            return (
+              <div className="space-y-5">
+                {hasFront && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold text-fairway-800 border-b border-fairway-100 pb-1">Front Nine</p>
+                    {renderGroup(par5s(frontNine), "LONGEST_DRIVE", "Longest Drive (Par 5)")}
+                    {renderGroup(par3s(frontNine), "NEAREST_PIN",   "Nearest to Pin (Par 3)")}
+                  </div>
+                )}
+                {hasBack && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold text-fairway-800 border-b border-fairway-100 pb-1">Back Nine</p>
+                    {renderGroup(par5s(backNine), "LONGEST_DRIVE", "Longest Drive (Par 5)")}
+                    {renderGroup(par3s(backNine), "NEAREST_PIN",   "Nearest to Pin (Par 3)")}
+                  </div>
+                )}
+                {!hasFront && !hasBack && (
+                  <p className="text-sm text-gray-400 text-center py-4">
+                    No Par 3 or Par 5 holes found for this tee.
+                  </p>
+                )}
+              </div>
+            );
+          })()}
+
+          <div className="flex gap-3">
+            <button onClick={() => setStep(3)} className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400">
+              ← Back
+            </button>
+            <button
+              onClick={() => setStep(5)}
+              className="flex-1 py-3 bg-fairway-700 text-white rounded-xl font-semibold hover:bg-fairway-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500"
+            >
+              Next →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 5: Invite players */}
+      {step === 5 && (
         <div className="space-y-4">
           <h2 className="font-semibold text-fairway-800">Invite players</h2>
           <p className="text-sm text-gray-500">
@@ -308,7 +462,10 @@ export default function NewTournamentPage() {
           </div>
 
           <div className="flex gap-3">
-            <button onClick={() => setStep(3)} className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400">
+            <button
+              onClick={() => prizeHolesEnabled ? setStep(4) : setStep(3)}
+              className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+            >
               ← Back
             </button>
             <button

@@ -234,6 +234,23 @@ enum InvitationStatus {
   DECLINED
 }
 
+enum PrizeHoleType {
+  LONGEST_DRIVE
+  NEAREST_PIN
+}
+
+model TournamentPrizeHole {
+  id           String        @id @default(cuid())
+  tournamentId String
+  holeNumber   Int
+  type         PrizeHoleType
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, holeNumber])
+  @@map("tournament_prize_holes")
+}
+
 model Tournament {
   id          String           @id @default(cuid())
   name        String
@@ -252,6 +269,7 @@ model Tournament {
   rounds      TournamentRound[]
   invitations TournamentInvitation[]
   groups      TournamentGroup[]
+  prizeHoles  TournamentPrizeHole[]
 
   @@map("tournaments")
 }

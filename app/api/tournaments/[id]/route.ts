@@ -99,6 +99,13 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (teeId !== undefined) data.teeId = teeId;
   if (status !== undefined) data.status = status;
 
+  // If the course or tee changes, prize holes are no longer valid — clear them
+  const courseChanged = courseId !== undefined && courseId !== tournament.courseId;
+  const teeChanged = teeId !== undefined && teeId !== tournament.teeId;
+  if (courseChanged || teeChanged) {
+    await prisma.tournamentPrizeHole.deleteMany({ where: { tournamentId: id } });
+  }
+
   const updated = await prisma.tournament.update({ where: { id }, data });
 
   return Response.json({ tournament: updated });
