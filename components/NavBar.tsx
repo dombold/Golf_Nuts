@@ -8,7 +8,6 @@ import { logout } from "@/app/actions/auth";
 const navLinks = [
   { href: "/dashboard", label: "Home", icon: "🏠" },
   { href: "/rounds/new", label: "Play", icon: "⛳" },
-  { href: "/courses", label: "Courses", icon: "🗺️" },
   { href: "/stats", label: "Stats", icon: "📊" },
   { href: "/tournaments", label: "Events", icon: "🏆" },
   { href: "/guide", label: "Guide", icon: "📖" },
@@ -104,7 +103,7 @@ export default function NavBar({ user }: { user: { name: string; username: strin
 
       {/* Bottom tab bar (mobile) */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-fairway-900 border-t border-fairway-800 md:hidden">
-        <div className="grid grid-cols-6 h-14">
+        <div className="grid grid-cols-5 h-14">
           {navLinks.map((link) => {
             const active = pathname === link.href || pathname.startsWith(link.href + "/");
             return (

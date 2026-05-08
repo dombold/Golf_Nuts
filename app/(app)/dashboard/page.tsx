@@ -15,6 +15,16 @@ export default async function DashboardPage() {
     where: { userId, status: "PENDING" },
   });
 
+  const nextAcceptedTournament = await prisma.tournamentInvitation.findFirst({
+    where: {
+      userId,
+      status: "ACCEPTED",
+      tournament: { status: "UPCOMING", date: { gte: new Date() } },
+    },
+    orderBy: { tournament: { date: "asc" } },
+    include: { tournament: { select: { id: true, name: true, date: true } } },
+  });
+
   const activeRounds = await prisma.round.findMany({
     where: { players: { some: { userId } }, status: "ACTIVE" },
     include: { course: { select: { name: true } } },
@@ -41,18 +51,27 @@ export default async function DashboardPage() {
       {/* Welcome */}
       <div className="bg-fairway-900 text-white rounded-2xl p-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold">G&apos;day, {user?.firstName ?? user?.name?.split(" ")[0]} 👋</h1>
+          <h1 className="text-xl font-bold">G&apos;day, {user?.firstName ?? user?.name?.split(" ")[0]}</h1>
           <p className="text-fairway-300 text-sm mt-1">
             Handicap Index:{" "}
             <span className="text-white font-semibold">{user?.handicapIndex?.toFixed(1) ?? "N/A"}</span>
           </p>
         </div>
-        <Link
-          href="/rounds/new"
-          className="bg-fairway-500 hover:bg-fairway-400 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors"
-        >
-          + New Round
-        </Link>
+        {pendingInvitations > 0 ? (
+          <Link
+            href="/tournaments"
+            className="bg-acorn-500 hover:bg-acorn-400 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-transform transition-opacity"
+          >
+            🏆 {pendingInvitations} Invite{pendingInvitations > 1 ? "s" : ""}
+          </Link>
+        ) : nextAcceptedTournament ? (
+          <Link
+            href={`/tournaments/${nextAcceptedTournament.tournament.id}`}
+            className="bg-fairway-500 hover:bg-fairway-400 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-transform transition-opacity max-w-[140px] truncate text-center"
+          >
+            🏆 {nextAcceptedTournament.tournament.name}
+          </Link>
+        ) : null}
       </div>
 
       {/* Active rounds — resume banner */}
@@ -76,10 +95,9 @@ export default async function DashboardPage() {
       )}
 
       {/* Quick actions */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-3 gap-3">
         {[
           { href: "/rounds/new", icon: "⛳", label: "New Round" },
-          { href: "/courses/search", icon: "🔍", label: "Find Course" },
           { href: "/stats", icon: "📊", label: "My Stats" },
           { href: "/tournaments", icon: "🏆", label: "Tournaments" },
         ].map((item) => (

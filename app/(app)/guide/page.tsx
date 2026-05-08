@@ -4,7 +4,7 @@ const sections = [
   { id: "dashboard", icon: "🏠", title: "Dashboard" },
   { id: "play", icon: "⛳", title: "Playing a Round" },
   { id: "scoring", icon: "📋", title: "Live Scoring" },
-  { id: "courses", icon: "🗺️", title: "Courses" },
+  { id: "courses", icon: "🗺️", title: "Courses & Tees" },
   { id: "stats", icon: "📊", title: "Stats & Handicap" },
   { id: "tournaments", icon: "🏆", title: "Events & Tournaments" },
   { id: "notifications", icon: "🔔", title: "Notifications" },
@@ -46,18 +46,23 @@ export default function GuidePage() {
         <div className="space-y-3 text-sm text-gray-700 leading-relaxed">
           <p>
             The Dashboard is your home screen. It shows your current{" "}
-            <span className="font-semibold text-fairway-900">Handicap Index</span> at the top, four
-            quick-action tiles (New Round, Find Course, My Stats, Tournaments), and your five most
-            recent completed rounds.
+            <span className="font-semibold text-fairway-900">Handicap Index</span> at the top, three
+            quick-action tiles (New Round, My Stats, Tournaments), and your five most recent
+            completed rounds.
           </p>
           <ul className="list-disc list-inside space-y-1 text-gray-600">
             <li>
-              Your Handicap Index updates automatically after every completed round — no manual input
+              Your Handicap Index updates automatically after every completed Strokeplay round — no manual input
               needed.
             </li>
             <li>
-              Tap <span className="font-semibold">+ New Round</span> to start the three-step round
-              wizard.
+              If you have a pending tournament invitation, a button appears in the banner to take you
+              straight to it. If you have accepted an upcoming event, the banner shows a shortcut to
+              that event instead.
+            </li>
+            <li>
+              Tap <span className="font-semibold">New Round</span> or{" "}
+              <span className="font-semibold">Play</span> in the navigation to start the round wizard.
             </li>
             <li>
               Tap any recent round in the list to view its full scorecard and result summary.
@@ -110,16 +115,12 @@ export default function GuidePage() {
           <div>
             <p className="font-semibold text-fairway-700 mb-1">Step 1 — Select course and tee</p>
             <p>
-              Type at least two characters in the search box to find your course. Tap the course to
-              select it, then choose the tee you are playing from — each tee shows the Course
-              Rating, total length in metres, and Par. Tees are listed longest first. Select{" "}
-              <span className="font-semibold">9 holes</span> or{" "}
+              Type at least two characters in the search box to find your course — all WA courses
+              are pre-loaded. Tap the course to select it, then choose the tee you are playing from
+              — each tee shows the Course Rating, total length in metres, and Par. Tees are listed
+              longest first. Select <span className="font-semibold">9 holes</span> or{" "}
               <span className="font-semibold">18 holes</span>, then tap{" "}
-              <span className="font-semibold">Next</span>. If no courses appear,{" "}
-              <Link href="/courses" className="text-fairway-700 underline">
-                import one first
-              </Link>
-              .
+              <span className="font-semibold">Next</span>.
             </p>
           </div>
 
@@ -235,38 +236,24 @@ export default function GuidePage() {
       {/* Courses */}
       <div id="courses" className="bg-white rounded-xl border border-fairway-50 p-4 scroll-mt-20">
         <h2 className="text-lg font-semibold text-fairway-900 flex items-center gap-2 mb-3">
-          <span>🗺️</span> Courses
+          <span>🗺️</span> Courses &amp; Tees
         </h2>
         <div className="space-y-3 text-sm text-gray-700 leading-relaxed">
           <p>
-            The{" "}
-            <Link href="/courses" className="text-fairway-700 underline">
-              Courses page
-            </Link>{" "}
-            lists every course your group has imported, sorted alphabetically. Tap a course to view
-            all its tee sets and a full hole-by-hole breakdown of distances and pars. Tees are
-            listed longest first. The detail page also shows the course address, postcode, and phone
-            number where available — tap the phone number to call.
+            All WA golf courses are pre-loaded in Golf Nuts — there is nothing to import. You search
+            for a course inline when starting a round (Step 1) or creating an event (Step 2). Type
+            at least two characters and results appear instantly.
           </p>
           <p>
-            <span className="font-semibold text-fairway-900">Importing a course</span> — Tap{" "}
-            <span className="font-semibold">+ Add Course</span> in the top-right corner. Type the
-            course name in the search box — Golf Nuts searches an external course database. Tap a
-            result to preview it, then tap <span className="font-semibold">Import</span> to save it
-            permanently. Once imported, it is available to everyone in your group.
+            <span className="font-semibold text-fairway-900">Tee selection</span> — After choosing a
+            course, pick the tee set you are playing from. Each tee displays the Course Rating, Slope
+            Rating, total length in metres, and Par. Tees are listed longest first.
           </p>
           <p>
-            <span className="font-semibold text-fairway-900">Removing a course</span> — On the{" "}
-            <Link href="/courses" className="text-fairway-700 underline">
-              Courses page
-            </Link>
-            , swipe or tap the remove button next to any course to remove it from your list.
-          </p>
-          <p>
-            <span className="font-semibold text-fairway-900">Starting a round from a course</span>{" "}
-            — On the course detail page, tap{" "}
-            <span className="font-semibold">⛳ Start a round here</span> to jump straight into the
-            round wizard with that course pre-selected.
+            <span className="font-semibold text-fairway-900">Course detail pages</span> — Tapping a
+            course name anywhere in the app opens its detail page, which shows all tee sets with a
+            full hole-by-hole breakdown of distances and pars, plus the club&apos;s address, postcode,
+            and phone number where available. Tap the phone number to call directly.
           </p>
         </div>
       </div>
@@ -364,6 +351,13 @@ export default function GuidePage() {
             The tournament opens with an{" "}
             <span className="font-semibold">UPCOMING</span> status badge while you wait for players
             to accept.
+          </p>
+          <p>
+            <span className="font-semibold text-fairway-900">Prize holes</span> — During event
+            creation you can designate specific holes as prize holes. Each hole can be marked as{" "}
+            <span className="font-semibold">Longest Drive</span> or{" "}
+            <span className="font-semibold">Nearest the Pin</span>. These appear on the event page
+            so all players know which holes carry extra competition.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Arranging groups</span> — Once
