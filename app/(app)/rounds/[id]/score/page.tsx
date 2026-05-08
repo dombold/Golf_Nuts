@@ -353,13 +353,15 @@ export default function ScoringPage() {
             >
               ← Hole {currentHole - 1}
             </button>
-            <button
-              onClick={saveHole}
-              disabled={saving || !allEntered}
-              className="flex-1 py-3 bg-fairway-700 text-white rounded-xl font-semibold hover:bg-fairway-800 disabled:opacity-40 transition-colors"
-            >
-              {saving ? "Saving…" : currentHole < lastHoleNumber ? `Save & Hole ${currentHole + 1} →` : "Save →"}
-            </button>
+            {currentHole !== lastHoleNumber && round.status !== "COMPLETE" && (
+              <button
+                onClick={saveHole}
+                disabled={saving || !allEntered}
+                className="flex-1 py-3 bg-fairway-700 text-white rounded-xl font-semibold hover:bg-fairway-800 disabled:opacity-40 transition-colors"
+              >
+                {saving ? "Saving…" : `Save & Hole ${currentHole + 1} →`}
+              </button>
+            )}
           </div>
 
           {(currentHole === lastHoleNumber || round.status === "COMPLETE") && (
