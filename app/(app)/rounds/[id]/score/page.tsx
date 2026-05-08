@@ -208,7 +208,7 @@ export default function ScoringPage() {
       if (round.format === "STABLEFORD") {
         total += stablefordPoints(s, h.par, player.playingHandicap, h.strokeIndex);
       } else {
-        total += s - strokesReceived(player.playingHandicap, h.strokeIndex);
+        total += s - strokesReceived(player.playingHandicap, h.strokeIndex) - h.par;
       }
     }
     return { name: player.user.name, total, holesPlayed };
