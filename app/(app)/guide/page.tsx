@@ -158,6 +158,23 @@ export default function GuidePage() {
                 2-Player but for a team of four.
               </li>
             </ul>
+
+            <div className="bg-fairway-50/60 rounded-lg p-3 space-y-2 mt-2">
+              <p className="font-semibold text-fairway-900">Ambrose team handicap</p>
+              <p>
+                The team receives a combined handicap calculated as the{" "}
+                <span className="font-semibold">sum of all players&apos; handicaps divided by twice the number of players</span>{" "}
+                — which is the same as the average handicap halved.
+              </p>
+              <div className="space-y-1 text-gray-600">
+                <p>2-player team: (H1 + H2) ÷ 4</p>
+                <p>4-player team: (H1 + H2 + H3 + H4) ÷ 8</p>
+              </div>
+              <p className="text-gray-500 text-xs">
+                Example: a four-player team with handicaps of 10, 14, 18, and 22 receives a team
+                handicap of (10 + 14 + 18 + 22) ÷ 8 = <span className="font-semibold">8</span>.
+              </p>
+            </div>
           </div>
 
           <div>
@@ -391,9 +408,10 @@ export default function GuidePage() {
           <p>
             <span className="font-semibold text-fairway-900">Prize holes</span> — During event
             creation you can designate specific holes as prize holes. Each hole can be marked as{" "}
-            <span className="font-semibold">Longest Drive</span> or{" "}
-            <span className="font-semibold">Nearest the Pin</span>. These appear on the event page
-            so all players know which holes carry extra competition.
+            <span className="font-semibold">Longest Drive</span> (par 5s) or{" "}
+            <span className="font-semibold">Nearest to Pin</span> (par 3s). You can select one
+            Longest Drive and up to two Nearest to Pin holes per nine. Prize holes appear on the
+            event page so all players know which holes carry extra competition.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Arranging groups</span> — Once

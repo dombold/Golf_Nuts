@@ -37,8 +37,15 @@ export default function PrizeHolesCard({ tournamentId, teeId, prizeHoles: initia
       if (prev.find((p) => p.holeNumber === holeNumber)) {
         return prev.filter((p) => p.holeNumber !== holeNumber);
       }
-      const filtered = prev.filter((p) => !(p.type === type && (p.holeNumber <= 9) === isFront));
-      return [...filtered, { holeNumber, type }];
+      const sameTypeAndNine = prev.filter((p) => p.type === type && (p.holeNumber <= 9) === isFront);
+      if (type === "NEAREST_PIN") {
+        if (sameTypeAndNine.length >= 2) return prev;
+        return [...prev, { holeNumber, type }];
+      }
+      return [
+        ...prev.filter((p) => !(p.type === type && (p.holeNumber <= 9) === isFront)),
+        { holeNumber, type },
+      ];
     });
   }
 
@@ -165,7 +172,7 @@ export default function PrizeHolesCard({ tournamentId, teeId, prizeHoles: initia
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm text-sm">
       <div className="px-4 py-3 border-b border-gray-50">
         <h2 className="font-semibold text-fairway-900">Prize Holes</h2>
-        <p className="text-xs text-gray-500 mt-0.5">One Longest Drive and one Nearest to Pin per nine recommended.</p>
+        <p className="text-xs text-gray-500 mt-0.5">One Longest Drive and up to two Nearest to Pin holes per nine.</p>
       </div>
 
       <div className="px-4 py-4 space-y-5">

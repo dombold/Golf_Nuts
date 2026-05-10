@@ -33,6 +33,13 @@ export async function POST(req: NextRequest) {
   // Deduplicate invitees and exclude the organiser (they're auto-accepted separately)
   const otherInvitees = [...new Set(inviteeIds)].filter((id) => id !== organiserId);
 
+  for (const nine of [true, false]) {
+    if (prizeHoles.filter((h) => h.type === "NEAREST_PIN" && (h.holeNumber <= 9) === nine).length > 2 ||
+        prizeHoles.filter((h) => h.type === "LONGEST_DRIVE" && (h.holeNumber <= 9) === nine).length > 1) {
+      return Response.json({ error: { message: "Too many prize holes of the same type per nine" } }, { status: 400 });
+    }
+  }
+
   // Verify the organiser exists — catches stale JWT sessions
   const organiserExists = await prisma.user.findUnique({ where: { id: organiserId }, select: { id: true } });
   if (!organiserExists) {

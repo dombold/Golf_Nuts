@@ -33,6 +33,13 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
 
   const { prizeHoles } = parsed.data;
 
+  for (const nine of [true, false]) {
+    if (prizeHoles.filter((h) => h.type === "NEAREST_PIN" && (h.holeNumber <= 9) === nine).length > 2 ||
+        prizeHoles.filter((h) => h.type === "LONGEST_DRIVE" && (h.holeNumber <= 9) === nine).length > 1) {
+      return Response.json({ error: { message: "Too many prize holes of the same type per nine" } }, { status: 400 });
+    }
+  }
+
   await prisma.$transaction([
     prisma.tournamentPrizeHole.deleteMany({ where: { tournamentId: id } }),
     ...(prizeHoles.length > 0

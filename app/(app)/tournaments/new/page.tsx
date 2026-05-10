@@ -100,9 +100,17 @@ export default function NewTournamentPage() {
       if (prev.find((p) => p.holeNumber === holeNumber)) {
         return prev.filter((p) => p.holeNumber !== holeNumber);
       }
-      // Replace any existing selection of the same type in the same nine
-      const filtered = prev.filter((p) => !(p.type === type && (p.holeNumber <= 9) === isFront));
-      return [...filtered, { holeNumber, type }];
+      const sameTypeAndNine = prev.filter((p) => p.type === type && (p.holeNumber <= 9) === isFront);
+      if (type === "NEAREST_PIN") {
+        // Allow up to 2 per nine; ignore a 3rd attempt
+        if (sameTypeAndNine.length >= 2) return prev;
+        return [...prev, { holeNumber, type }];
+      }
+      // LONGEST_DRIVE: keep 1-per-nine limit — replace existing
+      return [
+        ...prev.filter((p) => !(p.type === type && (p.holeNumber <= 9) === isFront)),
+        { holeNumber, type },
+      ];
     });
   }
 
@@ -354,7 +362,7 @@ export default function NewTournamentPage() {
         <div className="space-y-4">
           <h2 className="font-semibold text-fairway-800">Prize Holes</h2>
           <p className="text-sm text-gray-500">
-            Select which holes to designate as prize holes. One Longest Drive and one Nearest to Pin per nine is recommended.
+            Select which holes to designate as prize holes. One Longest Drive and up to two Nearest to Pin holes per nine.
           </p>
 
           {teeHolesLoading && (
