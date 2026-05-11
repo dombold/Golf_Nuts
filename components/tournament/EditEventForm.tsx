@@ -20,6 +20,7 @@ interface TournamentData {
   name: string;
   format: string;
   date: string | null;
+  teeOffTime: string | null;
   course: Course | null;
   tee: Tee | null;
 }
@@ -30,6 +31,7 @@ export default function EditEventForm({ tournament }: { tournament: TournamentDa
   const [date, setDate] = useState(
     tournament.date ? new Date(tournament.date).toISOString().split("T")[0] : ""
   );
+  const [teeOffTime, setTeeOffTime] = useState(tournament.teeOffTime ?? "");
   const [format, setFormat] = useState(tournament.format);
 
   const [courseQuery, setCourseQuery] = useState("");
@@ -85,6 +87,7 @@ export default function EditEventForm({ tournament }: { tournament: TournamentDa
           name: name.trim(),
           format,
           date: date || null,
+          teeOffTime: teeOffTime || null,
           courseId: selectedCourse?.id ?? null,
           teeId: selectedTee?.id ?? null,
         }),
@@ -129,6 +132,19 @@ export default function EditEventForm({ tournament }: { tournament: TournamentDa
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
+          className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-fairway-500 text-sm"
+        />
+      </div>
+
+      {/* Tee Off Time */}
+      <div className="space-y-1">
+        <label className="block text-sm font-medium text-gray-700">
+          Tee Off Time <span className="text-gray-400 font-normal">(optional)</span>
+        </label>
+        <input
+          type="time"
+          value={teeOffTime}
+          onChange={(e) => setTeeOffTime(e.target.value)}
           className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-fairway-500 text-sm"
         />
       </div>

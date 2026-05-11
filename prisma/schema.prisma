@@ -260,6 +260,7 @@ model Tournament {
   format      GameFormat
   status      TournamentStatus @default(UPCOMING)
   date        DateTime?
+  teeOffTime  String?
   createdAt   DateTime         @default(now())
 
   createdById String

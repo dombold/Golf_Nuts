@@ -41,12 +41,12 @@ export default function AvatarUpload({ currentAvatarUrl, initials }: AvatarUploa
   }
 
   return (
-    <div className="flex flex-col items-start gap-1">
+    <div className="flex flex-col items-center gap-1.5">
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={loading}
-        className="relative group w-16 h-16 rounded-full overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500 focus-visible:ring-offset-2 disabled:opacity-70"
+        className="relative group w-20 h-20 rounded-full overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500 focus-visible:ring-offset-2 disabled:opacity-70"
         aria-label="Change profile photo"
       >
         {avatarUrl ? (
@@ -56,7 +56,7 @@ export default function AvatarUpload({ currentAvatarUrl, initials }: AvatarUploa
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full bg-fairway-600 flex items-center justify-center text-white text-2xl font-bold">
+          <div className="w-full h-full bg-fairway-600 flex items-center justify-center text-white text-xl font-bold">
             {initials}
           </div>
         )}
@@ -75,6 +75,15 @@ export default function AvatarUpload({ currentAvatarUrl, initials }: AvatarUploa
             </svg>
           )}
         </div>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={loading}
+        className="text-xs text-fairway-600 hover:text-fairway-800 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500 rounded disabled:opacity-50"
+      >
+        Change photo
       </button>
 
       {error && (

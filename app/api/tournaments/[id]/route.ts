@@ -66,6 +66,7 @@ const PatchSchema = z.object({
   name: z.string().min(2).trim().optional(),
   format: z.enum(["STROKEPLAY", "STABLEFORD", "MATCH_PLAY", "SKINS", "AMBROSE_2", "AMBROSE_4"]).optional(),
   date: z.string().nullable().optional(),
+  teeOffTime: z.string().regex(/^\d{2}:\d{2}$/).nullable().optional(),
   courseId: z.string().nullable().optional(),
   teeId: z.string().nullable().optional(),
   status: z.enum(["UPCOMING", "ACTIVE", "COMPLETE"]).optional(),
@@ -87,10 +88,10 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const parsed = PatchSchema.safeParse(body);
   if (!parsed.success) return Response.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const { name, format, date, courseId, teeId, status } = parsed.data;
+  const { name, format, date, teeOffTime, courseId, teeId, status } = parsed.data;
 
   const isFieldEdit = name !== undefined || format !== undefined || date !== undefined
-    || courseId !== undefined || teeId !== undefined;
+    || teeOffTime !== undefined || courseId !== undefined || teeId !== undefined;
 
   if (isFieldEdit && tournament.status !== "UPCOMING") {
     return Response.json(
@@ -103,6 +104,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (name !== undefined) data.name = name;
   if (format !== undefined) data.format = format;
   if (date !== undefined) data.date = date ? new Date(date) : null;
+  if (teeOffTime !== undefined) data.teeOffTime = teeOffTime;
   if (courseId !== undefined) data.courseId = courseId;
   if (teeId !== undefined) data.teeId = teeId;
   if (status !== undefined) data.status = status;

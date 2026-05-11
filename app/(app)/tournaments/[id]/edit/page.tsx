@@ -41,6 +41,7 @@ export default async function EditTournamentPage({
         name: tournament.name,
         format: tournament.format,
         date: tournament.date?.toISOString() ?? null,
+        teeOffTime: tournament.teeOffTime ?? null,
         course: tournament.course
           ? {
               id: tournament.course.id,

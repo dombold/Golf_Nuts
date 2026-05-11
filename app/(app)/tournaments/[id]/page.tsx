@@ -145,6 +145,18 @@ export default async function TournamentDetailPage({
             </dd>
           </div>
         )}
+        {tournament.teeOffTime && (
+          <div className="flex justify-between px-4 py-3">
+            <dt className="text-gray-500">Tee Off</dt>
+            <dd className="font-medium text-gray-800">
+              {new Date(`1970-01-01T${tournament.teeOffTime}`).toLocaleTimeString("en-AU", {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })}
+            </dd>
+          </div>
+        )}
         <div className="flex justify-between px-4 py-3">
           <dt className="text-gray-500">Players</dt>
           <dd className="font-medium text-gray-800">
