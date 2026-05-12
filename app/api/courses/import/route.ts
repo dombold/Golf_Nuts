@@ -1,5 +1,4 @@
 import { auth } from "@/lib/auth";
-import { getCourseById, flattenTees } from "@/lib/courseApi";
 import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 
@@ -12,49 +11,8 @@ export async function POST(req: NextRequest) {
     const externalId = body.externalId != null ? String(body.externalId) : null;
     if (!externalId) return Response.json({ error: "externalId required" }, { status: 400 });
 
-    // Return existing course if already imported
-    const existing = await prisma.course.findUnique({ where: { externalId } });
-    if (existing) return Response.json({ course: existing });
-
-    const apiCourse = await getCourseById(externalId);
-
-    const course = await prisma.course.create({
-      data: {
-        name: (() => {
-          const parts = [apiCourse.club_name, apiCourse.course_name].filter(Boolean) as string[];
-          const raw = parts.length === 2 && parts[0].trim().toLowerCase() === parts[1].trim().toLowerCase()
-            ? parts[0]
-            : parts.join(" — ");
-          return raw
-            .replace(/\bG C\b/g, 'Golf Club')
-            .replace(/\bGc\b/g, 'Golf Club')
-            .replace(/\bCc\b/g, 'Country Club');
-        })(),
-        address: apiCourse.location?.address,
-        city: apiCourse.location?.city,
-        state: apiCourse.location?.state,
-        country: apiCourse.location?.country,
-        externalId,
-        tees: {
-          create: flattenTees(apiCourse.tees).map((tee) => ({
-            name: tee.tee_name,
-            color: tee.tee_color,
-            rating: tee.course_rating,
-            slope: tee.slope_rating,
-            par: tee.par_total,
-            holes: {
-              create: (tee.holes ?? []).map((h, i) => ({
-                number: i + 1,
-                par: h.par,
-                strokeIndex: h.handicap ?? 0,
-                distance: h.yardage != null ? Math.round(h.yardage * 0.9144) : null,
-              })),
-            },
-          })),
-        },
-      },
-      include: { tees: { include: { holes: true } } },
-    });
+    const course = await prisma.course.findUnique({ where: { externalId } });
+    if (!course) return Response.json({ error: "Course not found" }, { status: 404 });
 
     return Response.json({ course });
   } catch (err) {
