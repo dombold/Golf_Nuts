@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import DeleteTournamentButton from "@/components/DeleteTournamentButton";
+import PastTournamentsDropdown from "@/components/tournament/PastTournamentsDropdown";
 
 export default async function TournamentsPage() {
   const session = await auth();
@@ -18,7 +19,19 @@ export default async function TournamentsPage() {
     },
   });
 
-  const [tournaments, pendingCount] = await Promise.all([
+  const roundsInclude = {
+    include: {
+      round: {
+        include: {
+          course: { select: { name: true } },
+          players: { include: { user: { select: { name: true } } } },
+        },
+      },
+    },
+    orderBy: { roundNumber: "asc" as const },
+  };
+
+  const [tournaments, pastTournaments, pendingCount] = await Promise.all([
     prisma.tournament.findMany({
       where: {
         OR: [
@@ -30,19 +43,18 @@ export default async function TournamentsPage() {
         course: { select: { name: true } },
         createdBy: { select: { name: true } },
         invitations: { where: { userId } },
-        rounds: {
-          include: {
-            round: {
-              include: {
-                course: { select: { name: true } },
-                players: { include: { user: { select: { name: true } } } },
-              },
-            },
-          },
-          orderBy: { roundNumber: "asc" },
-        },
+        rounds: roundsInclude,
       },
       orderBy: { createdAt: "desc" },
+    }),
+    prisma.tournament.findMany({
+      where: { status: "COMPLETE" },
+      include: {
+        course: { select: { name: true } },
+        createdBy: { select: { name: true } },
+        rounds: roundsInclude,
+      },
+      orderBy: { date: "desc" },
     }),
     prisma.tournamentInvitation.count({
       where: { userId, status: "PENDING" },
@@ -164,6 +176,10 @@ export default async function TournamentsPage() {
             );
           })}
         </div>
+      )}
+
+      {pastTournaments.length > 0 && (
+        <PastTournamentsDropdown pastTournaments={pastTournaments} />
       )}
     </div>
   );
