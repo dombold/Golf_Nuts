@@ -7,8 +7,25 @@ export default async function TournamentsPage() {
   const session = await auth();
   const userId = session!.user.id;
 
+  const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  // Delete never-started tournaments whose scheduled date passed > 1 week ago.
+  // Cascade removes invitations, groups, prize holes automatically.
+  await prisma.tournament.deleteMany({
+    where: {
+      status: "UPCOMING",
+      date: { lt: oneWeekAgo },
+    },
+  });
+
   const [tournaments, pendingCount] = await Promise.all([
     prisma.tournament.findMany({
+      where: {
+        OR: [
+          { date: null },
+          { date: { gte: oneWeekAgo } },
+        ],
+      },
       include: {
         course: { select: { name: true } },
         createdBy: { select: { name: true } },
