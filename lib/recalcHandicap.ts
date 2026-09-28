@@ -40,18 +40,25 @@ export async function recalcHandicap(userId: string): Promise<number | null> {
       !excludedRoundIds.has(h.roundId)
   );
 
-  // Separate 18-hole and 9-hole (half) differentials
-  const fullDiffs = eligible.filter((h) => !h.isNineHole).map((h) => h.differential);
-  const halfDiffs = eligible.filter((h) => h.isNineHole).map((h) => h.differential);
+  // Walk in chronological order, pairing consecutive 9-hole halves on the fly.
+  // This preserves true date ordering so slice(-20) in calcHandicapIndex picks
+  // the 20 most recently played rounds, not the 20 most recently concatenated.
+  // An unpaired trailing 9-hole entry is intentionally dropped per WHS rules.
+  const allDiffs: number[] = [];
+  let pendingHalf: number | null = null;
 
-  // Pair consecutive 9-hole halves into 18-hole equivalents (oldest first).
-  // An unpaired trailing entry is intentionally dropped per WHS rules.
-  const combinedFromNine: number[] = [];
-  for (let i = 0; i + 1 < halfDiffs.length; i += 2) {
-    combinedFromNine.push(halfDiffs[i] + halfDiffs[i + 1]);
+  for (const h of eligible) {
+    if (!h.isNineHole) {
+      allDiffs.push(h.differential);
+    } else {
+      if (pendingHalf !== null) {
+        allDiffs.push(pendingHalf + h.differential);
+        pendingHalf = null;
+      } else {
+        pendingHalf = h.differential;
+      }
+    }
   }
-
-  const allDiffs = [...fullDiffs, ...combinedFromNine];
 
   if (allDiffs.length < 3) return null;
   return calcHandicapIndex(allDiffs);
