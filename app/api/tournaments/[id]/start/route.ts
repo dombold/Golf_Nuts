@@ -60,6 +60,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
                 tee.par
               ),
               teamNumber: member.teamNumber ?? null,
+              excludeFromHandicap: tournament.format !== "STROKEPLAY",
             })),
           },
         },

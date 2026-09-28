@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
             tee.rating,
             tee.par
           ),
+          excludeFromHandicap: format !== "STROKEPLAY",
         })),
       },
     },
