@@ -15,7 +15,6 @@
     "@simplewebauthn/server": "^9.0.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/nodemailer": "^7.0.11",
     "@types/pg": "^8.20.0",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.3.1",
@@ -24,7 +23,7 @@
     "jsonwebtoken": "^9.0.3",
     "next": "^16.2.4",
     "next-auth": "^5.0.0-beta.30",
-    "nodemailer": "^7.0.13",
+    "nodemailer": "^10.0.12",
     "pg": "^8.20.0",
     "prisma": "^7.5.0",
     "react": "19.2.4",
@@ -42,7 +41,10 @@
     "defu": "6.1.7",
     "effect": "3.21.2",
     "lodash": "4.18.1",
-    "brace-expansion": "1.1.18"
+    "brace-expansion": "1.1.18",
+    "nodemailer": "$nodemailer",
+    "deepmerge-ts": "^8.0.2",
+    "mysql2": "^3.24.4"
   },
   "devDependencies": {
     "@simplewebauthn/types": "^12.0.0",
