@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import HandicapChart from "./HandicapChart";
 import ExcludeToggle from "./ExcludeToggle";
+import { isHoleInPlay } from "@/lib/nines";
 
 export default async function StatsPage() {
   const session = await auth();
@@ -25,7 +26,7 @@ export default async function StatsPage() {
       },
       include: {
         course: { select: { name: true } },
-        tee: { select: { par: true } },
+        tee: { select: { holes: { select: { number: true, par: true } } } },
         players: {
           where: { userId },
           include: { scores: true },
@@ -44,12 +45,17 @@ export default async function StatsPage() {
     const fairwayAttempts = rp.scores.filter((s) => s.fairwayHit !== null).length;
     const girs = rp.scores.filter((s) => s.gir === true).length;
     const putts = rp.scores.reduce((s, sc) => s + (sc.putts ?? 0), 0);
+    // Par of the holes actually in play — just the front or back nine for 9-hole rounds
+    const playedPar = round.tee.holes
+      .filter((h) => isHoleInPlay(h.number, round.holesCount, round.startingHole))
+      .reduce((sum, h) => sum + h.par, 0);
     return {
       roundId: round.id,
       date: round.date,
       course: round.course.name,
       gross,
-      toPar: gross - round.tee.par,
+      holesCount: round.holesCount,
+      toPar: gross - playedPar,
       fairwayPct: fairwayAttempts > 0 ? Math.round((fairways / fairwayAttempts) * 100) : null,
       girPct: Math.round((girs / Math.max(rp.scores.length, 1)) * 100),
       avgPutts: rp.scores.length > 0 ? (putts / rp.scores.length).toFixed(1) : null,
@@ -75,9 +81,13 @@ export default async function StatsPage() {
       {/* Summary cards */}
       {statsRows.length > 0 && (() => {
         const validRows = statsRows.filter((r) => r !== null);
-        const avgGross = validRows.length
-          ? Math.round(validRows.reduce((s, r) => s + r!.gross, 0) / validRows.length)
-          : 0;
+        // Average 9- and 18-hole rounds separately — mixing them would drag the average down
+        const avgGrossFor = (holes: number) => {
+          const rows = validRows.filter((r) => r!.holesCount === holes);
+          return rows.length ? Math.round(rows.reduce((s, r) => s + r!.gross, 0) / rows.length) : null;
+        };
+        const avg18 = avgGrossFor(18);
+        const avg9 = avgGrossFor(9);
         const avgFairway = validRows.filter((r) => r!.fairwayPct !== null).length
           ? Math.round(validRows.filter((r) => r!.fairwayPct !== null).reduce((s, r) => s + r!.fairwayPct!, 0) / validRows.filter((r) => r!.fairwayPct !== null).length)
           : null;
@@ -86,7 +96,9 @@ export default async function StatsPage() {
         return (
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: "Avg Score", value: avgGross.toString(), sub: "gross" },
+              avg18 !== null
+                ? { label: "Avg Score", value: avg18.toString(), sub: "gross · 18 holes", extra: avg9 !== null ? `9 holes: ${avg9}` : undefined }
+                : { label: "Avg Score", value: avg9?.toString() ?? "—", sub: "gross · 9 holes" },
               { label: "Fairways", value: avgFairway !== null ? `${avgFairway}%` : "—", sub: "avg hit" },
               { label: "GIR", value: `${avgGir}%`, sub: "avg" },
             ].map((stat) => (
@@ -94,6 +106,7 @@ export default async function StatsPage() {
                 <p className="text-2xl font-bold text-fairway-700">{stat.value}</p>
                 <p className="text-xs font-medium text-fairway-900 mt-0.5">{stat.label}</p>
                 <p className="text-xs text-gray-400">{stat.sub}</p>
+                {"extra" in stat && stat.extra && <p className="text-xs text-gray-400">{stat.extra}</p>}
               </div>
             ))}
           </div>
