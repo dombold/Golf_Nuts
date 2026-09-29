@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface Player {
   id: string;
@@ -44,6 +45,7 @@ export default function GroupBuilder({
   format,
   tournamentId,
 }: Props) {
+  const router = useRouter();
   const [groups, setGroups] = useState<Group[]>(
     initialGroups.length > 0
       ? initialGroups
@@ -54,6 +56,7 @@ export default function GroupBuilder({
   const [randomising, setRandomising] = useState(false);
   const [wasRandomised, setWasRandomised] = useState(false);
   const [randomiseError, setRandomiseError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Players not yet assigned to any group
   const assignedIds = new Set(groups.flatMap((g) => g.members.map((m) => m.userId)));
@@ -128,13 +131,22 @@ export default function GroupBuilder({
 
   async function saveGroups() {
     setSaving(true);
-    const res = await fetch(`/api/tournaments/${tournamentId}/groups`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ groups }),
-    });
-    setSaving(false);
-    if (res.ok) setSaved(true);
+    setSaveError(null);
+    try {
+      const res = await fetch(`/api/tournaments/${tournamentId}/groups`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ groups }),
+      });
+      if (!res.ok) throw new Error("Save failed");
+      setSaved(true);
+      // Re-render the server page so the Start Round status reflects the saved groups
+      router.refresh();
+    } catch {
+      setSaveError("Could not save groups. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function randomiseTeams() {
@@ -302,6 +314,10 @@ export default function GroupBuilder({
 
         {randomiseError && (
           <p className="text-xs text-red-600 text-center">{randomiseError}</p>
+        )}
+
+        {saveError && (
+          <p className="text-xs text-red-600 text-center">{saveError}</p>
         )}
 
         {unassigned.length > 0 && (

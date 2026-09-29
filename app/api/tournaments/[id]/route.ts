@@ -40,7 +40,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
               tee: {
                 select: {
                   holes: {
-                    select: { number: true, strokeIndex: true },
+                    select: { number: true, strokeIndex: true, par: true },
                     orderBy: { number: "asc" },
                   },
                 },

@@ -70,6 +70,8 @@ export async function GET(
         include: {
           tournament: {
             select: {
+              id: true,
+              status: true,
               prizeHoles: {
                 select: { holeNumber: true, type: true },
                 orderBy: { holeNumber: "asc" },

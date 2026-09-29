@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import HoleMap from "@/components/HoleMap";
+import TournamentLeaderboard from "@/components/tournament/TournamentLeaderboard";
 import { useParams, useRouter } from "next/navigation";
 
 interface Hole { id: string; number: number; par: number; strokeIndex: number; distance?: number; teeLat?: number | null; teeLng?: number | null; greenLat?: number | null; greenLng?: number | null; }
@@ -18,6 +19,7 @@ interface Round {
   tee: { name: string; par: number; holes: Hole[] };
   players: Player[];
   prizeHoles?: PrizeHole[];
+  tournamentRounds?: { tournament?: { id: string; status: string; prizeHoles?: PrizeHole[] } }[];
 }
 
 function strokesReceived(handicap: number, strokeIndex: number) {
@@ -120,7 +122,7 @@ export default function ScoringPage() {
   const firstLoadRef = useRef(true);
   const [popupDismissedForHole, setPopupDismissedForHole] = useState<number | null>(null);
 
-  const applyRoundData = useCallback((data: { round?: Round & { tournamentRounds?: { tournament?: { prizeHoles?: PrizeHole[] } }[] } }) => {
+  const applyRoundData = useCallback((data: { round?: Round }) => {
     if (data.round) {
       // Flatten prize holes from the tournament relation onto the round
       data.round.prizeHoles =
@@ -268,6 +270,7 @@ export default function ScoringPage() {
   const hole = holes.find((h) => h.number === currentHole);
   const lastHoleNumber = holes[holes.length - 1]?.number ?? 18;
   const isAmbrose = round.format === "AMBROSE_2" || round.format === "AMBROSE_4";
+  const tournament = round.tournamentRounds?.[0]?.tournament;
 
   // Group players by teamNumber for Ambrose; each entry has teamNumber + sorted members
   const teams = isAmbrose
@@ -281,7 +284,7 @@ export default function ScoringPage() {
     ? teams.every((team) => (scores[team.members[0]?.id]?.[currentHole]?.strokes ?? 0) > 0)
     : round.players.every((p) => (scores[p.id]?.[currentHole]?.strokes ?? 0) > 0);
 
-  // Leaderboard calculation
+  // Group-only leaderboard for casual rounds (tournament rounds use TournamentLeaderboard)
   const leaderboard = isAmbrose
     ? teams.map((team) => {
         const phs = team.members.map((m) => m.playingHandicap);
@@ -520,7 +523,19 @@ export default function ScoringPage() {
         </div>
       )}
 
-      {tab === "leaderboard" && (
+      {tab === "leaderboard" && tournament && (
+        <div className="space-y-2">
+          <h2 className="font-semibold text-fairway-800 mb-3">Tournament Leaderboard</h2>
+          <TournamentLeaderboard
+            tournamentId={tournament.id}
+            format={round.format}
+            isActive={tournament.status !== "COMPLETE"}
+            highlightRoundId={round.id}
+          />
+        </div>
+      )}
+
+      {tab === "leaderboard" && !tournament && (
         <div className="space-y-2">
           <h2 className="font-semibold text-fairway-800 mb-3">Live Leaderboard</h2>
           {leaderboard.map((entry, i) => (
