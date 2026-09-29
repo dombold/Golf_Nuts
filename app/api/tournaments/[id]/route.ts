@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { z } from "zod";
+import { isHoleInPlay } from "@/lib/nines";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -69,6 +70,8 @@ const PatchSchema = z.object({
   teeOffTime: z.string().regex(/^\d{2}:\d{2}$/).nullable().optional(),
   courseId: z.string().nullable().optional(),
   teeId: z.string().nullable().optional(),
+  holesCount: z.union([z.literal(9), z.literal(18)]).optional(),
+  startingHole: z.union([z.literal(1), z.literal(10)]).optional(),
   status: z.enum(["UPCOMING", "ACTIVE", "COMPLETE"]).optional(),
 });
 
@@ -88,10 +91,11 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const parsed = PatchSchema.safeParse(body);
   if (!parsed.success) return Response.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const { name, format, date, teeOffTime, courseId, teeId, status } = parsed.data;
+  const { name, format, date, teeOffTime, courseId, teeId, holesCount, startingHole, status } = parsed.data;
 
   const isFieldEdit = name !== undefined || format !== undefined || date !== undefined
-    || teeOffTime !== undefined || courseId !== undefined || teeId !== undefined;
+    || teeOffTime !== undefined || courseId !== undefined || teeId !== undefined
+    || holesCount !== undefined || startingHole !== undefined;
 
   if (isFieldEdit && tournament.status !== "UPCOMING") {
     return Response.json(
@@ -109,11 +113,25 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (teeId !== undefined) data.teeId = teeId;
   if (status !== undefined) data.status = status;
 
+  const newHolesCount = holesCount ?? tournament.holesCount;
+  const newStartingHole = newHolesCount === 18 ? 1 : (startingHole ?? tournament.startingHole);
+  if (holesCount !== undefined || startingHole !== undefined) {
+    data.holesCount = newHolesCount;
+    data.startingHole = newStartingHole;
+  }
+
   // If the course or tee changes, prize holes are no longer valid — clear them
   const courseChanged = courseId !== undefined && courseId !== tournament.courseId;
   const teeChanged = teeId !== undefined && teeId !== tournament.teeId;
   if (courseChanged || teeChanged) {
     await prisma.tournamentPrizeHole.deleteMany({ where: { tournamentId: id } });
+  } else if (newHolesCount !== tournament.holesCount || newStartingHole !== tournament.startingHole) {
+    // Drop prize holes that fall outside the newly selected nine(s)
+    const existing = await prisma.tournamentPrizeHole.findMany({ where: { tournamentId: id } });
+    const outOfPlay = existing.filter((ph) => !isHoleInPlay(ph.holeNumber, newHolesCount, newStartingHole));
+    if (outOfPlay.length > 0) {
+      await prisma.tournamentPrizeHole.deleteMany({ where: { id: { in: outOfPlay.map((ph) => ph.id) } } });
+    }
   }
 
   const updated = await prisma.tournament.update({ where: { id }, data });

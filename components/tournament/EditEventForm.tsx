@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import HolesPicker from "@/components/HolesPicker";
+import type { HolesCount, StartingHole } from "@/lib/nines";
 
 const FORMATS = [
   { value: "STROKEPLAY", label: "Strokeplay", desc: "Total gross / net strokes" },
@@ -21,6 +23,8 @@ interface TournamentData {
   format: string;
   date: string | null;
   teeOffTime: string | null;
+  holesCount: HolesCount;
+  startingHole: StartingHole;
   course: Course | null;
   tee: Tee | null;
 }
@@ -33,6 +37,8 @@ export default function EditEventForm({ tournament }: { tournament: TournamentDa
   );
   const [teeOffTime, setTeeOffTime] = useState(tournament.teeOffTime ?? "");
   const [format, setFormat] = useState(tournament.format);
+  const [holesCount, setHolesCount] = useState<HolesCount>(tournament.holesCount);
+  const [startingHole, setStartingHole] = useState<StartingHole>(tournament.startingHole);
 
   const [courseQuery, setCourseQuery] = useState("");
   const [courseResults, setCourseResults] = useState<Course[]>([]);
@@ -90,6 +96,8 @@ export default function EditEventForm({ tournament }: { tournament: TournamentDa
           teeOffTime: teeOffTime || null,
           courseId: selectedCourse?.id ?? null,
           teeId: selectedTee?.id ?? null,
+          holesCount,
+          startingHole,
         }),
       });
       const data = await res.json();
@@ -254,6 +262,14 @@ export default function EditEventForm({ tournament }: { tournament: TournamentDa
           </>
         )}
       </div>
+
+      {/* Holes */}
+      <HolesPicker
+        holesCount={holesCount}
+        startingHole={startingHole}
+        teeName={selectedTee?.name}
+        onChange={(n, start) => { setHolesCount(n); setStartingHole(start); }}
+      />
 
       {/* Actions */}
       <div className="flex gap-3 pt-2">

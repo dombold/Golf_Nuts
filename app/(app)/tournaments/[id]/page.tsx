@@ -7,6 +7,7 @@ import GroupBuilder from "@/components/tournament/GroupBuilder";
 import StartRoundButton from "@/components/tournament/StartRoundButton";
 import TournamentLeaderboard from "@/components/tournament/TournamentLeaderboard";
 import PrizeHolesCard from "@/components/tournament/PrizeHolesCard";
+import { describeHoles } from "@/lib/nines";
 
 const FORMAT_LABELS: Record<string, string> = {
   STROKEPLAY: "Strokeplay",
@@ -129,6 +130,12 @@ export default async function TournamentDetailPage({
           </div>
         )}
         <div className="flex justify-between px-4 py-3">
+          <dt className="text-gray-500">Holes</dt>
+          <dd className="font-medium text-gray-800">
+            {describeHoles(tournament.holesCount, tournament.startingHole, tournament.tee?.name)}
+          </dd>
+        </div>
+        <div className="flex justify-between px-4 py-3">
           <dt className="text-gray-500">Format</dt>
           <dd className="font-medium text-gray-800">{FORMAT_LABELS[tournament.format] ?? tournament.format}</dd>
         </div>
@@ -182,6 +189,8 @@ export default async function TournamentDetailPage({
         <PrizeHolesCard
           tournamentId={id}
           teeId={tournament.teeId ?? null}
+          holesCount={tournament.holesCount}
+          startingHole={tournament.startingHole}
           prizeHoles={tournament.prizeHoles as { holeNumber: number; type: "LONGEST_DRIVE" | "NEAREST_PIN" }[]}
           canEdit={isOrganiser && tournament.status === "UPCOMING"}
         />

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { sendTournamentInviteNotification } from "@/lib/push";
+import { isHoleInPlay } from "@/lib/nines";
 
 const PrizeHoleSchema = z.object({
   holeNumber: z.number().int().min(1).max(18),
@@ -14,6 +15,8 @@ const CreateSchema = z.object({
   format: z.enum(["STROKEPLAY", "STABLEFORD", "MATCH_PLAY", "SKINS", "AMBROSE_2", "AMBROSE_4"]),
   courseId: z.string(),
   teeId: z.string(),
+  holesCount: z.union([z.literal(9), z.literal(18)]).default(18),
+  startingHole: z.union([z.literal(1), z.literal(10)]).default(1),
   date: z.string().optional(),
   inviteeIds: z.array(z.string()).default([]),
   prizeHoles: z.array(PrizeHoleSchema).default([]),
@@ -27,11 +30,16 @@ export async function POST(req: NextRequest) {
   const parsed = CreateSchema.safeParse(body);
   if (!parsed.success) return Response.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const { name, format, courseId, teeId, date, inviteeIds, prizeHoles } = parsed.data;
+  const { name, format, courseId, teeId, holesCount, date, inviteeIds, prizeHoles } = parsed.data;
+  const startingHole = holesCount === 18 ? 1 : parsed.data.startingHole;
   const organiserId = session.user.id;
 
   // Deduplicate invitees and exclude the organiser (they're auto-accepted separately)
   const otherInvitees = [...new Set(inviteeIds)].filter((id) => id !== organiserId);
+
+  if (prizeHoles.some((h) => !isHoleInPlay(h.holeNumber, holesCount, startingHole))) {
+    return Response.json({ error: { message: "Prize holes must be on the holes being played" } }, { status: 400 });
+  }
 
   for (const nine of [true, false]) {
     if (prizeHoles.filter((h) => h.type === "NEAREST_PIN" && (h.holeNumber <= 9) === nine).length > 2 ||
@@ -52,6 +60,8 @@ export async function POST(req: NextRequest) {
       format,
       courseId,
       teeId,
+      holesCount,
+      startingHole,
       date: date ? new Date(date) : null,
       createdById: organiserId,
       invitations: {
@@ -76,7 +86,7 @@ export async function POST(req: NextRequest) {
   return Response.json({ tournament }, { status: 201 });
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const session = await auth();
   if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 

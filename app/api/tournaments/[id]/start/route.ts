@@ -47,6 +47,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
         data: {
           courseId: tournament.courseId!,
           teeId: tee.id,
+          holesCount: tournament.holesCount,
+          startingHole: tournament.startingHole,
           format: tournament.format,
           date: tournament.date ?? new Date(),
           status: "ACTIVE",

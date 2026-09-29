@@ -4,18 +4,24 @@ import Link from "next/link";
 import DeleteTournamentButton from "@/components/DeleteTournamentButton";
 import PastTournamentsDropdown from "@/components/tournament/PastTournamentsDropdown";
 
+// Computed outside the component body: server components render once per request,
+// so reading the clock here is safe.
+function oneWeekAgo(): Date {
+  return new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+}
+
 export default async function TournamentsPage() {
   const session = await auth();
   const userId = session!.user.id;
 
-  const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const cutoff = oneWeekAgo();
 
   // Delete never-started tournaments whose scheduled date passed > 1 week ago.
   // Cascade removes invitations, groups, prize holes automatically.
   await prisma.tournament.deleteMany({
     where: {
       status: "UPCOMING",
-      date: { lt: oneWeekAgo },
+      date: { lt: cutoff },
     },
   });
 
@@ -36,7 +42,7 @@ export default async function TournamentsPage() {
       where: {
         OR: [
           { date: null },
-          { date: { gte: oneWeekAgo } },
+          { date: { gte: cutoff } },
         ],
       },
       include: {

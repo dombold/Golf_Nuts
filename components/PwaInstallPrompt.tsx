@@ -41,6 +41,7 @@ export default function PwaInstallPrompt() {
   return (
     <div className="fixed bottom-0 inset-x-0 z-50 p-4 flex justify-center pointer-events-none">
       <div className="pointer-events-auto w-full max-w-sm bg-white rounded-2xl shadow-lg border border-fairway-100 p-4 flex items-center gap-3">
+        {/* eslint-disable-next-line @next/next/no-img-element -- badge is precached by public/sw.js for offline use; /_next/image URLs would not be */}
         <img src="/golf_nuts_badge.jpg" alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-fairway-900 leading-tight">Add Golf Nuts to your home screen</p>

@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
   return Response.json({ round }, { status: 201 });
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const session = await auth();
   if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 

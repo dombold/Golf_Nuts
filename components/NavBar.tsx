@@ -42,6 +42,7 @@ export default function NavBar({ user }: { user: { name: string; username: strin
       <header className="bg-fairway-900 text-white sticky top-0 z-40 shadow-md">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element -- badge is precached by public/sw.js for offline use; /_next/image URLs would not be */}
             <img
               src="/golf_nuts_badge.jpg"
               alt="Golf Nuts"
@@ -61,6 +62,7 @@ export default function NavBar({ user }: { user: { name: string; username: strin
               aria-expanded={open}
             >
               {user.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- avatars are uploaded to public/ at runtime and reuse filenames, which the image optimiser handles poorly
                 <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
               ) : (
                 initials

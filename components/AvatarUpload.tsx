@@ -50,6 +50,7 @@ export default function AvatarUpload({ currentAvatarUrl, initials }: AvatarUploa
         aria-label="Change profile photo"
       >
         {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- avatars are uploaded to public/ at runtime and reuse filenames, which the image optimiser handles poorly
           <img
             src={avatarUrl}
             alt="Profile photo"

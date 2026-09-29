@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import HolesPicker from "@/components/HolesPicker";
 
 const FORMATS = [
   { value: "STROKEPLAY", label: "Strokeplay", desc: "Total gross / net strokes" },
@@ -15,11 +16,6 @@ const FORMATS = [
 interface Course { id: string; name: string; suburb: string | null; city: string | null; address?: string | null; phone?: string | null; tees: Tee[] }
 interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
 interface User { id: string; name: string; email: string }
-
-function parseNineNames(teeName: string): { front: string; back: string } | null {
-  const parts = teeName.split("/");
-  return parts.length === 2 ? { front: parts[0].trim(), back: parts[1].trim() } : null;
-}
 
 function NewRoundForm() {
   const router = useRouter();
@@ -49,6 +45,10 @@ function NewRoundForm() {
     fetch("/api/users").then((r) => r.json()).then((d) => {
       setUsers(d.users ?? []);
       setCurrentUser(d.currentUser);
+      if (d.currentUser) {
+        const me: string = d.currentUser.id;
+        setSelectedPlayers((prev) => (prev.includes(me) ? prev : [me]));
+      }
     });
     if (preselectedCourseId) {
       fetch(`/api/courses/${preselectedCourseId}`)
@@ -57,12 +57,6 @@ function NewRoundForm() {
         .catch(() => {});
     }
   }, [preselectedCourseId]);
-
-  useEffect(() => {
-    if (currentUser && !selectedPlayers.includes(currentUser.id)) {
-      setSelectedPlayers([currentUser.id]);
-    }
-  }, [currentUser]);
 
   // Debounced course search
   useEffect(() => {
@@ -237,51 +231,12 @@ function NewRoundForm() {
             </div>
           )}
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-fairway-800">Holes</p>
-            <div className="flex gap-2">
-              {([9, 18] as const).map((n) => (
-                <button
-                  key={n}
-                  onClick={() => { setHolesCount(n); if (n === 18) setStartingHole(1); }}
-                  className={`flex-1 py-2.5 rounded-xl border font-semibold transition-colors ${
-                    holesCount === n
-                      ? "border-fairway-600 bg-fairway-50 text-fairway-900"
-                      : "border-gray-200 bg-white text-gray-600 hover:border-fairway-300"
-                  }`}
-                >
-                  {n} holes
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {holesCount === 9 && selectedTee && (() => {
-            const names = parseNineNames(selectedTee.name);
-            const options: { label: string; value: 1 | 10 }[] = names
-              ? [{ label: names.front, value: 1 }, { label: names.back, value: 10 }]
-              : [{ label: "Front 9", value: 1 }, { label: "Back 9", value: 10 }];
-            return (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-fairway-800">Which 9?</p>
-                <div className="flex gap-2">
-                  {options.map((o) => (
-                    <button
-                      key={o.value}
-                      onClick={() => setStartingHole(o.value)}
-                      className={`flex-1 py-2.5 rounded-xl border font-semibold transition-colors ${
-                        startingHole === o.value
-                          ? "border-fairway-600 bg-fairway-50 text-fairway-900"
-                          : "border-gray-200 bg-white text-gray-600 hover:border-fairway-300"
-                      }`}
-                    >
-                      {o.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
+          <HolesPicker
+            holesCount={holesCount}
+            startingHole={startingHole}
+            teeName={selectedTee?.name}
+            onChange={(n, start) => { setHolesCount(n); setStartingHole(start); }}
+          />
 
           <button
             onClick={() => setStep(2)}

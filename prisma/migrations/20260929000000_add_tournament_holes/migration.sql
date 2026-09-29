@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "tournaments" ADD COLUMN "holesCount" INTEGER NOT NULL DEFAULT 18;
+ALTER TABLE "tournaments" ADD COLUMN "startingHole" INTEGER NOT NULL DEFAULT 1;

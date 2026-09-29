@@ -261,6 +261,8 @@ model Tournament {
   status      TournamentStatus @default(UPCOMING)
   date        DateTime?
   teeOffTime  String?
+  holesCount   Int             @default(18)
+  startingHole Int             @default(1)
   createdAt   DateTime         @default(now())
 
   createdById String

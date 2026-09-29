@@ -118,12 +118,9 @@ export default function ScoringPage() {
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<"score" | "leaderboard">("score");
   const firstLoadRef = useRef(true);
-  const [prizeHolePopup, setPrizeHolePopup] = useState<PrizeHole | null>(null);
   const [popupDismissedForHole, setPopupDismissedForHole] = useState<number | null>(null);
 
-  const fetchRound = useCallback(async () => {
-    const res = await fetch(`/api/rounds/${id}/score`);
-    const data = await res.json();
+  const applyRoundData = useCallback((data: { round?: Round & { tournamentRounds?: { tournament?: { prizeHoles?: PrizeHole[] } }[] } }) => {
     if (data.round) {
       // Flatten prize holes from the tournament relation onto the round
       data.round.prizeHoles =
@@ -138,12 +135,13 @@ export default function ScoringPage() {
       }
       if (firstLoadRef.current) {
         firstLoadRef.current = false;
-        const holes: Hole[] = data.round.tee.holes.slice(
-        data.round.startingHole - 1,
-        data.round.startingHole - 1 + data.round.holesCount
-      );
+        const loaded = data.round;
+        const holes: Hole[] = loaded.tee.holes.slice(
+          loaded.startingHole - 1,
+          loaded.startingHole - 1 + loaded.holesCount
+        );
         const nextHole = holes.find((h) =>
-          !data.round.players.every((p: Player) => (existing[p.id]?.[h.number]?.strokes ?? 0) > 0)
+          !loaded.players.every((p: Player) => (existing[p.id]?.[h.number]?.strokes ?? 0) > 0)
         );
         if (nextHole) setCurrentHole(nextHole.number);
       }
@@ -155,7 +153,12 @@ export default function ScoringPage() {
         return merged;
       });
     }
-  }, [id]);
+  }, []);
+
+  const fetchRound = useCallback(
+    () => fetch(`/api/rounds/${id}/score`).then((r) => r.json()).then(applyRoundData),
+    [id, applyRoundData]
+  );
 
   useEffect(() => { fetchRound(); }, [fetchRound]);
 
@@ -165,18 +168,16 @@ export default function ScoringPage() {
     return () => clearInterval(interval);
   }, [fetchRound]);
 
-  // Reset dismissed flag when moving to a new hole
-  useEffect(() => {
-    setPopupDismissedForHole(null);
-  }, [currentHole]);
-
   // Show prize hole popup when on a designated hole (unless already dismissed)
-  useEffect(() => {
-    if (!round?.prizeHoles?.length) return;
-    if (popupDismissedForHole === currentHole) return;
-    const match = round.prizeHoles.find((p) => p.holeNumber === currentHole);
-    setPrizeHolePopup(match ?? null);
-  }, [currentHole, round?.prizeHoles, popupDismissedForHole]);
+  const prizeHolePopup = popupDismissedForHole === currentHole
+    ? null
+    : round?.prizeHoles?.find((p) => p.holeNumber === currentHole) ?? null;
+
+  // Moving to another hole clears the dismissed flag so the popup shows again on return
+  function changeHole(next: number | ((h: number) => number)) {
+    setCurrentHole(next);
+    setPopupDismissedForHole(null);
+  }
 
   function updateScore(roundPlayerId: string, holeNumber: number, field: keyof ScoreEntry, value: number | boolean) {
     setScores((prev) => ({
@@ -233,7 +234,7 @@ export default function ScoringPage() {
     );
     setSaving(false);
     if (round && currentHole < round.startingHole - 1 + round.holesCount) {
-      setCurrentHole((h) => h + 1);
+      changeHole((h) => h + 1);
     }
   }
 
@@ -250,7 +251,6 @@ export default function ScoringPage() {
 
   function dismissPrizeHolePopup() {
     setPopupDismissedForHole(currentHole);
-    setPrizeHolePopup(null);
   }
 
   if (!round) {
@@ -266,7 +266,6 @@ export default function ScoringPage() {
     round.startingHole - 1 + round.holesCount
   );
   const hole = holes.find((h) => h.number === currentHole);
-  const totalHoles = holes.length;
   const lastHoleNumber = holes[holes.length - 1]?.number ?? 18;
   const isAmbrose = round.format === "AMBROSE_2" || round.format === "AMBROSE_4";
 
@@ -469,7 +468,7 @@ export default function ScoringPage() {
           {/* Hole navigation */}
           <div className="flex gap-3">
             <button
-              onClick={() => setCurrentHole((h) => Math.max(holes[0]?.number ?? 1, h - 1))}
+              onClick={() => changeHole((h) => Math.max(holes[0]?.number ?? 1, h - 1))}
               disabled={currentHole === (holes[0]?.number ?? 1)}
               className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 disabled:opacity-30"
             >
@@ -504,7 +503,7 @@ export default function ScoringPage() {
               return (
                 <button
                   key={h.number}
-                  onClick={() => setCurrentHole(h.number)}
+                  onClick={() => changeHole(h.number)}
                   className={`w-7 h-7 rounded-full text-xs font-medium transition-colors ${
                     h.number === currentHole
                       ? "bg-fairway-700 text-white"

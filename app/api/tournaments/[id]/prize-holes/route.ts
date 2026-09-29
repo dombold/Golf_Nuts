@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { z } from "zod";
+import { isHoleInPlay } from "@/lib/nines";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -20,7 +21,7 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
 
   const { id } = await params;
 
-  const tournament = await prisma.tournament.findUnique({ where: { id }, select: { createdById: true, status: true } });
+  const tournament = await prisma.tournament.findUnique({ where: { id }, select: { createdById: true, status: true, holesCount: true, startingHole: true } });
   if (!tournament) return Response.json({ error: "Tournament not found" }, { status: 404 });
   if (tournament.createdById !== session.user.id) return Response.json({ error: "Forbidden" }, { status: 403 });
   if (tournament.status !== "UPCOMING") {
@@ -32,6 +33,10 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
   if (!parsed.success) return Response.json({ error: parsed.error.flatten() }, { status: 400 });
 
   const { prizeHoles } = parsed.data;
+
+  if (prizeHoles.some((h) => !isHoleInPlay(h.holeNumber, tournament.holesCount, tournament.startingHole))) {
+    return Response.json({ error: { message: "Prize holes must be on the holes being played" } }, { status: 400 });
+  }
 
   for (const nine of [true, false]) {
     if (prizeHoles.filter((h) => h.type === "NEAREST_PIN" && (h.holeNumber <= 9) === nine).length > 2 ||

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { isHoleInPlay } from "@/lib/nines";
 
 interface PrizeHole { holeNumber: number; type: "LONGEST_DRIVE" | "NEAREST_PIN" }
 interface TeeHole { id: string; number: number; par: number; strokeIndex: number }
@@ -8,11 +9,13 @@ interface TeeHole { id: string; number: number; par: number; strokeIndex: number
 interface Props {
   tournamentId: string;
   teeId: string | null;
+  holesCount: number;
+  startingHole: number;
   prizeHoles: PrizeHole[];
   canEdit: boolean;
 }
 
-export default function PrizeHolesCard({ tournamentId, teeId, prizeHoles: initialPrizeHoles, canEdit }: Props) {
+export default function PrizeHolesCard({ tournamentId, teeId, holesCount, startingHole, prizeHoles: initialPrizeHoles, canEdit }: Props) {
   const [editing, setEditing] = useState(false);
   const [prizeHoles, setPrizeHoles] = useState<PrizeHole[]>(initialPrizeHoles);
   const [selected, setSelected] = useState<PrizeHole[]>(initialPrizeHoles);
@@ -132,8 +135,9 @@ export default function PrizeHolesCard({ tournamentId, teeId, prizeHoles: initia
   }
 
   // Edit mode
-  const frontNine = teeHoles.filter((h) => h.number <= 9);
-  const backNine  = teeHoles.filter((h) => h.number >= 10);
+  const inPlay = teeHoles.filter((h) => isHoleInPlay(h.number, holesCount, startingHole));
+  const frontNine = inPlay.filter((h) => h.number <= 9);
+  const backNine  = inPlay.filter((h) => h.number >= 10);
   const par5s = (nine: TeeHole[]) => nine.filter((h) => h.par === 5);
   const par3s = (nine: TeeHole[]) => nine.filter((h) => h.par === 3);
 

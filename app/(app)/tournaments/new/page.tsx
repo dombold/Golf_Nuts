@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import HolesPicker from "@/components/HolesPicker";
+import { isHoleInPlay, type HolesCount, type StartingHole } from "@/lib/nines";
 
 const FORMATS = [
   { value: "STROKEPLAY", label: "Strokeplay", desc: "Total gross / net strokes" },
@@ -35,6 +37,8 @@ export default function NewTournamentPage() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [selectedTee, setSelectedTee] = useState<Tee | null>(null);
+  const [holesCount, setHolesCount] = useState<HolesCount>(18);
+  const [startingHole, setStartingHole] = useState<StartingHole>(1);
 
   // Step 3 — Format
   const [format, setFormat] = useState("STABLEFORD");
@@ -132,6 +136,8 @@ export default function NewTournamentPage() {
           format,
           courseId: selectedCourse.id,
           teeId: selectedTee.id,
+          holesCount,
+          startingHole,
           date: date || undefined,
           inviteeIds,
           prizeHoles: selectedPrizeHoles,
@@ -287,6 +293,19 @@ export default function NewTournamentPage() {
             </div>
           )}
 
+          {selectedTee && (
+            <HolesPicker
+              holesCount={holesCount}
+              startingHole={startingHole}
+              teeName={selectedTee.name}
+              onChange={(n, start) => {
+                setHolesCount(n);
+                setStartingHole(start);
+                setSelectedPrizeHoles((prev) => prev.filter((p) => isHoleInPlay(p.holeNumber, n, start)));
+              }}
+            />
+          )}
+
           <div className="flex gap-3">
             <button onClick={() => setStep(1)} className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400">
               ← Back
@@ -370,8 +389,9 @@ export default function NewTournamentPage() {
           )}
 
           {!teeHolesLoading && teeHoles.length > 0 && (() => {
-            const frontNine = teeHoles.filter((h) => h.number <= 9);
-            const backNine  = teeHoles.filter((h) => h.number >= 10);
+            const inPlay = teeHoles.filter((h) => isHoleInPlay(h.number, holesCount, startingHole));
+            const frontNine = inPlay.filter((h) => h.number <= 9);
+            const backNine  = inPlay.filter((h) => h.number >= 10);
             const par5s = (nine: TeeHole[]) => nine.filter((h) => h.par === 5);
             const par3s = (nine: TeeHole[]) => nine.filter((h) => h.par === 3);
 
