@@ -512,10 +512,11 @@ export default function GuidePage() {
             <span className="font-semibold text-fairway-900">Setting players&apos; responses</span> —
             If someone tells you in person whether they&apos;re playing, the organiser can set it for
             them. In the <span className="font-semibold">Players</span> list on the event page, tap{" "}
-            <span className="font-semibold">In</span>, <span className="font-semibold">Out</span> or{" "}
+            <span className="font-semibold">Accepted</span>,{" "}
+            <span className="font-semibold">Declined</span> or{" "}
             <span className="font-semibold">Pending</span> next to their name. This works until the
-            event starts. Moving a player to Out or Pending takes them out of their group; a group
-            left empty is removed.
+            event starts. Moving a player to Declined or Pending takes them out of their group; a
+            group left empty is removed.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Prize holes</span> — Each prize hole is

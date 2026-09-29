@@ -7,12 +7,12 @@ import { apiErrorMessage } from "@/lib/apiError";
 type Status = "ACCEPTED" | "DECLINED" | "PENDING";
 
 const OPTIONS: { value: Status; label: string; active: string }[] = [
-  { value: "ACCEPTED", label: "In", active: "bg-green-100 text-green-700 border-green-300" },
-  { value: "DECLINED", label: "Out", active: "bg-red-100 text-red-600 border-red-300" },
+  { value: "ACCEPTED", label: "Accepted", active: "bg-green-100 text-green-700 border-green-300" },
+  { value: "DECLINED", label: "Declined", active: "bg-red-100 text-red-600 border-red-300" },
   { value: "PENDING", label: "Pending", active: "bg-amber-100 text-amber-700 border-amber-300" },
 ];
 
-/** Organiser's In / Out / Pending switch for one invitee on an upcoming event. */
+/** Organiser's Accepted / Declined / Pending switch for one invitee on an upcoming event. */
 export default function InviteeStatusControl({
   tournamentId,
   userId,
@@ -43,7 +43,7 @@ export default function InviteeStatusControl({
   }
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className="flex flex-col items-end gap-1 shrink-0">
       <div role="group" aria-label={`${name}'s status`} className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
         {OPTIONS.map((opt) => {
           const current = opt.value === status;

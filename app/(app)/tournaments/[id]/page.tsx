@@ -230,9 +230,9 @@ export default async function TournamentDetailPage({
                 <h2 className="text-base font-semibold text-fairway-900">Players</h2>
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm divide-y divide-gray-50">
                   {tournament.invitations.map((inv) => (
-                    <div key={inv.id} className="flex items-center justify-between px-4 py-3">
-                      <div>
-                        <p className="text-sm font-medium text-gray-800">{inv.user.name}</p>
+                    <div key={inv.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-800 break-words">{inv.user.name}</p>
                         <p className="text-xs text-gray-400">HCP {inv.user.handicapIndex}</p>
                       </div>
                       {inv.userId === tournament.createdById ? (
