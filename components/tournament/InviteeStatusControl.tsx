@@ -6,13 +6,16 @@ import { apiErrorMessage } from "@/lib/apiError";
 
 type Status = "ACCEPTED" | "DECLINED" | "PENDING";
 
-const OPTIONS: { value: Status; label: string; active: string }[] = [
-  { value: "ACCEPTED", label: "Accepted", active: "bg-green-100 text-green-700 border-green-300" },
-  { value: "DECLINED", label: "Declined", active: "bg-red-100 text-red-600 border-red-300" },
-  { value: "PENDING", label: "Pending", active: "bg-amber-100 text-amber-700 border-amber-300" },
+const OPTIONS: { value: Status; label: string; style: string }[] = [
+  { value: "ACCEPTED", label: "Accepted", style: "bg-green-100 text-green-700 border-green-300" },
+  { value: "DECLINED", label: "Declined", style: "bg-red-100 text-red-600 border-red-300" },
+  { value: "PENDING", label: "Pending", style: "bg-amber-100 text-amber-700 border-amber-300" },
 ];
 
-/** Organiser's Accepted / Declined / Pending switch for one invitee on an upcoming event. */
+/**
+ * Organiser's Accepted / Declined / Pending dropdown for one invitee on an upcoming event.
+ * `status` comes from the server, so a player's own Accept/Decline shows here after a refresh.
+ */
 export default function InviteeStatusControl({
   tournamentId,
   userId,
@@ -25,8 +28,12 @@ export default function InviteeStatusControl({
   status: Status;
 }) {
   const router = useRouter();
+  // The value being saved, shown until the refreshed status arrives (or the save fails)
   const [saving, setSaving] = useState<Status | null>(null);
   const [error, setError] = useState("");
+
+  const value = saving ?? status;
+  const style = OPTIONS.find((o) => o.value === value)!.style;
 
   async function setStatus(next: Status) {
     if (next === status || saving) return;
@@ -44,25 +51,19 @@ export default function InviteeStatusControl({
 
   return (
     <div className="flex flex-col items-end gap-1 shrink-0">
-      <div role="group" aria-label={`${name}'s status`} className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
-        {OPTIONS.map((opt) => {
-          const current = opt.value === status;
-          return (
-            <button
-              key={opt.value}
-              type="button"
-              aria-pressed={current}
-              disabled={!!saving}
-              onClick={() => setStatus(opt.value)}
-              className={`px-2.5 py-1 border-l first:border-l-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-fairway-500 disabled:opacity-60 ${
-                current ? opt.active : "border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
-              }`}
-            >
-              {saving === opt.value ? "…" : opt.label}
-            </button>
-          );
-        })}
-      </div>
+      <select
+        value={value}
+        onChange={(e) => setStatus(e.target.value as Status)}
+        disabled={!!saving}
+        aria-label={`${name}'s status`}
+        className={`text-xs font-medium rounded-lg border pl-2.5 pr-7 py-1 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500 disabled:opacity-60 disabled:cursor-wait ${style}`}
+      >
+        {OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value} className="bg-white text-gray-800">
+            {opt.label}
+          </option>
+        ))}
+      </select>
       {error && <p role="alert" className="text-xs text-red-600">{error}</p>}
     </div>
   );
