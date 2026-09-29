@@ -7,6 +7,7 @@ import GroupBuilder from "@/components/tournament/GroupBuilder";
 import StartRoundButton from "@/components/tournament/StartRoundButton";
 import TournamentLeaderboard from "@/components/tournament/TournamentLeaderboard";
 import PrizeHolesCard from "@/components/tournament/PrizeHolesCard";
+import InviteeStatusControl from "@/components/tournament/InviteeStatusControl";
 import { describeHoles } from "@/lib/nines";
 import { formatLabel } from "@/lib/gameFormats";
 
@@ -35,7 +36,8 @@ export default async function TournamentDetailPage({
         include: {
           user: { select: { id: true, name: true, username: true, handicapIndex: true } },
         },
-        orderBy: { createdAt: "asc" },
+        // Invitees created together share a timestamp — tie-break by name so rows don't jump around
+        orderBy: [{ createdAt: "asc" }, { user: { name: "asc" } }],
       },
       groups: {
         orderBy: { groupNumber: "asc" },
@@ -216,7 +218,7 @@ export default async function TournamentDetailPage({
           {/* Declined */}
           {!isOrganiser && myInvitation?.status === "DECLINED" && (
             <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
-              You declined this invitation.
+              You&apos;re not playing in this event.
             </div>
           )}
 
@@ -233,15 +235,18 @@ export default async function TournamentDetailPage({
                         <p className="text-sm font-medium text-gray-800">{inv.user.name}</p>
                         <p className="text-xs text-gray-400">HCP {inv.user.handicapIndex}</p>
                       </div>
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                        inv.status === "ACCEPTED"
-                          ? "bg-green-100 text-green-700"
-                          : inv.status === "DECLINED"
-                          ? "bg-red-100 text-red-600"
-                          : "bg-amber-100 text-amber-700"
-                      }`}>
-                        {inv.status === "ACCEPTED" ? "Accepted" : inv.status === "DECLINED" ? "Declined" : "Pending"}
-                      </span>
+                      {inv.userId === tournament.createdById ? (
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                          Organiser
+                        </span>
+                      ) : (
+                        <InviteeStatusControl
+                          tournamentId={id}
+                          userId={inv.userId}
+                          name={inv.user.name}
+                          status={inv.status}
+                        />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -252,6 +257,9 @@ export default async function TournamentDetailPage({
                 <div className="space-y-2">
                   <h2 className="text-base font-semibold text-fairway-900">Arrange Groups</h2>
                   <GroupBuilder
+                    // GroupBuilder copies the saved groups into state on mount; remount it when the
+                    // organiser changes who's accepted so it picks up the server's updated groups
+                    key={acceptedPlayers.map((p) => p.id).sort().join(",")}
                     acceptedPlayers={acceptedPlayers}
                     initialGroups={tournament.groups.map((g) => ({
                       groupNumber: g.groupNumber,
