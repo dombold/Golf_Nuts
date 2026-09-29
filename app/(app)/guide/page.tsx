@@ -9,6 +9,7 @@ const sections = [
   { id: "tournaments", icon: "🏆", title: "Events & Tournaments" },
   { id: "countback", icon: "🔢", title: "Tie-Breaking (Countback)" },
   { id: "notifications", icon: "🔔", title: "Notifications" },
+  { id: "profile", icon: "👤", title: "Profile & Sign-in" },
 ];
 
 export default function GuidePage() {
@@ -120,8 +121,10 @@ export default function GuidePage() {
               are pre-loaded. Tap the course to select it, then choose the tee you are playing from
               — each tee shows the Course Rating, total length in metres, and Par. Tees are listed
               longest first. Select <span className="font-semibold">9 holes</span> or{" "}
-              <span className="font-semibold">18 holes</span>, then tap{" "}
-              <span className="font-semibold">Next</span>.
+              <span className="font-semibold">18 holes</span>. For 9 holes, choose{" "}
+              <span className="font-semibold">which nine</span> — front or back (named after the
+              course&apos;s nines, such as &ldquo;Red&rdquo; and &ldquo;Blue&rdquo;, where the tee has them).
+              Then tap <span className="font-semibold">Next</span>.
             </p>
           </div>
 
@@ -129,14 +132,15 @@ export default function GuidePage() {
             <p className="font-semibold text-fairway-700 mb-2">Step 2 — Choose a format</p>
             <ul className="space-y-2">
               <li>
-                <span className="font-semibold text-fairway-900">Strokeplay</span> — lowest total
-                gross strokes wins. Net scores (adjusted for handicap) are used for handicap
-                calculations.
+                <span className="font-semibold text-fairway-900">Strokeplay</span> — lowest{" "}
+                <span className="font-semibold">net</span> score wins (your gross strokes minus the
+                handicap strokes you receive). Gross scores are used for handicap calculations.
               </li>
               <li>
                 <span className="font-semibold text-fairway-900">Stableford</span> — you earn points
-                per hole: 3 for birdie, 2 for par, 1 for bogey, 0 for double-bogey or worse. Your
-                handicap strokes are applied per hole so all skill levels compete fairly.
+                per hole based on your net score: 5 for an albatross or better, 4 for an eagle, 3 for
+                a birdie, 2 for par, 1 for bogey, 0 for double-bogey or worse. Your handicap strokes
+                are applied per hole so all skill levels compete fairly.
               </li>
               <li>
                 <span className="font-semibold text-fairway-900">Match Play</span> — hole-by-hole
@@ -195,8 +199,9 @@ export default function GuidePage() {
         <div className="space-y-3 text-sm text-gray-700 leading-relaxed">
           <p>
             <span className="font-semibold text-fairway-900">Navigating holes</span> — The row of
-            numbered dots at the top represents holes 1–18. Tap any dot to jump to that hole. The
-            current hole is highlighted in green; completed holes are filled in.
+            numbered dots below the score cards shows the holes you are playing (just the nine you
+            chose for a 9-hole round). Tap any dot to jump to that hole. The current hole is
+            highlighted in green; completed holes are filled in.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Entering a score</span> — Use the{" "}
@@ -232,8 +237,8 @@ export default function GuidePage() {
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Saving and moving on</span> — Tap{" "}
-            <span className="font-semibold">Save &amp; Next Hole</span>. Scores are saved to the
-            server immediately. You can go back to any previous hole at any time and edit scores
+            <span className="font-semibold">Save &amp; Hole N →</span> (N is the next hole). Scores
+            are saved to the server immediately. You can go back to any previous hole at any time and edit scores
             before the round is finished.
           </p>
           <p>
@@ -243,10 +248,22 @@ export default function GuidePage() {
             formats show net score relative to par.
           </p>
           <p>
+            In a <span className="font-semibold text-fairway-900">tournament</span>, the Leaderboard
+            tab shows the <span className="font-semibold">whole event</span> — every group ranked
+            together, with a <span className="font-semibold">Thru</span> column (holes played) and
+            your own group highlighted. It refreshes each time you open the tab and every 30
+            seconds while it is open.
+          </p>
+          <p>
+            <span className="font-semibold text-fairway-900">Prize holes</span> — In a tournament,
+            a pop-up appears when you reach a Longest Drive or Nearest the Pin hole, so the group
+            remembers to measure.
+          </p>
+          <p>
             <span className="font-semibold text-fairway-900">Finishing the round</span> — On the
             final hole, tap <span className="font-semibold">Finish Round</span> instead of Save
-            &amp; Next. You will be taken to the round summary and your Handicap Index will be
-            recalculated automatically.
+            &amp; Hole. You will be taken to the round summary, and your Handicap Index is
+            recalculated automatically if it was a Strokeplay round.
           </p>
         </div>
       </div>
@@ -321,10 +338,12 @@ export default function GuidePage() {
           </div>
 
           <p>
-            <span className="font-semibold text-fairway-900">Excluding a round</span> — On any
-            completed round&apos;s summary page, you can toggle{" "}
-            <span className="font-semibold">Exclude from handicap</span>. The round stays in your
-            history but its differential is removed from the index calculation immediately.
+            <span className="font-semibold text-fairway-900">Excluding a round</span> — In the{" "}
+            <span className="font-semibold">Recent Rounds</span> table on the Stats page, use the{" "}
+            <span className="font-semibold">HCP</span> switch on any round to include it in or
+            exclude it from your handicap. The round stays in your history but its differential is
+            removed from the index calculation immediately. Non-Strokeplay rounds are excluded by
+            default.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Handicap Trend chart</span> — Shows
@@ -337,7 +356,9 @@ export default function GuidePage() {
           </p>
           <ul className="list-disc list-inside space-y-1 text-gray-600">
             <li>
-              <span className="font-semibold">Avg Score</span> — your mean gross score per round.
+              <span className="font-semibold">Avg Score</span> — your average gross score for
+              18-hole rounds. If you have played 9-hole rounds, their average is shown underneath
+              (the two are kept separate so 9-hole scores don&apos;t pull the average down).
             </li>
             <li>
               <span className="font-semibold">Fairways (FIR%)</span> — percentage of par-4 and
@@ -350,8 +371,10 @@ export default function GuidePage() {
           </ul>
           <p>
             <span className="font-semibold text-fairway-900">Recent Rounds table</span> — Lists up
-            to 20 rounds with date, course, gross score (and to-par), FIR%, GIR%, and average putts
-            per hole. Scroll horizontally on mobile to see all columns.
+            to 20 rounds with date, course, gross score (and score to par), FIR%, GIR%, average
+            putts per hole, and the HCP switch. For 9-hole rounds, the score to par is measured
+            against the par of the nine you played. Scroll horizontally on mobile to see all
+            columns.
           </p>
         </div>
       </div>
@@ -367,8 +390,8 @@ export default function GuidePage() {
         <div className="space-y-3 text-sm text-gray-700 leading-relaxed">
           <p>
             A tournament groups a set of players under a single competition — the organiser
-            arranges them into groups, each group plays their own round, and a shared leaderboard
-            tracks the results.
+            arranges them into groups, each group plays their own round, and one shared leaderboard
+            ranks everyone across all groups.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Creating an event</span> — Tap{" "}
@@ -376,7 +399,7 @@ export default function GuidePage() {
             <Link href="/tournaments" className="text-fairway-700 underline">
               Events page
             </Link>
-            . A four-step wizard walks you through:
+            . The wizard walks you through:
           </p>
           <ol className="list-decimal list-inside space-y-1 text-gray-600 ml-1">
             <li>
@@ -384,16 +407,25 @@ export default function GuidePage() {
               optional date.
             </li>
             <li>
-              <span className="font-semibold">Course &amp; tee</span> — search for the course and
-              choose the default tee. Tees show Course Rating, length, and Par.
+              <span className="font-semibold">Course, tee &amp; holes</span> — search for the course,
+              choose the default tee (showing Course Rating, length, and Par), and pick{" "}
+              <span className="font-semibold">9 or 18 holes</span> — for 9 holes, the front or back
+              nine.
             </li>
             <li>
               <span className="font-semibold">Format</span> — choose the scoring format (same
-              options as a regular round).
+              options as a regular round), and tick <span className="font-semibold">Prize Holes</span>{" "}
+              if you want Longest Drive / Nearest the Pin holes.
             </li>
             <li>
-              <span className="font-semibold">Invite players</span> — select who to invite.
-              Invited players receive a push notification if they have notifications enabled on their{" "}
+              <span className="font-semibold">Prize holes</span> (only if ticked) — choose the
+              holes (see below).
+            </li>
+            <li>
+              <span className="font-semibold">Invite players</span> — tap{" "}
+              <span className="font-semibold">Select all</span> to invite everyone, then tap anyone
+              you want to leave out (the &ldquo;N of M selected&rdquo; count keeps track). Invited
+              players receive a push notification if they have notifications enabled on their{" "}
               <Link href="/profile" className="text-fairway-700 underline">
                 Profile
               </Link>
@@ -403,25 +435,37 @@ export default function GuidePage() {
           <p>
             The tournament opens with an{" "}
             <span className="font-semibold">UPCOMING</span> status badge while you wait for players
-            to accept.
+            to respond. While it is upcoming, the organiser can tap{" "}
+            <span className="font-semibold">Edit event details</span> to change the name, date,{" "}
+            <span className="font-semibold">tee-off time</span>, format, course, tee, or holes.
+            Changing the course, tee, or nine clears any prize holes that no longer apply.
           </p>
           <p>
-            <span className="font-semibold text-fairway-900">Prize holes</span> — During event
-            creation you can designate specific holes as prize holes. Each hole can be marked as{" "}
-            <span className="font-semibold">Longest Drive</span> (par 5s) or{" "}
-            <span className="font-semibold">Nearest to Pin</span> (par 3s). You can select one
-            Longest Drive and up to two Nearest to Pin holes per nine. Prize holes appear on the
-            event page so all players know which holes carry extra competition.
+            <span className="font-semibold text-fairway-900">Responding to an invitation</span> —
+            Open the event (from the Events page or the invite banner on your Dashboard) and tap{" "}
+            <span className="font-semibold">Accept</span> or{" "}
+            <span className="font-semibold">Decline</span>. On Android you can also respond straight
+            from the push notification (see Notifications below).
+          </p>
+          <p>
+            <span className="font-semibold text-fairway-900">Prize holes</span> — Each prize hole is
+            marked as <span className="font-semibold">Longest Drive</span> (par 5s) or{" "}
+            <span className="font-semibold">Nearest the Pin</span> (par 3s). You can select one
+            Longest Drive and up to two Nearest the Pin holes per nine, from the holes being played.
+            Prize holes appear on the event page, and scorers get a reminder when they reach one.
+            Once the event has started, the organiser taps{" "}
+            <span className="font-semibold">Record winners</span> on the Prize Holes card and picks
+            each hole&apos;s winner from the player list.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Arranging groups</span> — Once
             players have accepted, the organiser assigns them into groups on the tournament page.
             Use the <span className="font-semibold">+ Add player</span> dropdown to manually fill
             each group (up to four players), or tap{" "}
-            <span className="font-semibold">Randomise Teams</span> to auto-assign everyone at once.
-            Each group can be given its own tee if the course has multiple tee sets. When all
-            accepted players are assigned, tap{" "}
-            <span className="font-semibold">Save groups</span>.
+            <span className="font-semibold">Randomise Teams</span> to auto-assign everyone at once —
+            it puts together players who have played with each other least. Each group can be given
+            its own tee if the course has multiple tee sets. When all accepted players are assigned,
+            tap <span className="font-semibold">Save groups</span>.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Starting the round</span> — After
@@ -431,11 +475,36 @@ export default function GuidePage() {
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Live leaderboard</span> — While the
-            tournament is{" "}
-            <span className="font-semibold">ACTIVE</span>, the tournament page shows a live
-            leaderboard across all groups. Once all rounds are finished the organiser can tap{" "}
-            <span className="font-semibold">Mark tournament complete</span> to lock the final
-            results.
+            tournament is <span className="font-semibold">ACTIVE</span>, the tournament page and
+            every player&apos;s Leaderboard tab show one live leaderboard across all groups —
+            Stableford by points, other formats by net score to par — with how many holes each
+            player or team has played.
+          </p>
+          <p>
+            <span className="font-semibold text-fairway-900">Finishing and the winner</span> — When
+            the last group taps <span className="font-semibold">Finish Round</span>, the event
+            completes automatically (the organiser can also tap{" "}
+            <span className="font-semibold">Mark tournament complete</span> if a group can&apos;t
+            finish). There is <span className="font-semibold">one overall winner</span> — the best
+            player or team across all groups — shown in the{" "}
+            <span className="font-semibold">Final Results</span> on the event page. Ties are decided
+            by{" "}
+            <a href="#countback" className="text-fairway-700 underline">
+              countback
+            </a>
+            . Each group&apos;s round summary shows only that group&apos;s results, not a winner.
+          </p>
+          <p>
+            <span className="font-semibold text-fairway-900">Corrections</span> — If a score needs
+            fixing after the event has finished, open that group&apos;s round summary and tap{" "}
+            <span className="font-semibold">Edit Scores</span>. The leaderboard and winner update
+            automatically.
+          </p>
+          <p>
+            <span className="font-semibold text-fairway-900">Events page</span> — Completed events
+            show their winner and the Longest Drive / Nearest the Pin winners. A day after an event
+            finishes it moves into <span className="font-semibold">Previous Events</span> at the
+            bottom of the page. Events that never started are removed a week after their date.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Status badges</span>:
@@ -443,14 +512,14 @@ export default function GuidePage() {
           <ul className="list-disc list-inside space-y-1 text-gray-600">
             <li>
               <span className="font-semibold">UPCOMING</span> — event created, waiting for players
-              to accept and groups to be arranged.
+              to respond and groups to be arranged.
             </li>
             <li>
               <span className="font-semibold">ACTIVE</span> — rounds are underway.
             </li>
             <li>
-              <span className="font-semibold">COMPLETE</span> — all rounds finished and results
-              locked.
+              <span className="font-semibold">COMPLETE</span> — all groups have finished and the
+              winner is shown. Scores can still be corrected, and results update automatically.
             </li>
           </ul>
         </div>
@@ -462,11 +531,12 @@ export default function GuidePage() {
         </h2>
         <div className="space-y-3 text-sm text-gray-700 leading-relaxed">
           <p>
-            When two or more players or teams finish with the same{" "}
-            <span className="font-semibold text-fairway-900">net total</span>, Golf Nuts
-            automatically applies the standard{" "}
+            When two or more players or teams finish level at the top, Golf Nuts automatically
+            applies the standard{" "}
             <span className="font-semibold text-fairway-900">scorecard countback</span> to
             decide the winner. This applies to Strokeplay, Stableford, and Ambrose events.
+            Strokeplay and Ambrose compare net scores, and the lower total wins each step. In
+            Stableford the comparison uses points, and the higher total wins each step.
           </p>
 
           <div className="bg-fairway-50 rounded-lg p-3 space-y-2">
@@ -494,10 +564,18 @@ export default function GuidePage() {
           </p>
 
           <p>
-            When a tie is broken this way, the winner&apos;s result will show a label such as{" "}
+            With <span className="font-semibold text-fairway-900">three or more</span> tied,
+            anyone who falls behind at a step drops out, and the rest carry on to the next step.
+          </p>
+
+          <p>
+            When a tie is broken this way, the winner shows a label such as{" "}
             <span className="font-semibold text-fairway-900">&ldquo;Won on back 9&rdquo;</span> or{" "}
-            <span className="font-semibold text-fairway-900">&ldquo;Won on hole 18&rdquo;</span> in
-            the round summary and in the tournament leaderboard.
+            <span className="font-semibold text-fairway-900">&ldquo;Won on hole 18&rdquo;</span> —
+            in the round summary for casual rounds, and for events in the winner banner on the
+            Final Results and on the Events page. For events, tap the label to see{" "}
+            <span className="font-semibold">how the countback was decided</span>: each step with
+            everyone&apos;s totals, and a hole-by-hole table with the deciding holes highlighted.
           </p>
 
           <p>
@@ -554,6 +632,40 @@ export default function GuidePage() {
             <span className="font-semibold text-fairway-900">Disabling notifications</span> — Toggle
             the same switch off on your Profile page. You can also revoke permission in your
             browser or phone settings at any time.
+          </p>
+        </div>
+      </div>
+
+      {/* Profile & Sign-in */}
+      <div id="profile" className="bg-white rounded-xl border border-fairway-50 p-4 scroll-mt-20">
+        <h2 className="text-lg font-semibold text-fairway-900 flex items-center gap-2 mb-3">
+          <span>👤</span> Profile &amp; Sign-in
+        </h2>
+        <div className="space-y-3 text-sm text-gray-700 leading-relaxed">
+          <p>
+            Open your{" "}
+            <Link href="/profile" className="text-fairway-700 underline">
+              Profile page
+            </Link>{" "}
+            from the avatar in the top-right corner.
+          </p>
+          <p>
+            <span className="font-semibold text-fairway-900">Profile photo &amp; details</span> —
+            Tap your photo to upload a new one, and update your name and email in{" "}
+            <span className="font-semibold">Profile Settings</span>.
+          </p>
+          <p>
+            <span className="font-semibold text-fairway-900">Password</span> — Change it in the{" "}
+            <span className="font-semibold">Password</span> section. If you have forgotten it, tap{" "}
+            <span className="font-semibold">Forgot password?</span> on the login page — you will be
+            emailed a reset link that signs you straight in.
+          </p>
+          <p>
+            <span className="font-semibold text-fairway-900">Biometric login</span> — In the{" "}
+            <span className="font-semibold">Biometric Login</span> section, register your device to
+            sign in with your fingerprint or Face ID instead of your password. Next time, tap{" "}
+            <span className="font-semibold">Use Biometrics</span> on the login page. Register each
+            phone or computer you use separately.
           </p>
         </div>
       </div>
