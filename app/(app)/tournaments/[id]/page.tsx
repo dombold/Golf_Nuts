@@ -371,7 +371,7 @@ export default async function TournamentDetailPage({
                 "use server";
                 // Inline server action to mark complete
                 const { prisma: db } = await import("@/lib/prisma");
-                await db.tournament.update({ where: { id }, data: { status: "COMPLETE" } });
+                await db.tournament.update({ where: { id }, data: { status: "COMPLETE", completedAt: new Date() } });
                 const { revalidatePath } = await import("next/cache");
                 revalidatePath(`/tournaments/${id}`);
               }}

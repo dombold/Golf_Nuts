@@ -21,15 +21,17 @@ function tournamentResult(t: { format: string; rounds: StandingsRound[]; prizeHo
 
 // Computed outside the component body: server components render once per request,
 // so reading the clock here is safe.
-function oneWeekAgo(): Date {
-  return new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+function daysAgo(days: number): Date {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 }
 
 export default async function TournamentsPage() {
   const session = await auth();
   const userId = session!.user.id;
 
-  const cutoff = oneWeekAgo();
+  const cutoff = daysAgo(7);
+  // Completed events stay at the top for a day after finishing, then move to Previous Events
+  const finishedCutoff = daysAgo(1);
 
   // Delete never-started tournaments whose scheduled date passed > 1 week ago.
   // Cascade removes invitations, groups, prize holes automatically.
@@ -66,8 +68,8 @@ export default async function TournamentsPage() {
     prisma.tournament.findMany({
       where: {
         OR: [
-          { date: null },
-          { date: { gte: cutoff } },
+          { status: { not: "COMPLETE" } },
+          { status: "COMPLETE", completedAt: { gt: finishedCutoff } },
         ],
       },
       include: {
@@ -80,14 +82,17 @@ export default async function TournamentsPage() {
       orderBy: { createdAt: "desc" },
     }),
     prisma.tournament.findMany({
-      where: { status: "COMPLETE" },
+      where: {
+        status: "COMPLETE",
+        OR: [{ completedAt: { lte: finishedCutoff } }, { completedAt: null }],
+      },
       include: {
         course: { select: { name: true } },
         createdBy: { select: { name: true } },
         rounds: roundsInclude,
         prizeHoles: prizeHolesSelect,
       },
-      orderBy: { date: "desc" },
+      orderBy: { completedAt: "desc" },
     }),
     prisma.tournamentInvitation.count({
       where: { userId, status: "PENDING" },
@@ -119,9 +124,9 @@ export default async function TournamentsPage() {
       {tournaments.length === 0 ? (
         <div className="bg-white rounded-xl p-10 text-center text-gray-400 shadow-sm">
           <p className="text-3xl mb-2">🏆</p>
-          <p className="mb-3">No tournaments yet</p>
+          <p className="mb-3">{pastTournaments.length > 0 ? "No upcoming or active events" : "No tournaments yet"}</p>
           <Link href="/tournaments/new" className="text-fairway-700 font-medium hover:underline text-sm">
-            Create your first event
+            {pastTournaments.length > 0 ? "Create an event" : "Create your first event"}
           </Link>
         </div>
       ) : (

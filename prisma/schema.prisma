@@ -266,6 +266,7 @@ model Tournament {
   teeOffTime  String?
   holesCount   Int             @default(18)
   startingHole Int             @default(1)
+  completedAt DateTime?
   createdAt   DateTime         @default(now())
 
   createdById String

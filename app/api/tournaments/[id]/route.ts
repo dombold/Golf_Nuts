@@ -111,7 +111,12 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (teeOffTime !== undefined) data.teeOffTime = teeOffTime;
   if (courseId !== undefined) data.courseId = courseId;
   if (teeId !== undefined) data.teeId = teeId;
-  if (status !== undefined) data.status = status;
+  if (status !== undefined) {
+    data.status = status;
+    // Record when the event finished (drives the move to Previous Events); clear it if re-opened
+    if (status === "COMPLETE" && tournament.status !== "COMPLETE") data.completedAt = new Date();
+    if (status !== "COMPLETE") data.completedAt = null;
+  }
 
   const newHolesCount = holesCount ?? tournament.holesCount;
   const newStartingHole = newHolesCount === 18 ? 1 : (startingHole ?? tournament.startingHole);

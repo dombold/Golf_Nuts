@@ -43,7 +43,7 @@ export async function POST(
   });
   const tournament = tournamentRound?.tournament;
   if (tournament?.status === "ACTIVE" && tournament.rounds.every((tr) => tr.round.status === "COMPLETE")) {
-    await prisma.tournament.update({ where: { id: tournament.id }, data: { status: "COMPLETE" } });
+    await prisma.tournament.update({ where: { id: tournament.id }, data: { status: "COMPLETE", completedAt: new Date() } });
   }
 
   // Only strokeplay rounds count toward handicap under WHS
