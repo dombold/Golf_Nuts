@@ -9,6 +9,35 @@ interface Course { id: string; name: string; suburb: string | null; city: string
 interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
 interface User { id: string; name: string; email: string }
 
+function CheckCircle({ checked }: { checked: boolean }) {
+  return (
+    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${checked ? "bg-fairway-600 border-fairway-600" : "border-gray-300"}`}>
+      {checked && (
+        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+        </svg>
+      )}
+    </div>
+  );
+}
+
+function PlayerButton({ user, selected, onClick }: { user: User; selected: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500 ${
+        selected ? "border-fairway-600 bg-fairway-50" : "border-gray-200 bg-white hover:border-fairway-300"
+      }`}
+    >
+      <CheckCircle checked={selected} />
+      <span className="font-medium text-fairway-900 text-left flex-1">{user.name}</span>
+      {selected && <span className="text-xs text-gray-400">Tap to remove</span>}
+    </button>
+  );
+}
+
 function NewRoundForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -32,6 +61,8 @@ function NewRoundForm() {
   const [startingHole, setStartingHole] = useState<1 | 10>(1);
   const [format, setFormat] = useState("STROKEPLAY");
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
+  const [playerQuery, setPlayerQuery] = useState("");
+  const playerSearchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/users").then((r) => r.json()).then((d) => {
@@ -80,6 +111,16 @@ function NewRoundForm() {
     );
   }
 
+  /** Add a player from the search list: clear the search so the full list returns for the next pick. */
+  function selectPlayer(id: string) {
+    togglePlayer(id);
+    if (playerQuery) {
+      setPlayerQuery("");
+      // Keep the keyboard up only if they were typing — avoids popping it open on a plain tap
+      playerSearchRef.current?.focus();
+    }
+  }
+
   async function createRound() {
     if (!selectedCourse || !selectedTee) return;
     setLoading(true);
@@ -111,6 +152,17 @@ function NewRoundForm() {
   }
 
   const matchPlayNeedsTwo = format === "MATCH_PLAY" && selectedPlayers.length !== 2;
+
+  // Player step: selected players (in pick order) sit above the search, the rest are filtered below it
+  const selectedOthers = selectedPlayers
+    .filter((id) => id !== currentUser?.id)
+    .map((id) => users.find((u) => u.id === id))
+    .filter((u): u is User => !!u);
+  const unselectedUsers = users.filter((u) => !selectedPlayers.includes(u.id));
+  const playerSearch = playerQuery.trim().toLowerCase();
+  const availableUsers = playerSearch
+    ? unselectedUsers.filter((u) => u.name.toLowerCase().includes(playerSearch))
+    : unselectedUsers;
 
   return (
     <div className="space-y-6 max-w-xl">
@@ -282,44 +334,52 @@ function NewRoundForm() {
               Match Play is head-to-head — pick exactly one opponent.
             </p>
           )}
+          {/* Selected players — above the search */}
           <div className="space-y-2">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              Playing · {selectedPlayers.length} player{selectedPlayers.length !== 1 ? "s" : ""}
+            </p>
             {currentUser && (
               <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-fairway-50 border border-fairway-200">
-                <div className="w-5 h-5 rounded-full bg-fairway-600 flex items-center justify-center">
-                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                </div>
+                <CheckCircle checked />
                 <span className="font-medium text-fairway-900">{currentUser.name} (You)</span>
               </div>
             )}
-            {users.map((user) => {
-              const selected = selectedPlayers.includes(user.id);
-              return (
-                <button
-                  key={user.id}
-                  onClick={() => togglePlayer(user.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors ${
-                    selected ? "border-fairway-600 bg-fairway-50" : "border-gray-200 bg-white hover:border-fairway-300"
-                  }`}
-                >
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selected ? "bg-fairway-600 border-fairway-600" : "border-gray-300"}`}>
-                    {selected && (
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </div>
-                  <span className="font-medium text-fairway-900">{user.name}</span>
-                </button>
-              );
-            })}
-            {users.length === 0 && (
-              <p className="text-gray-400 text-sm text-center py-4">
-                No other users registered yet.
-              </p>
-            )}
+            {selectedOthers.map((user) => (
+              <PlayerButton key={user.id} user={user} selected onClick={() => togglePlayer(user.id)} />
+            ))}
           </div>
+
+          {users.length === 0 ? (
+            <p className="text-gray-400 text-sm text-center py-4">
+              No other users registered yet.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <input
+                ref={playerSearchRef}
+                type="search"
+                value={playerQuery}
+                onChange={(e) => setPlayerQuery(e.target.value)}
+                placeholder="Search players by name…"
+                aria-label="Search players"
+                autoComplete="off"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-fairway-500"
+              />
+              <p aria-live="polite" className="text-xs text-gray-500">
+                {unselectedUsers.length === 0
+                  ? "Everyone's been added"
+                  : availableUsers.length === 0
+                  ? `No players match “${playerQuery.trim()}”`
+                  : `${availableUsers.length} player${availableUsers.length !== 1 ? "s" : ""} available`}
+              </p>
+
+              {/* Unselected players — narrowed by the search */}
+              {availableUsers.map((user) => (
+                <PlayerButton key={user.id} user={user} selected={false} onClick={() => selectPlayer(user.id)} />
+              ))}
+            </div>
+          )}
 
           <div className="flex gap-3">
             <button onClick={() => setStep(2)} className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50">
