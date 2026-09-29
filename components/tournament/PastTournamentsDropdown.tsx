@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { Prisma } from "@/app/generated/prisma/client";
+import TournamentResultSummary, { type TournamentResult } from "@/components/tournament/TournamentResultSummary";
 
 type PastTournament = Prisma.TournamentGetPayload<{
   include: {
@@ -24,9 +25,11 @@ type PastTournament = Prisma.TournamentGetPayload<{
 
 interface Props {
   pastTournaments: PastTournament[];
+  /** Winner and prize winners, keyed by tournament id */
+  results: Record<string, TournamentResult>;
 }
 
-export default function PastTournamentsDropdown({ pastTournaments }: Props) {
+export default function PastTournamentsDropdown({ pastTournaments, results }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -71,6 +74,8 @@ export default function PastTournamentsDropdown({ pastTournaments }: Props) {
                   </span>
                 </div>
               </Link>
+
+              {results[t.id] && <TournamentResultSummary result={results[t.id]} />}
 
               {t.rounds.length > 0 && (
                 <div className="divide-y divide-fairway-50">

@@ -30,9 +30,21 @@ export default async function RoundSummaryPage({
           scores: { orderBy: { holeNumber: "asc" } },
         },
       },
+      tournamentRounds: {
+        take: 1,
+        select: {
+          roundNumber: true,
+          tournament: { select: { id: true, _count: { select: { rounds: true } } } },
+        },
+      },
     },
   });
   if (!round) notFound();
+
+  // In a multi-group tournament there is one overall winner, decided across all groups —
+  // so this round's summary shows group results only, with no winner.
+  const tournamentRound = round.tournamentRounds[0];
+  const isMultiGroupEvent = (tournamentRound?.tournament._count.rounds ?? 0) > 1;
 
   const playedHoles = round.tee.holes.filter(
     (h) => h.number >= round.startingHole && h.number < round.startingHole + round.holesCount
@@ -192,7 +204,19 @@ export default async function RoundSummaryPage({
         </p>
       </div>
 
-      {winner && (
+      {isMultiGroupEvent && (
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-fairway-900">Group {tournamentRound.roundNumber} results</h2>
+          <Link
+            href={`/tournaments/${tournamentRound.tournament.id}`}
+            className="text-sm text-fairway-700 hover:underline font-medium"
+          >
+            View tournament results →
+          </Link>
+        </div>
+      )}
+
+      {winner && !isMultiGroupEvent && (
         <div className="bg-fairway-900 text-white rounded-2xl p-5 text-center">
           <p className="text-fairway-300 text-xs uppercase tracking-widest mb-1">Winner</p>
           <p className="text-2xl font-bold">🏆 {winner}</p>
@@ -204,7 +228,10 @@ export default async function RoundSummaryPage({
 
       {/* Results */}
       <div className="space-y-3">
-        {results.map((r, i) => (
+        {results.map((r, index) => {
+          // Only highlight first place when this round decides a winner
+          const i = isMultiGroupEvent ? -1 : index;
+          return (
           <div
             key={r.name}
             className={`flex items-center gap-4 p-4 rounded-xl ${
@@ -212,7 +239,7 @@ export default async function RoundSummaryPage({
             }`}
           >
             <span className={`text-xl font-bold w-6 ${i === 0 ? "text-fairway-300" : "text-gray-300"}`}>
-              {i + 1}
+              {index + 1}
             </span>
             <div className="flex-1">
               <p className={`font-semibold ${i === 0 ? "text-white" : "text-fairway-900"}`}>{r.name}</p>
@@ -222,7 +249,8 @@ export default async function RoundSummaryPage({
               {r.score}
             </span>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Full scorecard */}

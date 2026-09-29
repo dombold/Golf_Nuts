@@ -32,6 +32,20 @@ export async function POST(
     data: { status: "COMPLETE" },
   });
 
+  // Tournament rounds: once every group has finished, the tournament is complete
+  const tournamentRound = await prisma.tournamentRound.findFirst({
+    where: { roundId },
+    select: {
+      tournament: {
+        select: { id: true, status: true, rounds: { select: { round: { select: { status: true } } } } },
+      },
+    },
+  });
+  const tournament = tournamentRound?.tournament;
+  if (tournament?.status === "ACTIVE" && tournament.rounds.every((tr) => tr.round.status === "COMPLETE")) {
+    await prisma.tournament.update({ where: { id: tournament.id }, data: { status: "COMPLETE" } });
+  }
+
   // Only strokeplay rounds count toward handicap under WHS
   if (round.format === "STROKEPLAY") {
     await Promise.all(

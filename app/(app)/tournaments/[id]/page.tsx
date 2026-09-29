@@ -72,7 +72,7 @@ export default async function TournamentDetailPage({
         },
       },
       prizeHoles: {
-        select: { holeNumber: true, type: true },
+        select: { holeNumber: true, type: true, winnerId: true, winner: { select: { name: true } } },
         orderBy: { holeNumber: "asc" },
       },
     },
@@ -191,8 +191,11 @@ export default async function TournamentDetailPage({
           teeId={tournament.teeId ?? null}
           holesCount={tournament.holesCount}
           startingHole={tournament.startingHole}
-          prizeHoles={tournament.prizeHoles as { holeNumber: number; type: "LONGEST_DRIVE" | "NEAREST_PIN" }[]}
+          prizeHoles={tournament.prizeHoles}
           canEdit={isOrganiser && tournament.status === "UPCOMING"}
+          started={tournament.status !== "UPCOMING"}
+          canRecordWinners={isOrganiser && tournament.status !== "UPCOMING"}
+          players={acceptedPlayers.map((p) => ({ id: p.id, name: p.name }))}
         />
       )}
 

@@ -32,6 +32,7 @@ model User {
   passwordResetTokens    PasswordResetToken[]
   webAuthnCredentials    WebAuthnCredential[]
   webAuthnChallenges     WebAuthnChallenge[]
+  prizeHoleWins          TournamentPrizeHole[]    @relation("PrizeHoleWins")
 
   @@map("users")
 }
@@ -247,8 +248,10 @@ model TournamentPrizeHole {
   tournamentId String
   holeNumber   Int
   type         PrizeHoleType
+  winnerId     String?
 
   tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  winner     User?      @relation("PrizeHoleWins", fields: [winnerId], references: [id], onDelete: SetNull)
 
   @@unique([tournamentId, holeNumber])
   @@map("tournament_prize_holes")

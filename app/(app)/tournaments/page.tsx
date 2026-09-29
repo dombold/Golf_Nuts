@@ -3,6 +3,21 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import DeleteTournamentButton from "@/components/DeleteTournamentButton";
 import PastTournamentsDropdown from "@/components/tournament/PastTournamentsDropdown";
+import TournamentResultSummary, {
+  type PrizeResult,
+  type TournamentResult,
+} from "@/components/tournament/TournamentResultSummary";
+import {
+  calcTournamentStandings,
+  tournamentWinner,
+  type StandingsRound,
+} from "@/lib/tournamentStandings";
+
+/** Overall winner and prize winners for a completed tournament, from its saved scores. */
+function tournamentResult(t: { format: string; rounds: StandingsRound[]; prizeHoles: PrizeResult[] }): TournamentResult {
+  const standings = calcTournamentStandings(t.rounds, t.format, true);
+  return { winner: tournamentWinner(standings, t.format), prizeHoles: t.prizeHoles };
+}
 
 // Computed outside the component body: server components render once per request,
 // so reading the clock here is safe.
@@ -30,11 +45,21 @@ export default async function TournamentsPage() {
       round: {
         include: {
           course: { select: { name: true } },
-          players: { include: { user: { select: { name: true } } } },
+          tee: { select: { holes: { select: { number: true, strokeIndex: true, par: true } } } },
+          players: {
+            include: {
+              user: { select: { id: true, name: true } },
+              scores: { select: { holeNumber: true, strokes: true } },
+            },
+          },
         },
       },
     },
     orderBy: { roundNumber: "asc" as const },
+  };
+
+  const prizeHolesSelect = {
+    select: { holeNumber: true, type: true, winner: { select: { name: true } } },
   };
 
   const [tournaments, pastTournaments, pendingCount] = await Promise.all([
@@ -50,6 +75,7 @@ export default async function TournamentsPage() {
         createdBy: { select: { name: true } },
         invitations: { where: { userId } },
         rounds: roundsInclude,
+        prizeHoles: prizeHolesSelect,
       },
       orderBy: { createdAt: "desc" },
     }),
@@ -59,6 +85,7 @@ export default async function TournamentsPage() {
         course: { select: { name: true } },
         createdBy: { select: { name: true } },
         rounds: roundsInclude,
+        prizeHoles: prizeHolesSelect,
       },
       orderBy: { date: "desc" },
     }),
@@ -138,6 +165,8 @@ export default async function TournamentsPage() {
                   </div>
                 </Link>
 
+                {t.status === "COMPLETE" && <TournamentResultSummary result={tournamentResult(t)} />}
+
                 {/* Group rounds (visible once active) */}
                 {t.rounds.length > 0 && (
                   <div className="divide-y divide-fairway-50">
@@ -185,7 +214,10 @@ export default async function TournamentsPage() {
       )}
 
       {pastTournaments.length > 0 && (
-        <PastTournamentsDropdown pastTournaments={pastTournaments} />
+        <PastTournamentsDropdown
+          pastTournaments={pastTournaments}
+          results={Object.fromEntries(pastTournaments.map((t) => [t.id, tournamentResult(t)]))}
+        />
       )}
     </div>
   );
