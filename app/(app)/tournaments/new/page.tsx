@@ -91,6 +91,12 @@ export default function NewTournamentPage() {
       .finally(() => setTeeHolesLoading(false));
   }, [step, prizeHolesEnabled, selectedTee, teeHoles.length]);
 
+  const allSelected = users.length > 0 && inviteeIds.length === users.length;
+
+  function toggleSelectAll() {
+    setInviteeIds(allSelected ? [] : users.map((u) => u.id));
+  }
+
   function toggleInvitee(id: string) {
     setInviteeIds((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
@@ -475,6 +481,21 @@ export default function NewTournamentPage() {
           <p className="text-sm text-gray-500">
             Select players to invite. You&apos;ll be added automatically as the organiser.
           </p>
+
+          {users.length > 0 && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-500">
+                {inviteeIds.length} of {users.length} selected
+              </p>
+              <button
+                type="button"
+                onClick={toggleSelectAll}
+                className="border border-fairway-300 text-fairway-700 rounded-lg px-3 py-1.5 text-sm font-medium hover:bg-fairway-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500"
+              >
+                {allSelected ? "Clear all" : "Select all"}
+              </button>
+            </div>
+          )}
 
           <div className="space-y-2">
             {users.map((user) => {
