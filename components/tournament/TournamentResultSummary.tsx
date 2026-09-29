@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { TournamentWinner } from "@/lib/tournamentStandings";
 
 export interface PrizeResult {
@@ -7,6 +8,7 @@ export interface PrizeResult {
 }
 
 export interface TournamentResult {
+  tournamentId: string;
   winner: TournamentWinner | null;
   prizeHoles: PrizeResult[];
 }
@@ -35,7 +37,12 @@ export default function TournamentResultSummary({ result }: { result: Tournament
             {result.winner.name}
             <span className="font-normal text-gray-500"> · {result.winner.detail}</span>
             {result.winner.countbackLabel && (
-              <span className="block text-xs font-normal text-fairway-600">{result.winner.countbackLabel}</span>
+              <Link
+                href={`/tournaments/${result.tournamentId}/countback`}
+                className="block text-xs font-normal text-fairway-600 underline underline-offset-2 hover:text-fairway-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500 rounded"
+              >
+                {result.winner.countbackLabel} →
+              </Link>
             )}
           </dd>
         </div>

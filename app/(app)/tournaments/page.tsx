@@ -14,9 +14,9 @@ import {
 } from "@/lib/tournamentStandings";
 
 /** Overall winner and prize winners for a completed tournament, from its saved scores. */
-function tournamentResult(t: { format: string; rounds: StandingsRound[]; prizeHoles: PrizeResult[] }): TournamentResult {
+function tournamentResult(t: { id: string; format: string; rounds: StandingsRound[]; prizeHoles: PrizeResult[] }): TournamentResult {
   const standings = calcTournamentStandings(t.rounds, t.format, true);
-  return { winner: tournamentWinner(standings, t.format), prizeHoles: t.prizeHoles };
+  return { tournamentId: t.id, winner: tournamentWinner(standings, t.format), prizeHoles: t.prizeHoles };
 }
 
 // Computed outside the component body: server components render once per request,

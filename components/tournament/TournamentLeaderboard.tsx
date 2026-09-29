@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   calcTournamentStandings,
   formatStandingScore,
@@ -56,7 +57,12 @@ export default function TournamentLeaderboard({ tournamentId, format, isActive, 
           <p className="text-2xl font-bold">🏆 {winner.name}</p>
           <p className="text-fairway-300 text-sm mt-1">{winner.detail}</p>
           {winner.countbackLabel && (
-            <p className="text-fairway-400 text-xs mt-1">{winner.countbackLabel}</p>
+            <Link
+              href={`/tournaments/${tournamentId}/countback`}
+              className="inline-block text-fairway-300 text-xs mt-1 underline underline-offset-2 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white rounded"
+            >
+              {winner.countbackLabel} · How was this decided? →
+            </Link>
           )}
         </div>
       )}

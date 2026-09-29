@@ -4,7 +4,7 @@
  */
 
 import { strokesOnHole, stablefordPoints, ambroseTeamHandicap } from "./formats";
-import { applyCountback } from "./countback";
+import { applyCountback, traceCountback, type CountbackTrace } from "./countback";
 
 export interface StandingsHole {
   number: number;
@@ -64,6 +64,23 @@ export function formatStandingScore(score: number, format: string): string {
   return score > 0 ? `+${score}` : `${score}`;
 }
 
+export interface DetailedStandings {
+  standings: Standing[];
+  /** Per-entry, per-hole values: Stableford points, otherwise net score to par */
+  holeValues: Map<string, Map<number, number>>;
+  /** Holes used for countback (the leader's holes) */
+  allHoles: number[];
+  lowerIsBetter: boolean;
+}
+
+export interface CountbackExplanation {
+  /** Players/teams level on the top score, in final order */
+  tied: Standing[];
+  trace: CountbackTrace;
+  /** Holes to show in the hole-by-hole table (every hole any step compared) */
+  tableHoles: number[];
+}
+
 /**
  * Rank every player (or Ambrose team) in the tournament.
  * Stableford ranks by points (high first); other formats by net score to par (low first).
@@ -74,6 +91,15 @@ export function calcTournamentStandings(
   format: string,
   withCountback: boolean
 ): Standing[] {
+  return calcTournamentStandingsDetailed(rounds, format, withCountback).standings;
+}
+
+/** As calcTournamentStandings, but also returns the per-hole working used for countback. */
+export function calcTournamentStandingsDetailed(
+  rounds: StandingsRound[],
+  format: string,
+  withCountback: boolean
+): DetailedStandings {
   const stableford = format === "STABLEFORD";
   const all: Standing[] = [];
   // Per-entry, per-hole values (points or net-to-par) for totals and countback
@@ -151,10 +177,38 @@ export function calcTournamentStandings(
     return b.holesPlayed - a.holesPlayed;
   });
 
-  if (!withCountback || sorted.length === 0) return sorted;
+  const allHoles = sorted[0]
+    ? Array.from(holeValues.get(sorted[0].playerId)?.keys() ?? []).sort((a, b) => a - b)
+    : [];
+  const lowerIsBetter = !stableford;
 
-  const allHoles = Array.from(holeValues.get(sorted[0].playerId)?.keys() ?? []).sort((a, b) => a - b);
-  return applyCountback(sorted, holeValues, !stableford, allHoles, (e) => e.score);
+  const standings = withCountback && sorted.length > 0
+    ? applyCountback(sorted, holeValues, lowerIsBetter, allHoles, (e) => e.score)
+    : sorted;
+
+  return { standings, holeValues, allHoles, lowerIsBetter };
+}
+
+/**
+ * How the winner was decided when two or more players/teams finished level on the top score.
+ * Returns null when there was an outright winner (no countback needed).
+ */
+export function explainWinnerCountback(detailed: DetailedStandings): CountbackExplanation | null {
+  const { standings, holeValues, allHoles, lowerIsBetter } = detailed;
+  const leader = standings[0];
+  if (!leader || leader.holesPlayed === 0) return null;
+
+  const tied = standings.filter((s) => s.holesPlayed > 0 && s.score === leader.score);
+  if (tied.length < 2) return null;
+
+  const trace = traceCountback(tied.map((s) => s.playerId), holeValues, lowerIsBetter, allHoles);
+  const tableHoles = [...new Set(trace.steps.flatMap((step) => step.holes))].sort((a, b) => a - b);
+  return { tied, trace, tableHoles };
+}
+
+/** Display name for a standing; Ambrose teams include their members. */
+export function standingLabel(s: Standing, format: string): string {
+  return s.subName && isAmbroseFormat(format) ? `${s.name} (${s.subName})` : s.name;
 }
 
 /** The single tournament winner from ranked standings, or null if nobody has scored. */
@@ -162,7 +216,7 @@ export function tournamentWinner(standings: Standing[], format: string): Tournam
   const [first, second] = standings;
   if (!first || first.holesPlayed === 0) return null;
 
-  const label = (s: Standing) => (s.subName && isAmbroseFormat(format) ? `${s.name} (${s.subName})` : s.name);
+  const label = (s: Standing) => standingLabel(s, format);
   const detail = formatStandingScore(first.score, format);
 
   // A tie that countback couldn't split — share the win
