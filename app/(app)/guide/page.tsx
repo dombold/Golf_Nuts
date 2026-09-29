@@ -134,7 +134,8 @@ export default function GuidePage() {
               <li>
                 <span className="font-semibold text-fairway-900">Strokeplay</span> — lowest{" "}
                 <span className="font-semibold">net</span> score wins (your gross strokes minus the
-                handicap strokes you receive). Gross scores are used for handicap calculations.
+                handicap strokes you receive). Strokeplay rounds count toward your Handicap Index — see{" "}
+                <a href="#stats" className="text-fairway-700 underline">Stats &amp; Handicap</a>.
               </li>
               <li>
                 <span className="font-semibold text-fairway-900">Stableford</span> — you earn points
@@ -304,36 +305,95 @@ export default function GuidePage() {
             top of the{" "}
             <Link href="/stats" className="text-fairway-700 underline">
               Stats page
-            </Link>
-            . Calculated using the World Handicap System (WHS) formula — the best differentials
-            from your last 20 rounds, on a sliding scale:
+            </Link>{" "}
+            and on the Dashboard. It is calculated with the World Handicap System (WHS) and updates
+            automatically whenever you finish a Strokeplay round, edit the scores of a finished one,
+            delete one, or switch a round in or out of your handicap. Only Strokeplay rounds count —
+            Stableford, Match Play, Skins, and Ambrose rounds never affect your index.
           </p>
-          <ul className="list-disc list-inside space-y-1 text-gray-600">
-            <li>3–4 rounds: best 1 differential</li>
-            <li>5–8 rounds: best 1–2 differentials (scales up)</li>
-            <li>9–18 rounds: best 2–6 differentials (scales up)</li>
-            <li>19–20 rounds: best 7–8 differentials</li>
-          </ul>
-          <p>
-            A minimum of <span className="font-semibold">3 completed Strokeplay rounds</span> is
-            required before a Handicap Index is assigned. Only Strokeplay rounds count — Stableford,
-            Match Play, Skins, and Ambrose rounds do not affect your index.
-          </p>
+
+          <div className="bg-fairway-50/60 rounded-lg p-3 space-y-2">
+            <p className="font-semibold text-fairway-900">1. Each round becomes a Score Differential</p>
+            <p>
+              A Score Differential measures how well you played compared with the difficulty of the
+              course:
+            </p>
+            <p className="font-mono text-xs bg-white rounded px-2 py-1.5 text-fairway-900">
+              (Adjusted score − Course Rating) × 113 ÷ Slope Rating
+            </p>
+            <p>
+              The <span className="font-semibold">adjusted score</span> is your gross score with any
+              blow-up holes capped at <span className="font-semibold">net double bogey</span> — par
+              + 2 + the handicap strokes you receive on that hole. A hole you didn&apos;t finish counts
+              as net par (par + your strokes). Your scorecard and results still show what you
+              actually scored; the cap only applies to your handicap.
+            </p>
+            <p>
+              Your handicap strokes come from your{" "}
+              <span className="font-semibold">Course Handicap</span> for the tee you played
+              (Handicap Index × Slope ÷ 113 + Course Rating − Par). The strokes go on the hardest
+              holes first, by stroke index. A plus handicap gives strokes back, starting with the
+              easiest holes.
+            </p>
+            <p>
+              A round only counts if you scored at least{" "}
+              <span className="font-semibold">14 holes</span> of an 18-hole round, or{" "}
+              <span className="font-semibold">7 holes</span> of a 9-hole round.
+            </p>
+            <p className="text-gray-500 text-xs">
+              Example: you get 1 stroke on a par 4 and take 9 — it counts as 7 for your handicap.
+            </p>
+          </div>
 
           <div className="bg-fairway-50/60 rounded-lg p-3 space-y-2">
             <p className="font-semibold text-fairway-900">9-hole rounds</p>
             <p>
-              9-hole rounds are fully supported and follow the WHS specification. Each 9-hole
-              Strokeplay round is stored as a <span className="font-semibold">half-differential</span>{" "}
-              — it does not count toward your index on its own. Once you have completed{" "}
-              <span className="font-semibold">two 9-hole rounds</span>, they are combined into a
-              single 18-hole equivalent differential and enter your index calculation as one score.
-              An unpaired 9-hole round is held in reserve until your next 9-hole round is submitted.
+              A 9-hole Strokeplay round counts toward your index straight away, just like an 18-hole
+              round, using the WHS method introduced in 2024. The nine you played is turned into a
+              differential (using half the course rating and a Course Handicap for nine holes), then
+              the <span className="font-semibold">expected score for the other nine</span> is added
+              to make a full 18-hole differential. The expected score is 0.52 × your Handicap Index
+              + 1.2.
             </p>
             <p className="text-gray-500 text-xs">
-              Example: 6 × 9-hole Strokeplay rounds = 3 combined differentials, which meets the
-              3-round minimum. 7 × 9-hole rounds = 3 combined differentials (the 7th is held in
-              reserve).
+              Example: with a 10.0 index, a nine that works out to a 4.0 differential gets 6.4 added
+              (0.52 × 10 + 1.2), giving an 18-hole differential of 10.4.
+            </p>
+          </div>
+
+          <div className="bg-fairway-50/60 rounded-lg p-3 space-y-2">
+            <p className="font-semibold text-fairway-900">2. Your index is the average of your best differentials</p>
+            <p>
+              Golf Nuts looks at the differentials from your{" "}
+              <span className="font-semibold">last 20 counting rounds</span> (9- and 18-hole rounds
+              each count as one) and averages the lowest ones:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-gray-600">
+              <li>3 rounds: best 1, minus 2.0</li>
+              <li>4 rounds: best 1, minus 1.0</li>
+              <li>5 rounds: best 1</li>
+              <li>6 rounds: best 2, minus 1.0</li>
+              <li>7–8 rounds: best 2</li>
+              <li>9–11 rounds: best 3</li>
+              <li>12–14 rounds: best 4</li>
+              <li>15–16 rounds: best 5</li>
+              <li>17–18 rounds: best 6</li>
+              <li>19 rounds: best 7</li>
+              <li>20 rounds: best 8</li>
+            </ul>
+            <p>
+              Until you have <span className="font-semibold">3 counting rounds</span>, the handicap
+              on your{" "}
+              <Link href="/profile" className="text-fairway-700 underline">
+                Profile
+              </Link>{" "}
+              (the one you entered when you signed up) is used. After that it is replaced
+              automatically each time your index is recalculated.
+            </p>
+            <p>
+              Net double bogey and the 9-hole expected score both use{" "}
+              <span className="font-semibold">your Handicap Index when you played the round</span>,
+              so editing an old round later doesn&apos;t change the index it was measured against.
             </p>
           </div>
 
@@ -347,8 +407,9 @@ export default function GuidePage() {
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Handicap Trend chart</span> — Shows
-            your Handicap Index over time. A falling line means you are improving. The chart appears
-            once your index has been established (minimum 3 qualifying rounds).
+            your Handicap Index at the time of each of your last 20 Strokeplay rounds, so you can see
+            which way it is heading. A falling line means you are improving. The chart appears once
+            you have finished two Strokeplay rounds.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Summary tiles</span> — Three tiles
@@ -663,7 +724,9 @@ export default function GuidePage() {
           <p>
             <span className="font-semibold text-fairway-900">Biometric login</span> — In the{" "}
             <span className="font-semibold">Biometric Login</span> section, register your device to
-            sign in with your fingerprint or Face ID instead of your password. Next time, tap{" "}
+            sign in with your fingerprint or Face ID (or your phone&apos;s PIN if biometrics
+            aren&apos;t set up) instead of your password. Golf Nuts never sees your fingerprint or
+            face — your phone checks it and confirms it&apos;s you. Next time, tap{" "}
             <span className="font-semibold">Use Biometrics</span> on the login page. Register each
             phone or computer you use separately.
           </p>

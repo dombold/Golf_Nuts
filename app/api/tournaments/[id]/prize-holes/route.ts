@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { isHoleInPlay } from "@/lib/nines";
+import { validatePrizeHoles } from "@/lib/prizeHoles";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -34,15 +34,9 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
 
   const { prizeHoles } = parsed.data;
 
-  if (prizeHoles.some((h) => !isHoleInPlay(h.holeNumber, tournament.holesCount, tournament.startingHole))) {
-    return Response.json({ error: { message: "Prize holes must be on the holes being played" } }, { status: 400 });
-  }
-
-  for (const nine of [true, false]) {
-    if (prizeHoles.filter((h) => h.type === "NEAREST_PIN" && (h.holeNumber <= 9) === nine).length > 2 ||
-        prizeHoles.filter((h) => h.type === "LONGEST_DRIVE" && (h.holeNumber <= 9) === nine).length > 1) {
-      return Response.json({ error: { message: "Too many prize holes of the same type per nine" } }, { status: 400 });
-    }
+  const prizeHoleError = validatePrizeHoles(prizeHoles, tournament.holesCount, tournament.startingHole);
+  if (prizeHoleError) {
+    return Response.json({ error: { message: prizeHoleError } }, { status: 400 });
   }
 
   await prisma.$transaction([

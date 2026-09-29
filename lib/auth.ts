@@ -14,6 +14,8 @@ declare module "next-auth" {
       image?: string | null;
       username: string;
       loginMethod?: string;
+      /** Epoch ms of a reset-link sign-in; allows a password change without the old one for a short window */
+      resetAt?: number;
     };
   }
 }
@@ -98,15 +100,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       const u = user as { username?: string; loginMethod?: string } | undefined;
       if (u?.username) token.username = u.username;
-      if (u?.loginMethod) token.loginMethod = u.loginMethod;
+      if (u?.loginMethod) {
+        token.loginMethod = u.loginMethod;
+        if (u.loginMethod === "reset_token") token.resetAt = Date.now();
+      }
       return token;
     },
     async session({ session, token }) {
       if (token.sub) session.user.id = token.sub;
       if (token.username) session.user.username = token.username as string;
       if (token.loginMethod) session.user.loginMethod = token.loginMethod as string;
+      if (typeof token.resetAt === "number") session.user.resetAt = token.resetAt;
       return session;
     },
   },
   session: { strategy: "jwt" },
 });
+
+const RESET_WINDOW_MS = 15 * 60 * 1000;
+
+/** True for 15 minutes after signing in with a reset link: the new password can be set without the old one. */
+export function isFreshResetSession(user: { loginMethod?: string; resetAt?: number }): boolean {
+  return (
+    user.loginMethod === "reset_token" &&
+    typeof user.resetAt === "number" &&
+    Date.now() - user.resetAt < RESET_WINDOW_MS
+  );
+}

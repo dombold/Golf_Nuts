@@ -11,8 +11,8 @@ export async function DELETE(
 
   const { courseId } = await params;
 
-  await prisma.userCourse.delete({
-    where: { userId_courseId: { userId: session.user.id, courseId } },
+  await prisma.userCourse.deleteMany({
+    where: { userId: session.user.id, courseId },
   });
 
   return Response.json({ ok: true });

@@ -13,11 +13,13 @@ export default async function StatsPage() {
     select: { name: true, handicapIndex: true },
   });
 
-  const [history, rounds] = await Promise.all([
+  const [recentHistory, rounds] = await Promise.all([
+    // The 20 most recent entries, flipped back to chronological order for the chart
     prisma.handicapHistory.findMany({
       where: { userId },
-      orderBy: { createdAt: "asc" },
+      orderBy: { createdAt: "desc" },
       take: 20,
+      select: { createdAt: true, index: true },
     }),
     prisma.round.findMany({
       where: {
@@ -63,7 +65,7 @@ export default async function StatsPage() {
     };
   }).filter(Boolean);
 
-  const chartData = history.map((h) => ({
+  const chartData = [...recentHistory].reverse().map((h) => ({
     date: new Date(h.createdAt).toLocaleDateString("en-AU", { day: "2-digit", month: "short" }),
     index: h.index,
   }));

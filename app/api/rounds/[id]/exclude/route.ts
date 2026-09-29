@@ -1,7 +1,10 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { recalcHandicap } from "@/lib/recalcHandicap";
+import { updateHandicapIndex } from "@/lib/recalcHandicap";
 import type { NextRequest } from "next/server";
+import { z } from "zod";
+
+const Schema = z.object({ exclude: z.boolean() });
 
 export async function PATCH(
   req: NextRequest,
@@ -11,26 +14,20 @@ export async function PATCH(
   if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id: roundId } = await params;
-  const { exclude } = await req.json() as { exclude: boolean };
+  const parsed = Schema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) return Response.json({ error: parsed.error.flatten() }, { status: 400 });
 
   const roundPlayer = await prisma.roundPlayer.findUnique({
     where: { roundId_userId: { roundId, userId: session.user.id } },
+    select: { id: true },
   });
   if (!roundPlayer) return Response.json({ error: "Not found" }, { status: 404 });
 
   await prisma.roundPlayer.update({
     where: { id: roundPlayer.id },
-    data: { excludeFromHandicap: exclude },
+    data: { excludeFromHandicap: parsed.data.exclude },
   });
 
-  const newIndex = await recalcHandicap(session.user.id);
-
-  if (newIndex !== null) {
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: { handicapIndex: newIndex },
-    });
-  }
-
-  return Response.json({ handicapIndex: newIndex });
+  const handicapIndex = await updateHandicapIndex(session.user.id);
+  return Response.json({ handicapIndex });
 }

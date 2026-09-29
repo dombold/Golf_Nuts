@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiErrorMessage } from "@/lib/apiError";
+import { formatLabel } from "@/lib/gameFormats";
 
 interface Props {
   tournamentId: string;
@@ -11,15 +13,6 @@ interface Props {
   date: string | null;
   organiserName: string;
 }
-
-const FORMAT_LABELS: Record<string, string> = {
-  STROKEPLAY: "Strokeplay",
-  STABLEFORD: "Stableford",
-  MATCH_PLAY: "Match Play",
-  SKINS: "Skins",
-  AMBROSE_2: "2-Player Ambrose",
-  AMBROSE_4: "4-Player Ambrose",
-};
 
 export default function InvitationResponseCard({
   tournamentId,
@@ -32,14 +25,22 @@ export default function InvitationResponseCard({
   const router = useRouter();
   const [loading, setLoading] = useState<"accept" | "decline" | null>(null);
 
+  const [error, setError] = useState("");
+
   async function respond(status: "ACCEPTED" | "DECLINED") {
     setLoading(status === "ACCEPTED" ? "accept" : "decline");
-    await fetch(`/api/tournaments/${tournamentId}/invitations`, {
+    setError("");
+    const res = await fetch(`/api/tournaments/${tournamentId}/invitations`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
-    });
-    router.refresh();
+    }).catch(() => null);
+    if (res?.ok) {
+      router.refresh();
+      return;
+    }
+    setError(res ? await apiErrorMessage(res, "Couldn't send your response.") : "Couldn't reach the server.");
+    setLoading(null);
   }
 
   return (
@@ -60,7 +61,7 @@ export default function InvitationResponseCard({
           </>
         )}
         <dt className="text-gray-500">Format</dt>
-        <dd className="text-gray-800 font-medium">{FORMAT_LABELS[format] ?? format}</dd>
+        <dd className="text-gray-800 font-medium">{formatLabel(format)}</dd>
         {date && (
           <>
             <dt className="text-gray-500">Date</dt>
@@ -92,6 +93,7 @@ export default function InvitationResponseCard({
           {loading === "decline" ? "Declining…" : "Decline"}
         </button>
       </div>
+      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
     </div>
   );
 }

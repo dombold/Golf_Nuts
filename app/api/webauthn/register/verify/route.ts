@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyRegistrationResponse } from "@simplewebauthn/server";
-import { RP_ID, ORIGIN } from "@/lib/webauthn";
+import { RP_ID, ORIGIN, challengeFromResponse, consumeChallenge } from "@/lib/webauthn";
 import { isoBase64URL } from "@simplewebauthn/server/helpers";
 
 export async function POST(req: Request) {
@@ -13,20 +13,13 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body) return Response.json({ error: "Invalid request" }, { status: 400 });
 
-  const challengeRecord = await prisma.webAuthnChallenge.findFirst({
-    where: {
-      userId: session.user.id,
-      type: "registration",
-      expiresAt: { gt: new Date() },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
+  const signedChallenge = challengeFromResponse(body);
+  const challengeRecord = signedChallenge
+    ? await consumeChallenge(signedChallenge, "registration", session.user.id)
+    : null;
   if (!challengeRecord) {
     return Response.json({ error: "Challenge expired or not found" }, { status: 400 });
   }
-
-  await prisma.webAuthnChallenge.delete({ where: { id: challengeRecord.id } });
 
   let verification;
   try {

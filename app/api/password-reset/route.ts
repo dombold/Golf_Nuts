@@ -6,17 +6,18 @@ import { z } from "zod";
 
 const Schema = z.object({ email: z.email() });
 
-const OK = Response.json({ ok: true });
+// A Response body can only be read once — build a fresh one per request
+const ok = () => Response.json({ ok: true });
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const parsed = Schema.safeParse(body);
-  if (!parsed.success) return OK;
+  if (!parsed.success) return ok();
 
   const { email } = parsed.data;
 
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) return OK;
+  if (!user) return ok();
 
   await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
 
@@ -36,5 +37,5 @@ export async function POST(req: NextRequest) {
     console.error("[password-reset] email send failed:", err);
   }
 
-  return OK;
+  return ok();
 }

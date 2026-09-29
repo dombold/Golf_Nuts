@@ -2,8 +2,10 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { z } from "zod";
+import { EventFormatSchema } from "@/lib/gameFormats";
 import { sendTournamentInviteNotification } from "@/lib/push";
-import { isHoleInPlay } from "@/lib/nines";
+import { validatePrizeHoles } from "@/lib/prizeHoles";
+import { pruneStaleTournaments } from "@/lib/staleTournaments";
 
 const PrizeHoleSchema = z.object({
   holeNumber: z.number().int().min(1).max(18),
@@ -12,7 +14,7 @@ const PrizeHoleSchema = z.object({
 
 const CreateSchema = z.object({
   name: z.string().min(2).trim(),
-  format: z.enum(["STROKEPLAY", "STABLEFORD", "MATCH_PLAY", "SKINS", "AMBROSE_2", "AMBROSE_4"]),
+  format: EventFormatSchema,
   courseId: z.string(),
   teeId: z.string(),
   holesCount: z.union([z.literal(9), z.literal(18)]).default(18),
@@ -37,15 +39,18 @@ export async function POST(req: NextRequest) {
   // Deduplicate invitees and exclude the organiser (they're auto-accepted separately)
   const otherInvitees = [...new Set(inviteeIds)].filter((id) => id !== organiserId);
 
-  if (prizeHoles.some((h) => !isHoleInPlay(h.holeNumber, holesCount, startingHole))) {
-    return Response.json({ error: { message: "Prize holes must be on the holes being played" } }, { status: 400 });
+  const prizeHoleError = validatePrizeHoles(prizeHoles, holesCount, startingHole);
+  if (prizeHoleError) {
+    return Response.json({ error: { message: prizeHoleError } }, { status: 400 });
   }
 
-  for (const nine of [true, false]) {
-    if (prizeHoles.filter((h) => h.type === "NEAREST_PIN" && (h.holeNumber <= 9) === nine).length > 2 ||
-        prizeHoles.filter((h) => h.type === "LONGEST_DRIVE" && (h.holeNumber <= 9) === nine).length > 1) {
-      return Response.json({ error: { message: "Too many prize holes of the same type per nine" } }, { status: 400 });
-    }
+  const tee = await prisma.tee.findUnique({ where: { id: teeId }, select: { courseId: true } });
+  if (!tee || tee.courseId !== courseId) {
+    return Response.json({ error: { message: "That tee doesn't belong to the selected course" } }, { status: 400 });
+  }
+  const inviteeCount = await prisma.user.count({ where: { id: { in: otherInvitees } } });
+  if (inviteeCount !== otherInvitees.length) {
+    return Response.json({ error: { message: "One or more invitees no longer exist" } }, { status: 400 });
   }
 
   // Verify the organiser exists — catches stale JWT sessions
@@ -75,6 +80,9 @@ export async function POST(req: NextRequest) {
       prizeHoles: prizeHoles.length > 0 ? { create: prizeHoles } : undefined,
     },
   });
+
+  // Housekeeping: clear out never-started events long past their date
+  await pruneStaleTournaments();
 
   // Fire push notifications to invitees — non-blocking, won't fail the request
   if (otherInvitees.length > 0) {

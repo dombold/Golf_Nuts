@@ -8,15 +8,7 @@ import StartRoundButton from "@/components/tournament/StartRoundButton";
 import TournamentLeaderboard from "@/components/tournament/TournamentLeaderboard";
 import PrizeHolesCard from "@/components/tournament/PrizeHolesCard";
 import { describeHoles } from "@/lib/nines";
-
-const FORMAT_LABELS: Record<string, string> = {
-  STROKEPLAY: "Strokeplay",
-  STABLEFORD: "Stableford",
-  MATCH_PLAY: "Match Play",
-  SKINS: "Skins",
-  AMBROSE_2: "2-Player Ambrose",
-  AMBROSE_4: "4-Player Ambrose",
-};
+import { formatLabel } from "@/lib/gameFormats";
 
 const STATUS_STYLES: Record<string, string> = {
   UPCOMING: "bg-acorn-100 text-acorn-700",
@@ -137,7 +129,7 @@ export default async function TournamentDetailPage({
         </div>
         <div className="flex justify-between px-4 py-3">
           <dt className="text-gray-500">Format</dt>
-          <dd className="font-medium text-gray-800">{FORMAT_LABELS[tournament.format] ?? tournament.format}</dd>
+          <dd className="font-medium text-gray-800">{formatLabel(tournament.format)}</dd>
         </div>
         {tournament.date && (
           <div className="flex justify-between px-4 py-3">

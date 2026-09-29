@@ -24,6 +24,9 @@ export async function PATCH(
     return Response.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
+  const exists = await prisma.hole.findUnique({ where: { id }, select: { id: true } });
+  if (!exists) return Response.json({ error: "Hole not found" }, { status: 404 });
+
   const hole = await prisma.hole.update({
     where: { id },
     data: parsed.data,

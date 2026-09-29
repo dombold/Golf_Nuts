@@ -1,7 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { calcDifferential } from "@/lib/handicap";
-import { recalcHandicap } from "@/lib/recalcHandicap";
+import { recordRoundDifferential } from "@/lib/recalcHandicap";
 import type { NextRequest } from "next/server";
 
 export async function POST(
@@ -15,22 +14,20 @@ export async function POST(
 
   const round = await prisma.round.findUnique({
     where: { id: roundId },
-    include: {
-      tee: true,
-      players: {
-        include: {
-          user: true,
-          scores: true,
-        },
-      },
-    },
+    select: { format: true, players: { select: { userId: true } } },
   });
   if (!round) return Response.json({ error: "Round not found" }, { status: 404 });
+  if (!round.players.some((p) => p.userId === session.user.id)) {
+    return Response.json({ error: "Forbidden" }, { status: 403 });
+  }
 
-  await prisma.round.update({
-    where: { id: roundId },
+  // Flip to COMPLETE atomically — a second request (another phone, a retry) is a no-op,
+  // so handicap history is never written twice.
+  const { count } = await prisma.round.updateMany({
+    where: { id: roundId, status: { not: "COMPLETE" } },
     data: { status: "COMPLETE" },
   });
+  if (count === 0) return Response.json({ success: true, alreadyComplete: true });
 
   // Tournament rounds: once every group has finished, the tournament is complete
   const tournamentRound = await prisma.tournamentRound.findFirst({
@@ -43,43 +40,15 @@ export async function POST(
   });
   const tournament = tournamentRound?.tournament;
   if (tournament?.status === "ACTIVE" && tournament.rounds.every((tr) => tr.round.status === "COMPLETE")) {
-    await prisma.tournament.update({ where: { id: tournament.id }, data: { status: "COMPLETE", completedAt: new Date() } });
+    await prisma.tournament.updateMany({
+      where: { id: tournament.id, status: "ACTIVE" },
+      data: { status: "COMPLETE", completedAt: new Date() },
+    });
   }
 
   // Only strokeplay rounds count toward handicap under WHS
   if (round.format === "STROKEPLAY") {
-    await Promise.all(
-      round.players.map(async (rp) => {
-        const grossScore = rp.scores.reduce((sum, s) => sum + s.strokes, 0);
-        if (grossScore === 0) return;
-
-        const differential = calcDifferential({
-          adjustedGrossScore: grossScore,
-          courseRating: round.tee.rating,
-          slopeRating: round.tee.slope,
-          holesCount: round.holesCount as 9 | 18,
-        });
-
-        await prisma.handicapHistory.create({
-          data: {
-            userId: rp.userId,
-            index: rp.user.handicapIndex,
-            differential,
-            roundId,
-            isNineHole: round.holesCount === 9,
-          },
-        });
-
-        const newIndex = await recalcHandicap(rp.userId);
-
-        if (newIndex !== null) {
-          await prisma.user.update({
-            where: { id: rp.userId },
-            data: { handicapIndex: newIndex },
-          });
-        }
-      })
-    );
+    await Promise.all(round.players.map((p) => recordRoundDifferential(roundId, p.userId)));
   }
 
   return Response.json({ success: true });

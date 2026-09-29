@@ -11,11 +11,11 @@ const PutSchema = z.object({
       members: z.array(
         z.object({
           userId: z.string(),
-          teamNumber: z.number().int().optional(),
+          teamNumber: z.number().int().min(1).max(8).optional(),
         })
       ).max(4),
     })
-  ),
+  ).max(50),
 });
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -24,7 +24,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { id: tournamentId } = await params;
 
-  const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    select: {
+      createdById: true,
+      status: true,
+      courseId: true,
+      invitations: { where: { status: "ACCEPTED" }, select: { userId: true } },
+    },
+  });
   if (!tournament) return Response.json({ error: "Tournament not found" }, { status: 404 });
   if (tournament.createdById !== session.user.id) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
@@ -37,13 +45,35 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const parsed = PutSchema.safeParse(body);
   if (!parsed.success) return Response.json({ error: parsed.error.flatten() }, { status: 400 });
 
+  const { groups } = parsed.data;
+  const bad = (message: string) => Response.json({ error: { message } }, { status: 400 });
+
+  if (new Set(groups.map((g) => g.groupNumber)).size !== groups.length) {
+    return bad("Group numbers must be unique");
+  }
+  const memberIds = groups.flatMap((g) => g.members.map((m) => m.userId));
+  if (new Set(memberIds).size !== memberIds.length) {
+    return bad("A player can only be in one group");
+  }
+  const acceptedIds = new Set(tournament.invitations.map((i) => i.userId));
+  if (memberIds.some((uid) => !acceptedIds.has(uid))) {
+    return bad("Only players who have accepted can be grouped");
+  }
+  const teeIds = [...new Set(groups.map((g) => g.teeId))];
+  const validTees = await prisma.tee.count({
+    where: { id: { in: teeIds }, courseId: tournament.courseId ?? undefined },
+  });
+  if (teeIds.length > 0 && (!tournament.courseId || validTees !== teeIds.length)) {
+    return bad("Each group's tee must belong to the event's course");
+  }
+
   // Replace all groups in a transaction
   await prisma.$transaction(async (tx) => {
     // Delete existing groups (cascades to members)
     await tx.tournamentGroup.deleteMany({ where: { tournamentId } });
 
     // Recreate from payload
-    for (const group of parsed.data.groups) {
+    for (const group of groups) {
       await tx.tournamentGroup.create({
         data: {
           tournamentId,

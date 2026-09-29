@@ -6,6 +6,8 @@ import {
   calcStableford,
   calcSkins,
   calcAmbrose,
+  calcMatchPlay,
+  type MatchPlayResult,
   type PlayerRoundResult,
   type AmbroseTeam,
 } from "@/lib/formats";
@@ -66,13 +68,15 @@ export default async function RoundSummaryPage({
   }));
 
   const format = round.format;
-  let results: { name: string; score: string; sub?: string }[] = [];
+  let results: { id: string; name: string; score: string; sub?: string }[] = [];
+  let match: MatchPlayResult | null = null;
   let winner = "";
   let winnerCountbackLabel: string | undefined;
 
   if (format === "STROKEPLAY") {
     const r = calcStrokeplay(players);
     results = r.map((p) => ({
+      id: p.playerId,
       name: p.name,
       score: `${p.net} net`,
       sub: [
@@ -88,6 +92,7 @@ export default async function RoundSummaryPage({
   } else if (format === "STABLEFORD") {
     const r = calcStableford(players);
     results = r.map((p) => ({
+      id: p.playerId,
       name: p.name,
       score: `${p.totalPoints} pts`,
       sub: p.countbackLabel,
@@ -97,6 +102,7 @@ export default async function RoundSummaryPage({
   } else if (format === "SKINS") {
     const r = calcSkins(players);
     results = r.totals.map((t) => ({
+      id: t.playerId,
       name: t.name,
       score: `${t.skins} skin${t.skins !== 1 ? "s" : ""}`,
     }));
@@ -160,6 +166,7 @@ export default async function RoundSummaryPage({
 
     const r = calcAmbrose(teams, teamSize as 2 | 4);
     results = r.map((t) => ({
+      id: t.teamId,
       name: t.name,
       score: `${t.net} net`,
       sub: [
@@ -172,12 +179,29 @@ export default async function RoundSummaryPage({
     }));
     winner = r[0]?.name ?? "";
     winnerCountbackLabel = r[0]?.countbackLabel;
+  } else if (format === "MATCH_PLAY" && players.length === 2) {
+    const [p1, p2] = players;
+    match = calcMatchPlay(p1, p2, playedHoles.length);
+    const won = (who: "player1" | "player2") => match!.holes.filter((h) => h.result === who).length;
+    results = [
+      { id: p1.playerId, name: p1.name, score: `${won("player1")} won`, sub: `Hcp ${p1.playingHandicap}` },
+      { id: p2.playerId, name: p2.name, score: `${won("player2")} won`, sub: `Hcp ${p2.playingHandicap}` },
+    ].sort((a, b) => parseInt(b.score) - parseInt(a.score));
+    winner = match.status;
   } else {
     results = players.map((p) => ({
+      id: p.playerId,
       name: p.name,
       score: `${p.holes.reduce((s, h) => s + h.strokes, 0)} gross`,
     }));
   }
+
+  const matchHoleLabel = (holeNumber: number) => {
+    const result = match?.holes.find((h) => h.holeNumber === holeNumber)?.result;
+    if (!result) return "—";
+    if (result === "halved") return "½";
+    return players[result === "player1" ? 0 : 1].name.split(" ")[0];
+  };
 
   const totalPar = playedHoles.reduce((sum, h) => sum + h.par, 0);
   const frontNineHoles = playedHoles.filter((h) => h.number <= 9);
@@ -218,8 +242,10 @@ export default async function RoundSummaryPage({
 
       {winner && !isMultiGroupEvent && (
         <div className="bg-fairway-900 text-white rounded-2xl p-5 text-center">
-          <p className="text-fairway-300 text-xs uppercase tracking-widest mb-1">Winner</p>
-          <p className="text-2xl font-bold">🏆 {winner}</p>
+          <p className="text-fairway-300 text-xs uppercase tracking-widest mb-1">
+            {match ? (match.finished ? "Result" : "Match status") : "Winner"}
+          </p>
+          <p className="text-2xl font-bold">{match && !match.winner ? winner : `🏆 ${winner}`}</p>
           {winnerCountbackLabel && (
             <p className="text-fairway-400 text-xs mt-1">{winnerCountbackLabel}</p>
           )}
@@ -233,7 +259,7 @@ export default async function RoundSummaryPage({
           const i = isMultiGroupEvent ? -1 : index;
           return (
           <div
-            key={r.name}
+            key={r.id}
             className={`flex items-center gap-4 p-4 rounded-xl ${
               i === 0 ? "bg-fairway-800 text-white" : "bg-white border border-fairway-50"
             }`}
@@ -267,6 +293,7 @@ export default async function RoundSummaryPage({
                 {round.players.map((p) => (
                   <th key={p.id} className="px-2 py-2 text-center">{p.user.name.split(" ")[0]}</th>
                 ))}
+                {match && <th className="px-2 py-2 text-center">Hole won</th>}
               </tr>
             </thead>
             <tbody>
@@ -293,6 +320,9 @@ export default async function RoundSummaryPage({
                         </td>
                       );
                     })}
+                    {match && (
+                      <td className="px-2 py-1.5 text-center text-fairway-800 font-medium">{matchHoleLabel(hole.number)}</td>
+                    )}
                   </tr>
                   {hole.number === 9 && frontNineHoles.length > 0 && (
                     <tr className="bg-fairway-200/60 font-semibold text-fairway-900 border-t-2 border-fairway-300">
@@ -303,6 +333,7 @@ export default async function RoundSummaryPage({
                           {playerFront(p) || "—"}
                         </td>
                       ))}
+                      {match && <td />}
                     </tr>
                   )}
                   {hole.number === backNineHoles[backNineHoles.length - 1]?.number && backNineHoles.length > 0 && (
@@ -314,6 +345,7 @@ export default async function RoundSummaryPage({
                           {playerBack(p) || "—"}
                         </td>
                       ))}
+                      {match && <td />}
                     </tr>
                   )}
                 </React.Fragment>
@@ -326,6 +358,7 @@ export default async function RoundSummaryPage({
                     {p.scores.reduce((sum, s) => sum + s.strokes, 0) || "—"}
                   </td>
                 ))}
+                {match && <td />}
               </tr>
             </tbody>
           </table>

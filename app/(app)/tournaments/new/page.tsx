@@ -4,15 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import HolesPicker from "@/components/HolesPicker";
 import { isHoleInPlay, type HolesCount, type StartingHole } from "@/lib/nines";
-
-const FORMATS = [
-  { value: "STROKEPLAY", label: "Strokeplay", desc: "Total gross / net strokes" },
-  { value: "STABLEFORD", label: "Stableford", desc: "Points per hole" },
-  { value: "MATCH_PLAY", label: "Match Play", desc: "Hole-by-hole win/loss" },
-  { value: "SKINS", label: "Skins", desc: "Win each hole outright" },
-  { value: "AMBROSE_2", label: "2-Player Ambrose", desc: "Best ball scramble (pairs)" },
-  { value: "AMBROSE_4", label: "4-Player Ambrose", desc: "Best ball scramble (teams of 4)" },
-];
+import { EVENT_FORMATS } from "@/lib/gameFormats";
 
 interface Course { id: string; name: string; tees: Tee[]; suburb?: string | null; city?: string | null; address?: string | null; phone?: string | null }
 interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
@@ -332,7 +324,7 @@ export default function NewTournamentPage() {
         <div className="space-y-4">
           <h2 className="font-semibold text-fairway-800">Choose format</h2>
           <div className="space-y-2">
-            {FORMATS.map((f) => (
+            {EVENT_FORMATS.map((f) => (
               <button
                 key={f.value}
                 onClick={() => setFormat(f.value)}

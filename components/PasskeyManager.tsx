@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { startRegistration } from "@simplewebauthn/browser";
 import { useRouter } from "next/navigation";
+import { apiErrorMessage } from "@/lib/apiError";
 
 type Passkey = {
   id: string;
@@ -59,8 +60,10 @@ export default function PasskeyManager({ passkeys }: { passkeys: Passkey[] }) {
   async function handleDelete(id: string) {
     setDeleting(id);
     try {
-      await fetch(`/api/webauthn/credentials/${id}`, { method: "DELETE" });
-      router.refresh();
+      setError("");
+      const res = await fetch(`/api/webauthn/credentials/${id}`, { method: "DELETE" }).catch(() => null);
+      if (res?.ok) router.refresh();
+      else setError(res ? await apiErrorMessage(res, "Couldn't remove that device.") : "Couldn't reach the server.");
     } finally {
       setDeleting(null);
     }
@@ -124,7 +127,8 @@ export default function PasskeyManager({ passkeys }: { passkeys: Passkey[] }) {
 
       {passkeys.length === 0 && (
         <p className="text-xs text-gray-500">
-          Use your fingerprint or Face ID to sign in instead of your password.
+          Use your fingerprint or Face ID (or your phone&apos;s PIN) to sign in instead of your
+          password. Your phone checks it — Golf Nuts never sees your fingerprint or face.
         </p>
       )}
     </div>

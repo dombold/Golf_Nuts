@@ -144,11 +144,18 @@ export interface MatchPlayResult {
   holes: { holeNumber: number; result: HoleResult }[];
   status: string;
   winner: string | null;
+  /** True once the match is decided or every hole has been played */
+  finished: boolean;
 }
 
+/**
+ * Net match play between two players over `totalHoles` holes (9 or 18).
+ * Holes where either player has no score yet (strokes 0) are not counted.
+ */
 export function calcMatchPlay(
   p1: PlayerRoundResult,
-  p2: PlayerRoundResult
+  p2: PlayerRoundResult,
+  totalHoles: number
 ): MatchPlayResult {
   let p1Holes = 0;
   let p2Holes = 0;
@@ -156,7 +163,7 @@ export function calcMatchPlay(
 
   for (const h1 of p1.holes) {
     const h2 = p2.holes.find((h) => h.holeNumber === h1.holeNumber);
-    if (!h2) continue;
+    if (!h2 || h1.strokes <= 0 || h2.strokes <= 0) continue;
 
     const net1 = netStrokes(h1, p1.playingHandicap);
     const net2 = netStrokes(h2, p2.playingHandicap);
@@ -175,30 +182,28 @@ export function calcMatchPlay(
   }
 
   const diff = p1Holes - p2Holes;
-  const holesPlayed = holes.length;
-  const holesRemaining = 18 - holesPlayed;
+  const holesRemaining = Math.max(0, totalHoles - holes.length);
+  const finished = Math.abs(diff) > holesRemaining || holesRemaining === 0;
+  const leader = diff > 0 ? p1.name : diff < 0 ? p2.name : null;
 
   let status: string;
-  let winner: string | null = null;
-
-  if (diff > holesRemaining || holesPlayed === 18) {
-    winner = diff > 0 ? p1.name : diff < 0 ? p2.name : null;
-    status =
-      diff === 0
-        ? "All Square"
-        : `${winner} wins ${Math.abs(diff)}${holesPlayed < 18 ? "&" + holesRemaining : ""}`;
+  if (diff === 0) {
+    status = finished ? "Match halved" : "All Square";
+  } else if (finished) {
+    status = `${leader} wins ${Math.abs(diff)}${holesRemaining > 0 ? `&${holesRemaining}` : " up"}`;
   } else {
-    status =
-      diff === 0 ? "All Square" : `${diff > 0 ? p1.name : p2.name} ${Math.abs(diff)} UP`;
+    status = `${leader} ${Math.abs(diff)} UP`;
   }
 
-  return { holes, status, winner };
+  return { holes, status, winner: finished ? leader : null, finished };
 }
 
 // ─── Skins ────────────────────────────────────────────────────────────────────
 
 export interface SkinResult {
   holeNumber: number;
+  /** playerId of the skin winner */
+  winnerId: string | null;
   winner: string | null;
   carried: boolean;
   value: number;
@@ -216,24 +221,23 @@ export function calcSkins(players: PlayerRoundResult[]): SkinsResults {
   const holeNumbers = players[0]?.holes.map((h) => h.holeNumber) ?? [];
 
   for (const holeNum of holeNumbers) {
-    const holeScores = players.map((p) => ({
-      playerId: p.playerId,
-      name: p.name,
-      net: netStrokes(
-        p.holes.find((h) => h.holeNumber === holeNum)!,
-        p.playingHandicap
-      ),
-    }));
+    const holeScores = players.flatMap((p) => {
+      const hole = p.holes.find((h) => h.holeNumber === holeNum);
+      if (!hole || hole.strokes <= 0) return [];
+      return [{ playerId: p.playerId, name: p.name, net: netStrokes(hole, p.playingHandicap) }];
+    });
+    // A hole isn't decided until everyone has a score on it
+    if (holeScores.length < players.length) continue;
 
     const minScore = Math.min(...holeScores.map((s) => s.net));
     const winners = holeScores.filter((s) => s.net === minScore);
 
     if (winners.length === 1) {
       const value = 1 + carryover;
-      skins.push({ holeNumber: holeNum, winner: winners[0].name, carried: carryover > 0, value });
+      skins.push({ holeNumber: holeNum, winnerId: winners[0].playerId, winner: winners[0].name, carried: carryover > 0, value });
       carryover = 0;
     } else {
-      skins.push({ holeNumber: holeNum, winner: null, carried: false, value: 0 });
+      skins.push({ holeNumber: holeNum, winnerId: null, winner: null, carried: false, value: 0 });
       carryover++;
     }
   }
@@ -241,7 +245,7 @@ export function calcSkins(players: PlayerRoundResult[]): SkinsResults {
   const totals = players.map((p) => ({
     playerId: p.playerId,
     name: p.name,
-    skins: skins.filter((s) => s.winner === p.name).reduce((sum, s) => sum + s.value, 0),
+    skins: skins.filter((s) => s.winnerId === p.playerId).reduce((sum, s) => sum + s.value, 0),
   }));
 
   return { skins, totals };

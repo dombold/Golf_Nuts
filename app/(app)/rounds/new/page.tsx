@@ -3,15 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import HolesPicker from "@/components/HolesPicker";
-
-const FORMATS = [
-  { value: "STROKEPLAY", label: "Strokeplay", desc: "Total gross / net strokes" },
-  { value: "STABLEFORD", label: "Stableford", desc: "Points per hole" },
-  { value: "MATCH_PLAY", label: "Match Play", desc: "Hole-by-hole win/loss" },
-  { value: "SKINS", label: "Skins", desc: "Win each hole outright" },
-  { value: "AMBROSE_2", label: "2-Player Ambrose", desc: "Best ball scramble (pairs)" },
-  { value: "AMBROSE_4", label: "4-Player Ambrose", desc: "Best ball scramble (teams of 4)" },
-];
+import { GAME_FORMATS } from "@/lib/gameFormats";
 
 interface Course { id: string; name: string; suburb: string | null; city: string | null; address?: string | null; phone?: string | null; tees: Tee[] }
 interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
@@ -117,6 +109,8 @@ function NewRoundForm() {
       setLoading(false);
     }
   }
+
+  const matchPlayNeedsTwo = format === "MATCH_PLAY" && selectedPlayers.length !== 2;
 
   return (
     <div className="space-y-6 max-w-xl">
@@ -253,7 +247,7 @@ function NewRoundForm() {
         <div className="space-y-4">
           <h2 className="font-semibold text-fairway-800">Choose format</h2>
           <div className="space-y-2">
-            {FORMATS.map((f) => (
+            {GAME_FORMATS.map((f) => (
               <button
                 key={f.value}
                 onClick={() => setFormat(f.value)}
@@ -283,6 +277,11 @@ function NewRoundForm() {
       {step === 3 && (
         <div className="space-y-4">
           <h2 className="font-semibold text-fairway-800">Select players</h2>
+          {matchPlayNeedsTwo && (
+            <p className="text-sm text-acorn-700 bg-acorn-50 border border-acorn-200 rounded-xl px-3 py-2">
+              Match Play is head-to-head — pick exactly one opponent.
+            </p>
+          )}
           <div className="space-y-2">
             {currentUser && (
               <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-fairway-50 border border-fairway-200">
@@ -328,7 +327,7 @@ function NewRoundForm() {
             </button>
             <button
               onClick={createRound}
-              disabled={loading || selectedPlayers.length === 0}
+              disabled={loading || selectedPlayers.length === 0 || matchPlayNeedsTwo}
               className="flex-1 py-3 bg-fairway-700 text-white rounded-xl font-semibold hover:bg-fairway-800 transition-colors disabled:opacity-40"
             >
               {loading ? "Starting…" : "Tee Off! ⛳"}

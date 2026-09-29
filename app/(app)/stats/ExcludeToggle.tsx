@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { apiErrorMessage } from "@/lib/apiError";
 import { useState } from "react";
 
 interface Props {
@@ -11,19 +12,23 @@ interface Props {
 export default function ExcludeToggle({ roundId, excluded }: Props) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
 
   async function toggle() {
     setPending(true);
-    await fetch(`/api/rounds/${roundId}/exclude`, {
+    setError("");
+    const res = await fetch(`/api/rounds/${roundId}/exclude`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ exclude: !excluded }),
-    });
-    router.refresh();
+    }).catch(() => null);
+    if (res?.ok) router.refresh();
+    else setError(res ? await apiErrorMessage(res, "Couldn't update") : "Offline");
     setPending(false);
   }
 
   return (
+    <>
     <button
       onClick={toggle}
       disabled={pending}
@@ -45,5 +50,7 @@ export default function ExcludeToggle({ roundId, excluded }: Props) {
         ].join(" ")}
       />
     </button>
+    {error && <span role="alert" className="block text-[10px] text-red-600 mt-0.5">{error}</span>}
+    </>
   );
 }

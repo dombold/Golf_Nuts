@@ -24,6 +24,9 @@ function buildGroups(
 ) {
   const n = playerIds.length;
   const numGroups = Math.ceil(n / 4);
+  // Spread players evenly: 5 → 3+2, 6 → 3+3, 9 → 3+3+3 (never a lone player in the last group)
+  const baseSize = Math.floor(n / numGroups);
+  const capacity = (i: number) => baseSize + (i < n % numGroups ? 1 : 0);
   const shuffled = fisherYates([...playerIds]);
   const remaining = new Set(shuffled);
 
@@ -38,7 +41,7 @@ function buildGroups(
     const group = groups[i];
     const isLast = i === numGroups - 1;
 
-    while (group.members.length < 4 && remaining.size > 0) {
+    while (group.members.length < capacity(i) && remaining.size > 0) {
       if (isLast) {
         for (const id of remaining) group.members.push(id);
         remaining.clear();
@@ -84,7 +87,7 @@ export async function GET(
 
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
-    select: { createdById: true, status: true, teeId: true },
+    select: { createdById: true, status: true, teeId: true, course: { select: { tees: { select: { id: true }, take: 1 } } } },
   });
   if (!tournament) return Response.json({ error: "Tournament not found" }, { status: 404 });
   if (tournament.createdById !== session.user.id) {
@@ -105,7 +108,10 @@ export async function GET(
 
   if (playerIds.length === 0) return Response.json({ groups: [] });
 
-  const defaultTeeId = tournament.teeId ?? "";
+  const defaultTeeId = tournament.teeId ?? tournament.course?.tees[0]?.id;
+  if (!defaultTeeId) {
+    return Response.json({ error: "Choose a course and tee for the event first" }, { status: 409 });
+  }
 
   const pairRows = await prisma.$queryRaw<PairRow[]>`
     SELECT

@@ -2,16 +2,25 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiErrorMessage } from "@/lib/apiError";
 
 export default function DeleteRoundButton({ roundId }: { roundId: string }) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleDelete() {
     setDeleting(true);
-    await fetch(`/api/rounds/${roundId}`, { method: "DELETE" });
-    router.push("/dashboard");
+    setError("");
+    const res = await fetch(`/api/rounds/${roundId}`, { method: "DELETE" }).catch(() => null);
+    if (res?.ok) {
+      router.push("/dashboard");
+      return;
+    }
+    setError(res ? await apiErrorMessage(res, "Couldn't delete the round.") : "Couldn't reach the server.");
+    setDeleting(false);
+    setConfirming(false);
   }
 
   if (confirming) {
@@ -35,11 +44,14 @@ export default function DeleteRoundButton({ roundId }: { roundId: string }) {
   }
 
   return (
-    <button
-      onClick={() => setConfirming(true)}
-      className="py-3 px-4 border border-red-200 text-red-600 rounded-xl font-semibold hover:bg-red-50 transition-colors text-sm"
-    >
-      Delete
-    </button>
+    <div className="flex flex-col gap-1">
+      <button
+        onClick={() => setConfirming(true)}
+        className="py-3 px-4 border border-red-200 text-red-600 rounded-xl font-semibold hover:bg-red-50 transition-colors text-sm"
+      >
+        Delete
+      </button>
+      {error && <p role="alert" className="text-xs text-red-600 max-w-40">{error}</p>}
+    </div>
   );
 }

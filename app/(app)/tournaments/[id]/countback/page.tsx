@@ -7,15 +7,7 @@ import {
   formatStandingScore,
   standingLabel,
 } from "@/lib/tournamentStandings";
-
-const FORMAT_LABELS: Record<string, string> = {
-  STROKEPLAY: "Strokeplay",
-  STABLEFORD: "Stableford",
-  MATCH_PLAY: "Match Play",
-  SKINS: "Skins",
-  AMBROSE_2: "2-Player Ambrose",
-  AMBROSE_4: "4-Player Ambrose",
-};
+import { formatLabel } from "@/lib/gameFormats";
 
 function joinNames(names: string[]) {
   return names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
@@ -80,7 +72,7 @@ export default async function CountbackPage({ params }: { params: Promise<{ id: 
     <div>
       <h1 className="text-2xl font-bold text-fairway-900">Countback — {tournament.name}</h1>
       <p className="text-sm text-gray-500 mt-1">
-        {FORMAT_LABELS[format] ?? format}
+        {formatLabel(format)}
         {tournament.course ? ` · ${tournament.course.name}` : ""} · {tournament.holesCount} holes
       </p>
     </div>

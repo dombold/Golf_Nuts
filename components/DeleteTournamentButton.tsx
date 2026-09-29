@@ -2,16 +2,25 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiErrorMessage } from "@/lib/apiError";
 
 export default function DeleteTournamentButton({ tournamentId }: { tournamentId: string }) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleDelete() {
     setDeleting(true);
-    await fetch(`/api/tournaments/${tournamentId}`, { method: "DELETE" });
-    router.refresh();
+    setError("");
+    const res = await fetch(`/api/tournaments/${tournamentId}`, { method: "DELETE" }).catch(() => null);
+    if (res?.ok) {
+      router.refresh();
+      return;
+    }
+    setError(res ? await apiErrorMessage(res, "Couldn't delete the event.") : "Couldn't reach the server.");
+    setDeleting(false);
+    setConfirming(false);
   }
 
   if (confirming) {
@@ -35,11 +44,14 @@ export default function DeleteTournamentButton({ tournamentId }: { tournamentId:
   }
 
   return (
-    <button
-      onClick={() => setConfirming(true)}
-      className="text-xs px-2 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors"
-    >
-      Delete
-    </button>
+    <span className="inline-flex flex-col items-end gap-1">
+      <button
+        onClick={() => setConfirming(true)}
+        className="text-xs px-2 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors"
+      >
+        Delete
+      </button>
+      {error && <span role="alert" className="text-xs text-red-600">{error}</span>}
+    </span>
   );
 }

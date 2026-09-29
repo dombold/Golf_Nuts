@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { z } from "zod";
+import { GameFormatSchema } from "@/lib/gameFormats";
 import { isHoleInPlay } from "@/lib/nines";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -65,7 +66,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
 
 const PatchSchema = z.object({
   name: z.string().min(2).trim().optional(),
-  format: z.enum(["STROKEPLAY", "STABLEFORD", "MATCH_PLAY", "SKINS", "AMBROSE_2", "AMBROSE_4"]).optional(),
+  format: GameFormatSchema.optional(),
   date: z.string().nullable().optional(),
   teeOffTime: z.string().regex(/^\d{2}:\d{2}$/).nullable().optional(),
   courseId: z.string().nullable().optional(),
@@ -104,6 +105,34 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     );
   }
 
+  // Starting goes through /start (which creates the rounds); after that the organiser may only
+  // finish the event early or re-open a finished one.
+  if (status !== undefined && status !== tournament.status) {
+    const allowed =
+      (tournament.status === "ACTIVE" && status === "COMPLETE") ||
+      (tournament.status === "COMPLETE" && status === "ACTIVE");
+    if (!allowed) {
+      return Response.json(
+        { error: `Can't change an ${tournament.status.toLowerCase()} event to ${status.toLowerCase()}` },
+        { status: 409 }
+      );
+    }
+  }
+
+  if (format === "MATCH_PLAY" && tournament.format !== "MATCH_PLAY") {
+    return Response.json({ error: { message: "Match Play isn't available for events" } }, { status: 400 });
+  }
+
+  // The tee must belong to the event's course
+  const newCourseId = courseId !== undefined ? courseId : tournament.courseId;
+  const newTeeId = teeId !== undefined ? teeId : tournament.teeId;
+  if (newTeeId) {
+    const tee = await prisma.tee.findUnique({ where: { id: newTeeId }, select: { courseId: true } });
+    if (!tee || tee.courseId !== newCourseId) {
+      return Response.json({ error: { message: "That tee doesn't belong to the selected course" } }, { status: 400 });
+    }
+  }
+
   const data: Record<string, unknown> = {};
   if (name !== undefined) data.name = name;
   if (format !== undefined) data.format = format;
@@ -111,11 +140,10 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (teeOffTime !== undefined) data.teeOffTime = teeOffTime;
   if (courseId !== undefined) data.courseId = courseId;
   if (teeId !== undefined) data.teeId = teeId;
-  if (status !== undefined) {
+  if (status !== undefined && status !== tournament.status) {
     data.status = status;
     // Record when the event finished (drives the move to Previous Events); clear it if re-opened
-    if (status === "COMPLETE" && tournament.status !== "COMPLETE") data.completedAt = new Date();
-    if (status !== "COMPLETE") data.completedAt = null;
+    data.completedAt = status === "COMPLETE" ? new Date() : null;
   }
 
   const newHolesCount = holesCount ?? tournament.holesCount;
@@ -125,21 +153,22 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     data.startingHole = newStartingHole;
   }
 
-  // If the course or tee changes, prize holes are no longer valid — clear them
-  const courseChanged = courseId !== undefined && courseId !== tournament.courseId;
-  const teeChanged = teeId !== undefined && teeId !== tournament.teeId;
-  if (courseChanged || teeChanged) {
-    await prisma.tournamentPrizeHole.deleteMany({ where: { tournamentId: id } });
-  } else if (newHolesCount !== tournament.holesCount || newStartingHole !== tournament.startingHole) {
-    // Drop prize holes that fall outside the newly selected nine(s)
-    const existing = await prisma.tournamentPrizeHole.findMany({ where: { tournamentId: id } });
-    const outOfPlay = existing.filter((ph) => !isHoleInPlay(ph.holeNumber, newHolesCount, newStartingHole));
-    if (outOfPlay.length > 0) {
-      await prisma.tournamentPrizeHole.deleteMany({ where: { id: { in: outOfPlay.map((ph) => ph.id) } } });
+  const updated = await prisma.$transaction(async (tx) => {
+    // If the course or tee changes, prize holes are no longer valid — clear them
+    const courseChanged = courseId !== undefined && courseId !== tournament.courseId;
+    const teeChanged = teeId !== undefined && teeId !== tournament.teeId;
+    if (courseChanged || teeChanged) {
+      await tx.tournamentPrizeHole.deleteMany({ where: { tournamentId: id } });
+    } else if (newHolesCount !== tournament.holesCount || newStartingHole !== tournament.startingHole) {
+      // Drop prize holes that fall outside the newly selected nine(s)
+      const existing = await tx.tournamentPrizeHole.findMany({ where: { tournamentId: id } });
+      const outOfPlay = existing.filter((ph) => !isHoleInPlay(ph.holeNumber, newHolesCount, newStartingHole));
+      if (outOfPlay.length > 0) {
+        await tx.tournamentPrizeHole.deleteMany({ where: { id: { in: outOfPlay.map((ph) => ph.id) } } });
+      }
     }
-  }
-
-  const updated = await prisma.tournament.update({ where: { id }, data });
+    return tx.tournament.update({ where: { id }, data });
+  });
 
   return Response.json({ tournament: updated });
 }

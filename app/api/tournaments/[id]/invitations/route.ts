@@ -19,9 +19,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const invitation = await prisma.tournamentInvitation.findUnique({
     where: { tournamentId_userId: { tournamentId, userId: session.user.id } },
+    select: { id: true, tournament: { select: { status: true, createdById: true } } },
   });
 
   if (!invitation) return Response.json({ error: "Invitation not found" }, { status: 404 });
+  if (invitation.tournament.status !== "UPCOMING") {
+    return Response.json({ error: "The event has already started" }, { status: 409 });
+  }
+  if (invitation.tournament.createdById === session.user.id && parsed.data.status === "DECLINED") {
+    return Response.json({ error: "The organiser can't decline their own event" }, { status: 400 });
+  }
 
   const updated = await prisma.tournamentInvitation.update({
     where: { id: invitation.id },

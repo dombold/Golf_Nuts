@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { signIn, signOut, auth } from "@/lib/auth";
+import { signIn, signOut, auth, isFreshResetSession } from "@/lib/auth";
 import { sendWelcomeEmail } from "@/lib/email";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -161,7 +161,8 @@ export async function changePassword(
   const session = await auth();
   if (!session?.user?.id) return { message: "Not authenticated" };
 
-  const fromReset = session.user.loginMethod === "reset_token";
+  // A reset-link sign-in may set a new password without the old one — but only shortly after
+  const fromReset = isFreshResetSession(session.user);
 
   const parsed = NewPasswordSchema.safeParse({
     newPassword: formData.get("newPassword"),

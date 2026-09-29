@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { liveTournamentWhere } from "@/lib/staleTournaments";
 import DeleteTournamentButton from "@/components/DeleteTournamentButton";
 import PastTournamentsDropdown from "@/components/tournament/PastTournamentsDropdown";
 import TournamentResultSummary, {
@@ -29,18 +30,8 @@ export default async function TournamentsPage() {
   const session = await auth();
   const userId = session!.user.id;
 
-  const cutoff = daysAgo(7);
   // Completed events stay at the top for a day after finishing, then move to Previous Events
   const finishedCutoff = daysAgo(1);
-
-  // Delete never-started tournaments whose scheduled date passed > 1 week ago.
-  // Cascade removes invitations, groups, prize holes automatically.
-  await prisma.tournament.deleteMany({
-    where: {
-      status: "UPCOMING",
-      date: { lt: cutoff },
-    },
-  });
 
   const roundsInclude = {
     include: {
@@ -67,6 +58,8 @@ export default async function TournamentsPage() {
   const [tournaments, pastTournaments, pendingCount] = await Promise.all([
     prisma.tournament.findMany({
       where: {
+        // Never-started events more than a week past their date are hidden (and pruned on the next event creation)
+        ...liveTournamentWhere(),
         OR: [
           { status: { not: "COMPLETE" } },
           { status: "COMPLETE", completedAt: { gt: finishedCutoff } },
@@ -95,7 +88,7 @@ export default async function TournamentsPage() {
       orderBy: { completedAt: "desc" },
     }),
     prisma.tournamentInvitation.count({
-      where: { userId, status: "PENDING" },
+      where: { userId, status: "PENDING", tournament: liveTournamentWhere() },
     }),
   ]);
 

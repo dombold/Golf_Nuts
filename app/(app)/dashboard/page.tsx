@@ -1,50 +1,58 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { liveTournamentWhere } from "@/lib/staleTournaments";
 import ActiveRoundCard from "@/components/ActiveRoundCard";
+
+// Event dates are stored at midnight — compare from the start of today so today's event still shows.
+// Read outside the component body (server components render once per request).
+function startOfToday(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
 
 export default async function DashboardPage() {
   const session = await auth();
-  const user = await prisma.user.findUnique({
-    where: { email: session!.user.email! },
-    select: { id: true, name: true, firstName: true, handicapIndex: true },
-  });
-  const userId = user!.id;
+  const userId = session!.user.id;
 
-  const pendingInvitations = await prisma.tournamentInvitation.count({
-    where: { userId, status: "PENDING" },
-  });
-
-  const nextAcceptedTournament = await prisma.tournamentInvitation.findFirst({
-    where: {
-      userId,
-      status: "ACCEPTED",
-      tournament: { status: "UPCOMING", date: { gte: new Date() } },
-    },
-    orderBy: { tournament: { date: "asc" } },
-    include: { tournament: { select: { id: true, name: true, date: true } } },
-  });
-
-  const activeRounds = await prisma.round.findMany({
-    where: { players: { some: { userId } }, status: "ACTIVE" },
-    include: { course: { select: { name: true } } },
-    orderBy: { date: "desc" },
-  });
-
-  const recentRounds = await prisma.round.findMany({
-    where: {
-      players: { some: { userId } },
-      status: "COMPLETE",
-    },
-    include: {
-      course: { select: { name: true } },
-      players: {
-        include: { user: { select: { name: true } } },
+  const [user, pendingInvitations, nextAcceptedTournament, activeRounds, recentRounds] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, firstName: true, handicapIndex: true },
+    }),
+    prisma.tournamentInvitation.count({
+      where: { userId, status: "PENDING", tournament: liveTournamentWhere() },
+    }),
+    prisma.tournamentInvitation.findFirst({
+      where: {
+        userId,
+        status: "ACCEPTED",
+        tournament: { status: "UPCOMING", date: { gte: startOfToday() } },
       },
-    },
-    orderBy: { date: "desc" },
-    take: 5,
-  });
+      orderBy: { tournament: { date: "asc" } },
+      include: { tournament: { select: { id: true, name: true, date: true } } },
+    }),
+    prisma.round.findMany({
+      where: { players: { some: { userId } }, status: "ACTIVE" },
+      include: { course: { select: { name: true } } },
+      orderBy: { date: "desc" },
+    }),
+    prisma.round.findMany({
+      where: {
+        players: { some: { userId } },
+        status: "COMPLETE",
+      },
+      include: {
+        course: { select: { name: true } },
+        players: {
+          include: { user: { select: { name: true } } },
+        },
+      },
+      orderBy: { date: "desc" },
+      take: 5,
+    }),
+  ]);
 
   return (
     <div className="space-y-6">

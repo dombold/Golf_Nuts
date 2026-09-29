@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiErrorMessage } from "@/lib/apiError";
 
 export default function ActiveRoundCard({
   roundId,
@@ -14,11 +15,18 @@ export default function ActiveRoundCard({
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [discarding, setDiscarding] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleDiscard() {
     setDiscarding(true);
-    await fetch(`/api/rounds/${roundId}`, { method: "DELETE" });
-    router.refresh();
+    setError("");
+    const res = await fetch(`/api/rounds/${roundId}`, { method: "DELETE" }).catch(() => null);
+    if (res?.ok) {
+      router.refresh();
+      return;
+    }
+    setError(res ? await apiErrorMessage(res, "Couldn't discard the round.") : "Couldn't reach the server.");
+    setDiscarding(false);
   }
 
   if (confirming) {
@@ -26,6 +34,7 @@ export default function ActiveRoundCard({
       <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3">
         <p className="text-sm font-semibold text-red-800">Discard this round?</p>
         <p className="text-xs text-red-500 mt-0.5">{courseName} · This cannot be undone.</p>
+        {error && <p role="alert" className="text-xs text-red-700 font-medium mt-2">{error}</p>}
         <div className="flex gap-2 mt-3">
           <button
             onClick={() => setConfirming(false)}

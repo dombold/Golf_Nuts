@@ -4,10 +4,15 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import HoleMap from "@/components/HoleMap";
 import TournamentLeaderboard from "@/components/tournament/TournamentLeaderboard";
 import { useParams, useRouter } from "next/navigation";
+import { strokesOnHole, ambroseTeamHandicap, calcMatchPlay } from "@/lib/formats";
+import { calcTournamentStandings, formatStandingScore, isAmbroseFormat } from "@/lib/tournamentStandings";
+import { isHoleInPlay } from "@/lib/nines";
+import { apiErrorMessage } from "@/lib/apiError";
 
 interface Hole { id: string; number: number; par: number; strokeIndex: number; distance?: number; teeLat?: number | null; teeLng?: number | null; greenLat?: number | null; greenLng?: number | null; }
 interface ScoreEntry { strokes: number; penalties: number; putts?: number; fairwayHit?: boolean; gir?: boolean }
-interface Player { id: string; userId: string; playingHandicap: number; teamNumber?: number | null; user: { id: string; name: string }; scores: { holeNumber: number; strokes: number }[] }
+interface SavedScore { holeNumber: number; strokes: number; penalties: number; putts: number | null; fairwayHit: boolean | null; gir: boolean | null }
+interface Player { id: string; userId: string; playingHandicap: number; teamNumber?: number | null; user: { id: string; name: string }; scores: SavedScore[] }
 interface PrizeHole { holeNumber: number; type: "LONGEST_DRIVE" | "NEAREST_PIN" }
 interface Round {
   id: string;
@@ -22,26 +27,8 @@ interface Round {
   tournamentRounds?: { tournament?: { id: string; status: string; prizeHoles?: PrizeHole[] } }[];
 }
 
-function strokesReceived(handicap: number, strokeIndex: number) {
-  if (handicap <= 0) return 0;
-  const full = Math.floor(handicap / 18);
-  const extra = handicap % 18;
-  return full + (strokeIndex <= extra ? 1 : 0);
-}
-
-function stablefordPoints(strokes: number, par: number, handicap: number, strokeIndex: number): number {
-  const net = strokes - strokesReceived(handicap, strokeIndex);
-  const diff = net - par;
-  if (diff <= -3) return 5;
-  if (diff === -2) return 4;
-  if (diff === -1) return 3;
-  if (diff === 0) return 2;
-  if (diff === 1) return 1;
-  return 0;
-}
-
 function scoreBadgeClass(strokes: number, par: number, handicap: number, strokeIndex: number) {
-  const net = strokes - strokesReceived(handicap, strokeIndex);
+  const net = strokes - strokesOnHole(handicap, strokeIndex);
   const diff = net - par;
   if (diff <= -2) return "score-eagle";
   if (diff === -1) return "score-birdie";
@@ -50,9 +37,13 @@ function scoreBadgeClass(strokes: number, par: number, handicap: number, strokeI
   return "score-double";
 }
 
-function ambroseTeamHandicap(format: string, phs: number[]): number {
-  const divisor = format === "AMBROSE_2" ? 4 : 8;
-  return Math.round(phs.reduce((a, b) => a + b, 0) / divisor);
+function teamSizeFor(format: string): 2 | 4 {
+  return format === "AMBROSE_2" ? 2 : 4;
+}
+
+/** Holes in play for the round, in playing order */
+function holesInPlay(round: Round): Hole[] {
+  return round.tee.holes.filter((h) => isHoleInPlay(h.number, round.holesCount, round.startingHole));
 }
 
 interface TeamScoreCardProps {
@@ -66,7 +57,7 @@ interface TeamScoreCardProps {
 }
 
 function TeamScoreCard({ teamNumber, memberNames, strokes, teamHandicap, holePar, holeStrokeIndex, onChange }: TeamScoreCardProps) {
-  const handi = strokesReceived(teamHandicap, holeStrokeIndex);
+  const handi = strokesOnHole(teamHandicap, holeStrokeIndex);
   const netPar = holePar + handi;
   return (
     <div className="bg-white rounded-xl p-4 shadow-sm border border-fairway-50">
@@ -118,6 +109,7 @@ export default function ScoringPage() {
   const [currentHole, setCurrentHole] = useState(1);
   const [scores, setScores] = useState<Record<string, Record<number, ScoreEntry>>>({});
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [tab, setTab] = useState<"score" | "leaderboard">("score");
   const firstLoadRef = useRef(true);
   const [popupDismissedForHole, setPopupDismissedForHole] = useState<number | null>(null);
@@ -132,17 +124,19 @@ export default function ScoringPage() {
       for (const player of data.round.players) {
         existing[player.id] = {};
         for (const s of player.scores) {
-          existing[player.id][s.holeNumber] = { strokes: s.strokes, penalties: 0 };
+          existing[player.id][s.holeNumber] = {
+            strokes: s.strokes,
+            penalties: s.penalties,
+            putts: s.putts ?? undefined,
+            fairwayHit: s.fairwayHit ?? undefined,
+            gir: s.gir ?? undefined,
+          };
         }
       }
       if (firstLoadRef.current) {
         firstLoadRef.current = false;
         const loaded = data.round;
-        const holes: Hole[] = loaded.tee.holes.slice(
-          loaded.startingHole - 1,
-          loaded.startingHole - 1 + loaded.holesCount
-        );
-        const nextHole = holes.find((h) =>
+        const nextHole = holesInPlay(loaded).find((h) =>
           !loaded.players.every((p: Player) => (existing[p.id]?.[h.number]?.strokes ?? 0) > 0)
         );
         if (nextHole) setCurrentHole(nextHole.number);
@@ -164,11 +158,15 @@ export default function ScoringPage() {
 
   useEffect(() => { fetchRound(); }, [fetchRound]);
 
-  // Poll for live updates every 10s
+  // Poll for live updates every 10s while the round is in play and the tab is visible
+  const isComplete = round?.status === "COMPLETE";
   useEffect(() => {
-    const interval = setInterval(fetchRound, 10000);
+    if (isComplete) return;
+    const interval = setInterval(() => {
+      if (!document.hidden) fetchRound().catch(() => { /* offline — try again next tick */ });
+    }, 10000);
     return () => clearInterval(interval);
-  }, [fetchRound]);
+  }, [fetchRound, isComplete]);
 
   // Show prize hole popup when on a designated hole (unless already dismissed)
   const prizeHolePopup = popupDismissedForHole === currentHole
@@ -209,13 +207,15 @@ export default function ScoringPage() {
     });
   }
 
-  async function saveHole() {
-    if (!round) return;
+  /** Save the current hole for every player. Returns false (and shows an error) if any save failed. */
+  async function saveHole(): Promise<boolean> {
+    if (!round) return false;
     setSaving(true);
+    setSaveError("");
     const hole = round.tee.holes.find((h) => h.number === currentHole);
-    if (!hole) { setSaving(false); return; }
+    if (!hole) { setSaving(false); return false; }
 
-    await Promise.all(
+    const responses = await Promise.all(
       round.players.map((player) => {
         const s = scores[player.id]?.[currentHole];
         if (!s || s.strokes < 1) return null;
@@ -231,24 +231,39 @@ export default function ScoringPage() {
             fairwayHit: s.fairwayHit,
             gir: s.gir,
           }),
-        });
+        }).catch(() => undefined);
       })
     );
     setSaving(false);
-    if (round && currentHole < round.startingHole - 1 + round.holesCount) {
-      changeHole((h) => h + 1);
+
+    const failed = responses.find((res) => res !== null && !res?.ok);
+    if (failed !== undefined) {
+      setSaveError(
+        failed
+          ? await apiErrorMessage(failed, `Hole ${currentHole} didn't save — please try again.`)
+          : `No connection — hole ${currentHole} isn't saved yet. Try again when you have signal.`
+      );
+      return false;
     }
+    return true;
+  }
+
+  async function saveAndNext() {
+    if (!round) return;
+    const ok = await saveHole();
+    if (ok && currentHole < lastHoleNumber) changeHole((h) => h + 1);
   }
 
   async function finishRound() {
-    if (round?.status === "COMPLETE") {
-      await saveHole();
-      router.push(`/rounds/${id}/summary`);
-    } else {
-      await saveHole();
-      await fetch(`/api/rounds/${id}/complete`, { method: "POST" });
-      router.push(`/rounds/${id}/summary`);
+    if (!(await saveHole())) return;
+    if (round?.status !== "COMPLETE") {
+      const res = await fetch(`/api/rounds/${id}/complete`, { method: "POST" }).catch(() => null);
+      if (!res?.ok) {
+        setSaveError(res ? await apiErrorMessage(res, "Couldn't finish the round — please try again.") : "No connection — couldn't finish the round.");
+        return;
+      }
     }
+    router.push(`/rounds/${id}/summary`);
   }
 
   function dismissPrizeHolePopup() {
@@ -263,18 +278,15 @@ export default function ScoringPage() {
     );
   }
 
-  const holes = round.tee.holes.slice(
-    round.startingHole - 1,
-    round.startingHole - 1 + round.holesCount
-  );
+  const holes = holesInPlay(round);
   const hole = holes.find((h) => h.number === currentHole);
   const lastHoleNumber = holes[holes.length - 1]?.number ?? 18;
-  const isAmbrose = round.format === "AMBROSE_2" || round.format === "AMBROSE_4";
+  const isAmbrose = isAmbroseFormat(round.format);
   const tournament = round.tournamentRounds?.[0]?.tournament;
 
   // Group players by teamNumber for Ambrose; each entry has teamNumber + sorted members
   const teams = isAmbrose
-    ? [...new Set(round.players.map((p) => p.teamNumber ?? 0))].sort().map((tn) => ({
+    ? [...new Set(round.players.map((p) => p.teamNumber ?? 0))].sort((a, b) => a - b).map((tn) => ({
         teamNumber: tn,
         members: round.players.filter((p) => (p.teamNumber ?? 0) === tn),
       }))
@@ -284,40 +296,47 @@ export default function ScoringPage() {
     ? teams.every((team) => (scores[team.members[0]?.id]?.[currentHole]?.strokes ?? 0) > 0)
     : round.players.every((p) => (scores[p.id]?.[currentHole]?.strokes ?? 0) > 0);
 
-  // Group-only leaderboard for casual rounds (tournament rounds use TournamentLeaderboard)
-  const leaderboard = isAmbrose
-    ? teams.map((team) => {
-        const phs = team.members.map((m) => m.playingHandicap);
-        const teamHCP = ambroseTeamHandicap(round.format, phs);
-        const memberNames = team.members.map((m) => m.user.name.split(" ")[0]).join(" & ");
-        const rep = team.members[0];
-        let total = 0;
-        let holesPlayed = 0;
-        for (const h of holes) {
-          const s = scores[rep?.id]?.[h.number]?.strokes;
-          if (!s) continue;
-          holesPlayed++;
-          total += s - strokesReceived(teamHCP, h.strokeIndex) - h.par;
-        }
-        return { name: `Team ${team.teamNumber}`, subName: memberNames, total, holesPlayed };
-      }).sort((a, b) => a.total - b.total)
-    : round.players.map((player) => {
-        let total = 0;
-        let holesPlayed = 0;
-        for (const h of holes) {
-          const s = scores[player.id]?.[h.number]?.strokes;
-          if (!s) continue;
-          holesPlayed++;
-          if (round.format === "STABLEFORD") {
-            total += stablefordPoints(s, h.par, player.playingHandicap, h.strokeIndex);
-          } else {
-            total += s - strokesReceived(player.playingHandicap, h.strokeIndex) - h.par;
-          }
-        }
-        return { name: player.user.name, subName: null as string | null, total, holesPlayed };
-      }).sort((a, b) =>
-        round.format === "STABLEFORD" ? b.total - a.total : a.total - b.total
-      );
+  // Live group leaderboard for casual rounds (tournament rounds use TournamentLeaderboard) —
+  // computed by the same lib as event standings, from the scores entered so far.
+  const enteredScores = (playerId: string) =>
+    holes.flatMap((h) => {
+      const strokes = scores[playerId]?.[h.number]?.strokes ?? 0;
+      return strokes > 0 ? [{ holeNumber: h.number, strokes }] : [];
+    });
+  const leaderboard = calcTournamentStandings(
+    [{
+      roundNumber: 1,
+      round: {
+        id: round.id,
+        tee: { holes },
+        players: round.players.map((p) => ({
+          playingHandicap: p.playingHandicap,
+          teamNumber: p.teamNumber ?? null,
+          user: p.user,
+          scores: enteredScores(p.id),
+        })),
+      },
+    }],
+    round.format,
+    false
+  );
+
+  const match = round.format === "MATCH_PLAY" && round.players.length === 2
+    ? calcMatchPlay(
+        ...(round.players.map((p) => ({
+          playerId: p.id,
+          name: p.user.name,
+          playingHandicap: p.playingHandicap,
+          holes: holes.map((h) => ({
+            holeNumber: h.number,
+            par: h.par,
+            strokeIndex: h.strokeIndex,
+            strokes: scores[p.id]?.[h.number]?.strokes ?? 0,
+          })),
+        })) as [Parameters<typeof calcMatchPlay>[0], Parameters<typeof calcMatchPlay>[1]]),
+        holes.length
+      )
+    : null;
 
   return (
     <div className="space-y-4 max-w-xl">
@@ -370,7 +389,7 @@ export default function ScoringPage() {
           {isAmbrose
             ? teams.map((team) => {
                 const phs = team.members.map((m) => m.playingHandicap);
-                const teamHCP = ambroseTeamHandicap(round.format, phs);
+                const teamHCP = ambroseTeamHandicap(phs, teamSizeFor(round.format));
                 const memberNames = team.members.map((m) => m.user.name).join(" & ");
                 const rep = team.members[0];
                 const strokes = scores[rep?.id]?.[currentHole]?.strokes ?? 0;
@@ -389,7 +408,7 @@ export default function ScoringPage() {
               })
             : round.players.map((player) => {
                 const s = scores[player.id]?.[currentHole] ?? { strokes: 0, penalties: 0 };
-                const handi = strokesReceived(player.playingHandicap, hole.strokeIndex);
+                const handi = strokesOnHole(player.playingHandicap, hole.strokeIndex);
                 const netPar = hole.par + handi;
                 return (
                   <div key={player.id} className="bg-white rounded-xl p-4 shadow-sm border border-fairway-50">
@@ -475,11 +494,11 @@ export default function ScoringPage() {
               disabled={currentHole === (holes[0]?.number ?? 1)}
               className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 disabled:opacity-30"
             >
-              ← Hole {currentHole - 1}
+              ← Hole {Math.max(holes[0]?.number ?? 1, currentHole - 1)}
             </button>
             {currentHole !== lastHoleNumber && round.status !== "COMPLETE" && (
               <button
-                onClick={saveHole}
+                onClick={saveAndNext}
                 disabled={saving || !allEntered}
                 className="flex-1 py-3 bg-fairway-700 text-white rounded-xl font-semibold hover:bg-fairway-800 disabled:opacity-40 transition-colors"
               >
@@ -488,9 +507,16 @@ export default function ScoringPage() {
             )}
           </div>
 
+          {saveError && (
+            <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+              {saveError}
+            </p>
+          )}
+
           {(currentHole === lastHoleNumber || round.status === "COMPLETE") && (
             <button
               onClick={finishRound}
+              disabled={saving}
               className="w-full py-3 bg-acorn-700 text-white rounded-xl font-semibold hover:bg-acorn-900 transition-colors"
             >
               {round.status === "COMPLETE" ? "✓ Save & Return to Summary" : "🏁 Finish Round"}
@@ -538,15 +564,21 @@ export default function ScoringPage() {
       {tab === "leaderboard" && !tournament && (
         <div className="space-y-2">
           <h2 className="font-semibold text-fairway-800 mb-3">Live Leaderboard</h2>
+          {match && (
+            <div className="bg-acorn-50 border border-acorn-200 rounded-xl px-4 py-3 text-center">
+              <p className="text-xs uppercase tracking-wide text-acorn-700">Match</p>
+              <p className="text-lg font-bold text-acorn-900">{match.status}</p>
+            </div>
+          )}
           {leaderboard.map((entry, i) => (
             <div
-              key={entry.name}
+              key={entry.playerId}
               className={`flex items-center gap-3 p-4 rounded-xl ${i === 0 ? "bg-fairway-900 text-white" : "bg-white border border-fairway-50"}`}
             >
               <span className={`text-lg font-bold w-6 ${i === 0 ? "text-fairway-300" : "text-gray-400"}`}>{i + 1}</span>
               <div className="flex-1">
                 <p className={`font-semibold ${i === 0 ? "text-white" : "text-fairway-900"}`}>{entry.name}</p>
-                {entry.subName && (
+                {entry.subName && isAmbrose && (
                   <p className={`text-xs ${i === 0 ? "text-fairway-400" : "text-gray-400"}`}>{entry.subName}</p>
                 )}
                 <p className={`text-xs ${i === 0 ? "text-fairway-300" : "text-gray-400"}`}>
@@ -554,13 +586,7 @@ export default function ScoringPage() {
                 </p>
               </div>
               <span className={`text-xl font-bold ${i === 0 ? "text-fairway-300" : "text-fairway-700"}`}>
-                {round.format === "STABLEFORD"
-                  ? `${entry.total} pts`
-                  : entry.total === 0
-                  ? "E"
-                  : entry.total > 0
-                  ? `+${entry.total}`
-                  : entry.total}
+                {formatStandingScore(entry.score, round.format)}
               </span>
             </div>
           ))}

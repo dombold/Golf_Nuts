@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { auth, isFreshResetSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import ProfileForm from "@/components/ProfileForm";
@@ -41,7 +41,7 @@ export default async function ProfilePage() {
 
   const initials = `${user.firstName?.[0] ?? "?"}${user.lastName?.[0] ?? "?"}`.toUpperCase();
 
-  const fromReset = session.user.loginMethod === "reset_token";
+  const fromReset = isFreshResetSession(session.user);
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
