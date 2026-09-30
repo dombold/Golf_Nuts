@@ -136,6 +136,8 @@ export default async function RoundSummaryPage({
     }));
   }
 
+  const teams = teamGame ? buildTeams() : [];
+
   if (format === "STROKEPLAY") {
     const r = calcStrokeplay(players);
     results = r.map((p) => ({
@@ -153,7 +155,7 @@ export default async function RoundSummaryPage({
     winner = r[0]?.name ?? "";
     winnerCountbackLabel = r[0]?.countbackLabel;
   } else if (format === "STABLEFORD" && teamGame) {
-    const r = calcStablefordTeams(buildTeams());
+    const r = calcStablefordTeams(teams);
     results = r.map((t) => ({
       id: t.teamId,
       name: t.name,
@@ -191,7 +193,6 @@ export default async function RoundSummaryPage({
     }));
     winner = skinsGroupWinnerLabel({ winners, totals }) ?? "";
   } else if (format === "AMBROSE_2" || format === "AMBROSE_4") {
-    const teams = buildTeams();
     const r = calcAmbrose(teams);
     results = r.map((t) => ({
       id: t.teamId,
@@ -239,10 +240,33 @@ export default async function RoundSummaryPage({
   const backNineHoles = playedHoles.filter((h) => h.number >= 10);
   const frontPar = frontNineHoles.reduce((s, h) => s + h.par, 0);
   const backPar = backNineHoles.reduce((s, h) => s + h.par, 0);
-  const playerFront = (p: (typeof round.players)[0]) =>
-    p.scores.filter((s) => s.holeNumber <= 9).reduce((sum, s) => sum + s.strokes, 0);
-  const playerBack = (p: (typeof round.players)[0]) =>
-    p.scores.filter((s) => s.holeNumber >= 10).reduce((sum, s) => sum + s.strokes, 0);
+  // Scorecard columns: one per team in team games (every member carries the same scramble score),
+  // otherwise one per player
+  interface ScoreColumn {
+    key: string;
+    label: string;
+    sub?: string;
+    guest?: boolean;
+    /** Round-player id — only player columns can win a skin */
+    playerId?: string;
+    strokes: (holeNumber: number) => number | undefined;
+  }
+  const columns: ScoreColumn[] = teamGame
+    ? teams.map((t) => ({
+        key: t.teamId,
+        label: joinNames(t.players.map((p) => p.name.split(" ")[0])),
+        sub: `Team ${t.teamId.replace("team-", "")}`,
+        strokes: (n) => t.teamHoles.find((h) => h.holeNumber === n)?.strokes || undefined,
+      }))
+    : round.players.map((p) => ({
+        key: p.id,
+        label: p.user.name.split(" ")[0],
+        guest: p.user.isGuest,
+        playerId: p.id,
+        strokes: (n) => p.scores.find((s) => s.holeNumber === n)?.strokes,
+      }));
+  const columnTotal = (c: ScoreColumn, holes: { number: number }[]) =>
+    holes.reduce((sum, h) => sum + (c.strokes(h.number) ?? 0), 0);
 
   return (
     <div className="space-y-6">
@@ -332,10 +356,11 @@ export default async function RoundSummaryPage({
               <tr className="bg-fairway-100 text-fairway-700">
                 <th className="px-2 py-2 text-left sticky left-0 bg-fairway-100">Hole</th>
                 <th className="px-2 py-2 text-center">Par</th>
-                {round.players.map((p) => (
-                  <th key={p.id} className="px-2 py-2 text-center">
-                    {p.user.name.split(" ")[0]}
-                    {p.user.isGuest && <span className="sr-only"> (guest)</span>}
+                {columns.map((c) => (
+                  <th key={c.key} scope="col" className="px-2 py-2 text-center align-bottom">
+                    {c.label}
+                    {c.guest && <span className="sr-only"> (guest)</span>}
+                    {c.sub && <span className="block text-[10px] font-normal text-fairway-600">{c.sub}</span>}
                   </th>
                 ))}
                 {match && <th className="px-2 py-2 text-center">Hole won</th>}
@@ -347,24 +372,24 @@ export default async function RoundSummaryPage({
                   <tr className={i % 2 === 0 ? "" : "bg-fairway-50/40"}>
                     <td className="px-2 py-1.5 font-medium text-fairway-800 sticky left-0 bg-inherit">{hole.number}</td>
                     <td className="px-2 py-1.5 text-center text-gray-600">{hole.par}</td>
-                    {round.players.map((p) => {
-                      const score = p.scores.find((s) => s.holeNumber === hole.number);
+                    {columns.map((c) => {
+                      const strokes = c.strokes(hole.number);
                       const skin = skinWins.get(hole.number);
-                      const wonSkin = skin?.winnerId === p.id;
+                      const wonSkin = !!c.playerId && skin?.winnerId === c.playerId;
                       return (
-                        <td key={p.id} className="px-2 py-1.5 text-center whitespace-nowrap">
-                          {score ? (
+                        <td key={c.key} className="px-2 py-1.5 text-center whitespace-nowrap">
+                          {strokes ? (
                             <>
                             <span className={`inline-flex items-center justify-center w-6 h-6 text-xs font-bold rounded ${
-                              score.strokes <= hole.par - 2 ? "bg-fairway-900 text-white rounded-full" :
-                              score.strokes === hole.par - 1 ? "bg-fairway-500 text-white rounded-full" :
-                              score.strokes === hole.par ? "" :
-                              score.strokes === hole.par + 1 ? "bg-amber-500 text-white" :
+                              strokes <= hole.par - 2 ? "bg-fairway-900 text-white rounded-full" :
+                              strokes === hole.par - 1 ? "bg-fairway-500 text-white rounded-full" :
+                              strokes === hole.par ? "" :
+                              strokes === hole.par + 1 ? "bg-amber-500 text-white" :
                               "bg-red-600 text-white"
                             }`}>
-                              {score.strokes}
+                              {strokes}
                             </span>
-                            {wonSkin && (
+                            {wonSkin && skin && (
                               <span
                                 className="ml-0.5 text-green-600 font-bold"
                                 aria-label={skin.value > 1 ? `won ${skin.value} skins` : "won the skin"}
@@ -386,9 +411,9 @@ export default async function RoundSummaryPage({
                     <tr className="bg-fairway-200/60 font-semibold text-fairway-900 border-t-2 border-fairway-300">
                       <td className="px-2 py-1.5 sticky left-0 bg-fairway-200/60">Out</td>
                       <td className="px-2 py-1.5 text-center">{frontPar}</td>
-                      {round.players.map((p) => (
-                        <td key={p.id} className="px-2 py-1.5 text-center">
-                          {playerFront(p) || "—"}
+                      {columns.map((c) => (
+                        <td key={c.key} className="px-2 py-1.5 text-center">
+                          {columnTotal(c, frontNineHoles) || "—"}
                         </td>
                       ))}
                       {match && <td />}
@@ -398,9 +423,9 @@ export default async function RoundSummaryPage({
                     <tr className="bg-fairway-200/60 font-semibold text-fairway-900 border-t-2 border-fairway-300">
                       <td className="px-2 py-1.5 sticky left-0 bg-fairway-200/60">In</td>
                       <td className="px-2 py-1.5 text-center">{backPar}</td>
-                      {round.players.map((p) => (
-                        <td key={p.id} className="px-2 py-1.5 text-center">
-                          {playerBack(p) || "—"}
+                      {columns.map((c) => (
+                        <td key={c.key} className="px-2 py-1.5 text-center">
+                          {columnTotal(c, backNineHoles) || "—"}
                         </td>
                       ))}
                       {match && <td />}
@@ -411,9 +436,9 @@ export default async function RoundSummaryPage({
               <tr className="bg-fairway-100 font-bold text-fairway-900">
                 <td className="px-2 py-2 sticky left-0 bg-fairway-100">Total</td>
                 <td className="px-2 py-2 text-center">{totalPar}</td>
-                {round.players.map((p) => (
-                  <td key={p.id} className="px-2 py-2 text-center">
-                    {p.scores.reduce((sum, s) => sum + s.strokes, 0) || "—"}
+                {columns.map((c) => (
+                  <td key={c.key} className="px-2 py-2 text-center">
+                    {columnTotal(c, playedHoles) || "—"}
                   </td>
                 ))}
                 {match && <td />}

@@ -19,9 +19,13 @@ export async function PATCH(
 
   const roundPlayer = await prisma.roundPlayer.findUnique({
     where: { roundId_userId: { roundId, userId: session.user.id } },
-    select: { id: true },
+    select: { id: true, round: { select: { format: true } } },
   });
   if (!roundPlayer) return Response.json({ error: "Not found" }, { status: 404 });
+  // Only Strokeplay counts under WHS — other formats (team Stableford, Ambrose, Skins…) never can
+  if (roundPlayer.round.format !== "STROKEPLAY") {
+    return Response.json({ error: "Only Strokeplay rounds count toward handicap" }, { status: 409 });
+  }
 
   await prisma.roundPlayer.update({
     where: { id: roundPlayer.id },

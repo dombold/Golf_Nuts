@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import HandicapChart from "./HandicapChart";
 import ExcludeToggle from "./ExcludeToggle";
 import { isHoleInPlay } from "@/lib/nines";
+import { formatDisplayLabel } from "@/lib/gameFormats";
 
 export default async function StatsPage() {
   const session = await auth();
@@ -55,6 +56,9 @@ export default async function StatsPage() {
       roundId: round.id,
       date: round.date,
       course: round.course.name,
+      format: formatDisplayLabel(round.format, round.stablefordTeamSize),
+      // Only Strokeplay counts toward handicap (WHS), so only those rounds get the include/exclude toggle
+      countsForHandicap: round.format === "STROKEPLAY",
       gross,
       holesCount: round.holesCount,
       toPar: gross - playedPar,
@@ -135,6 +139,7 @@ export default async function StatsPage() {
                 <tr className="bg-fairway-50 text-fairway-700">
                   <th className="px-3 py-2 text-left">Date</th>
                   <th className="px-3 py-2 text-left">Course</th>
+                  <th className="px-3 py-2 text-left">Format</th>
                   <th className="px-3 py-2 text-center">Score</th>
                   <th className="px-3 py-2 text-center">FIR%</th>
                   <th className="px-3 py-2 text-center">GIR%</th>
@@ -146,10 +151,11 @@ export default async function StatsPage() {
                 {statsRows.map((r, i) =>
                   r ? (
                     <tr key={i} className={i % 2 === 0 ? "" : "bg-fairway-50/40"}>
-                      <td className="px-3 py-1.5 text-gray-500">
+                      <td className="px-3 py-1.5 text-gray-500 whitespace-nowrap">
                         {new Date(r.date).toLocaleDateString("en-AU", { day: "2-digit", month: "short" })}
                       </td>
                       <td className="px-3 py-1.5 text-fairway-800 max-w-24 truncate">{r.course}</td>
+                      <td className="px-3 py-1.5 text-gray-600 whitespace-nowrap">{r.format}</td>
                       <td className="px-3 py-1.5 text-center font-medium">
                         {r.gross} ({r.toPar >= 0 ? "+" : ""}{r.toPar})
                       </td>
@@ -157,7 +163,14 @@ export default async function StatsPage() {
                       <td className="px-3 py-1.5 text-center text-gray-500">{r.girPct}%</td>
                       <td className="px-3 py-1.5 text-center text-gray-500">{r.avgPutts ?? "—"}</td>
                       <td className="px-3 py-1.5 text-center">
-                        <ExcludeToggle roundId={r.roundId} excluded={r.excluded} />
+                        {r.countsForHandicap ? (
+                          <ExcludeToggle roundId={r.roundId} excluded={r.excluded} />
+                        ) : (
+                          <span className="text-gray-400" title="Only Strokeplay rounds count toward your handicap">
+                            <span aria-hidden="true">—</span>
+                            <span className="sr-only">Only Strokeplay rounds count toward your handicap</span>
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ) : null
