@@ -17,6 +17,9 @@ import { skinsGroupWinnerLabel } from "@/lib/tournamentStandings";
 import { formatDisplayLabel, isTeamGame } from "@/lib/gameFormats";
 import { joinNames } from "@/lib/teams";
 import DeleteRoundButton from "@/components/DeleteRoundButton";
+import GuestBadge from "@/components/guests/GuestBadge";
+import GuestRow from "@/components/guests/GuestRow";
+import { auth } from "@/lib/auth";
 
 export default async function RoundSummaryPage({
   params,
@@ -24,6 +27,7 @@ export default async function RoundSummaryPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const session = await auth();
 
   const round = await prisma.round.findUnique({
     where: { id },
@@ -32,7 +36,7 @@ export default async function RoundSummaryPage({
       tee: { include: { holes: { orderBy: { number: "asc" } } } },
       players: {
         include: {
-          user: { select: { id: true, name: true } },
+          user: { select: { id: true, name: true, handicapIndex: true, isGuest: true } },
           scores: { orderBy: { holeNumber: "asc" } },
         },
       },
@@ -52,6 +56,12 @@ export default async function RoundSummaryPage({
   // each group plays its own skins game, so each group has its own winner.
   const tournamentRound = round.tournamentRounds[0];
   const isMultiGroupEvent = (tournamentRound?.tournament._count.rounds ?? 0) > 1;
+
+  // Guest players: badge by round-player id; the round's creator can assign a casual round's guests
+  // to a member (event guests are managed from the event page)
+  const guestPlayers = round.players.filter((rp) => rp.user.isGuest);
+  const guestRoundPlayerIds = new Set(guestPlayers.map((rp) => rp.id));
+  const canManageGuests = !tournamentRound && !!session?.user && round.createdById === session.user.id;
 
   const playedHoles = round.tee.holes.filter(
     (h) => h.number >= round.startingHole && h.number < round.startingHole + round.holesCount
@@ -282,7 +292,10 @@ export default async function RoundSummaryPage({
               {r.rank ?? index + 1}
             </span>
             <div className="flex-1">
-              <p className={`font-semibold ${highlight ? "text-white" : "text-fairway-900"}`}>{r.name}</p>
+              <p className={`font-semibold ${highlight ? "text-white" : "text-fairway-900"}`}>
+                {r.name}
+                {guestRoundPlayerIds.has(r.id) && <GuestBadge className="ml-2" />}
+              </p>
               {r.sub && <p className={`text-xs ${highlight ? "text-fairway-300" : "text-gray-400"}`}>{r.sub}</p>}
             </div>
             <span className={`font-bold text-lg ${highlight ? "text-fairway-300" : "text-fairway-700"}`}>
@@ -311,7 +324,10 @@ export default async function RoundSummaryPage({
                 <th className="px-2 py-2 text-left sticky left-0 bg-fairway-100">Hole</th>
                 <th className="px-2 py-2 text-center">Par</th>
                 {round.players.map((p) => (
-                  <th key={p.id} className="px-2 py-2 text-center">{p.user.name.split(" ")[0]}</th>
+                  <th key={p.id} className="px-2 py-2 text-center">
+                    {p.user.name.split(" ")[0]}
+                    {p.user.isGuest && <span className="sr-only"> (guest)</span>}
+                  </th>
                 ))}
                 {match && <th className="px-2 py-2 text-center">Hole won</th>}
               </tr>
@@ -397,6 +413,18 @@ export default async function RoundSummaryPage({
           </table>
         </div>
       </div>
+
+      {canManageGuests && guestPlayers.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="font-semibold text-fairway-900">Guest players</h2>
+          <p className="text-xs text-gray-500">If a guest registers, assign their scores to their new account.</p>
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm divide-y divide-gray-50">
+            {guestPlayers.map((rp) => (
+              <GuestRow key={rp.id} guest={rp.user} canAssign canRemove={rp.scores.length === 0} canAnonymise />
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-3">
         <Link

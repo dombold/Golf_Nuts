@@ -16,7 +16,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
         include: {
           tee: true,
           members: {
-            include: { user: { select: { id: true, handicapIndex: true } } },
+            include: { user: { select: { id: true, handicapIndex: true, isGuest: true } } },
           },
         },
         orderBy: { groupNumber: "asc" },
@@ -37,6 +37,14 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   if (tournament.groups.length === 0) {
     return Response.json({ error: "No groups have been arranged" }, { status: 400 });
   }
+  // Guests can't sign in, so each group needs a member to enter its scores
+  const guestOnly = tournament.groups.find((g) => g.members.every((m) => m.user.isGuest));
+  if (guestOnly) {
+    return Response.json(
+      { error: `Group ${guestOnly.groupNumber} has only guests — add a member to enter their scores` },
+      { status: 400 }
+    );
+  }
 
   await prisma.$transaction(async (tx) => {
     for (const group of tournament.groups) {
@@ -53,6 +61,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
           stablefordTeamSize: tournament.stablefordTeamSize,
           format: tournament.format,
           date: tournament.date ?? new Date(),
+          createdById: tournament.createdById,
           status: "ACTIVE",
           players: {
             create: group.members.map((member) => ({

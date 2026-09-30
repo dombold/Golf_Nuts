@@ -17,6 +17,9 @@ model User {
   passwordHash   String
   handicapIndex  Float    @default(0)
   avatarUrl      String?
+  // Guest (temporary) players: added by an organiser, cannot log in, scored by teammates.
+  isGuest          Boolean  @default(false)
+  guestCreatedById String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -33,7 +36,11 @@ model User {
   webAuthnCredentials    WebAuthnCredential[]
   webAuthnChallenges     WebAuthnChallenge[]
   prizeHoleWins          TournamentPrizeHole[]    @relation("PrizeHoleWins")
+  guestCreatedBy         User?                    @relation("GuestCreator", fields: [guestCreatedById], references: [id], onDelete: SetNull)
+  createdGuests          User[]                   @relation("GuestCreator")
+  createdRounds          Round[]                  @relation("RoundCreator")
 
+  @@index([isGuest])
   @@map("users")
 }
 
@@ -143,7 +150,9 @@ model Round {
   stablefordTeamSize Int @default(1)
   notes     String?
   createdAt DateTime    @default(now())
+  createdById String?
 
+  createdBy       User?            @relation("RoundCreator", fields: [createdById], references: [id], onDelete: SetNull)
   course          Course           @relation(fields: [courseId], references: [id])
   tee             Tee              @relation(fields: [teeId], references: [id])
   players         RoundPlayer[]

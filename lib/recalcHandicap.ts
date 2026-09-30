@@ -89,7 +89,7 @@ export async function computeRoundDifferential(roundId: string, userId: string):
         },
         players: {
           where: { userId },
-          select: { scores: { select: { holeNumber: true, strokes: true } }, user: { select: { handicapIndex: true } } },
+          select: { scores: { select: { holeNumber: true, strokes: true } }, user: { select: { handicapIndex: true, isGuest: true } } },
         },
       },
     }),
@@ -101,6 +101,8 @@ export async function computeRoundDifferential(roundId: string, userId: string):
   ]);
   const rp = round?.players[0];
   if (!round || !rp || round.status !== "COMPLETE" || round.format !== "STROKEPLAY") return null;
+  // Guests have no handicap record — their index is whatever the organiser entered
+  if (rp.user.isGuest) return null;
 
   const strokesByHole = new Map(rp.scores.map((s) => [s.holeNumber, s.strokes]));
   const holes = round.tee.holes

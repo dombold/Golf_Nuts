@@ -10,11 +10,12 @@ import { formatDisplayLabel, isTeamGame } from "@/lib/gameFormats";
 import { joinNames } from "@/lib/teams";
 import { isHoleInPlay } from "@/lib/nines";
 import { apiErrorMessage } from "@/lib/apiError";
+import GuestBadge from "@/components/guests/GuestBadge";
 
 interface Hole { id: string; number: number; par: number; strokeIndex: number; distance?: number; teeLat?: number | null; teeLng?: number | null; greenLat?: number | null; greenLng?: number | null; }
 interface ScoreEntry { strokes: number; penalties: number; putts?: number; fairwayHit?: boolean; gir?: boolean }
 interface SavedScore { holeNumber: number; strokes: number; penalties: number; putts: number | null; fairwayHit: boolean | null; gir: boolean | null }
-interface Player { id: string; userId: string; playingHandicap: number; teamNumber?: number | null; user: { id: string; name: string }; scores: SavedScore[] }
+interface Player { id: string; userId: string; playingHandicap: number; teamNumber?: number | null; user: { id: string; name: string; isGuest?: boolean }; scores: SavedScore[] }
 interface PrizeHole { holeNumber: number; type: "LONGEST_DRIVE" | "NEAREST_PIN" }
 interface Round {
   id: string;
@@ -426,7 +427,10 @@ export default function ScoringPage() {
                   <div key={player.id} className="bg-white rounded-xl p-4 shadow-sm border border-fairway-50">
                     <div className="flex items-center justify-between mb-3">
                       <div>
-                        <p className="font-semibold text-fairway-900">{player.user.name}</p>
+                        <p className="font-semibold text-fairway-900">
+                          {player.user.name}
+                          {player.user.isGuest && <GuestBadge className="ml-2" />}
+                        </p>
                         <p className="text-sm font-medium text-fairway-700 mt-0.5">
                           Hcap {player.playingHandicap}
                           <span className="mx-1.5 text-fairway-300">·</span>

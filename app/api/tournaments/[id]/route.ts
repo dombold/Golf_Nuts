@@ -50,7 +50,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
               },
               players: {
                 include: {
-                  user: { select: { id: true, name: true } },
+                  user: { select: { id: true, name: true, isGuest: true } },
                   scores: { select: { holeNumber: true, strokes: true } },
                 },
               },

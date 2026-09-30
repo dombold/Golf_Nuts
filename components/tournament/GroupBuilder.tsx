@@ -4,12 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { oddNumberHint as teamOddNumberHint, teamGameLabels, teamWarnings as findTeamWarnings } from "@/lib/teams";
 import { teamSizeFor } from "@/lib/gameFormats";
+import GuestBadge from "@/components/guests/GuestBadge";
 
 interface Player {
   id: string;
   name: string;
   username: string;
   handicapIndex: number;
+  isGuest?: boolean;
 }
 
 interface GroupMember {
@@ -203,6 +205,7 @@ export default function GroupBuilder({
             {unassigned.map((p) => (
               <div key={p.id} className="flex items-center gap-1 bg-gray-100 rounded-lg px-2 py-1">
                 <span className="text-sm text-gray-700">{p.name}</span>
+                {p.isGuest && <GuestBadge />}
                 <span className="text-xs text-gray-400">HCP {p.handicapIndex}</span>
               </div>
             ))}
@@ -242,7 +245,10 @@ export default function GroupBuilder({
           <div className="space-y-2">
             {group.members.map((member) => (
               <div key={member.userId} className="flex items-center gap-2 bg-fairway-50 rounded-lg px-3 py-2">
-                <span className="flex-1 text-sm text-fairway-900">{playerName(member.userId)}</span>
+                <span className="flex-1 text-sm text-fairway-900">
+                  {playerName(member.userId)}
+                  {acceptedPlayers.find((p) => p.id === member.userId)?.isGuest && <GuestBadge className="ml-1.5" />}
+                </span>
 
                 {/* Team assignment for 2-ball games (Ambrose, Stableford) */}
                 {teamSize === 2 && (
@@ -288,7 +294,7 @@ export default function GroupBuilder({
                 <option value="">+ Add player…</option>
                 {unassigned.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} (HCP {p.handicapIndex})
+                    {p.name}{p.isGuest ? " · Guest" : ""} (HCP {p.handicapIndex})
                   </option>
                 ))}
               </select>

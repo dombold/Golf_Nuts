@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   const { email } = parsed.data;
 
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) return ok();
+  if (!user || user.isGuest) return ok();
 
   await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
 

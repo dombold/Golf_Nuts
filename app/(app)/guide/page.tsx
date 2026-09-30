@@ -7,6 +7,7 @@ const sections = [
   { id: "courses", icon: "🗺️", title: "Courses & Tees" },
   { id: "stats", icon: "📊", title: "Stats & Handicap" },
   { id: "tournaments", icon: "🏆", title: "Events & Tournaments" },
+  { id: "guests", icon: "🙋", title: "Guest Players" },
   { id: "countback", icon: "🔢", title: "Tie-Breaking (Countback)" },
   { id: "notifications", icon: "🔔", title: "Notifications" },
   { id: "profile", icon: "👤", title: "Profile & Sign-in" },
@@ -693,6 +694,60 @@ export default function GuidePage() {
           </ul>
         </div>
       </div>
+      {/* Guest Players */}
+      <div id="guests" className="bg-white rounded-xl border border-fairway-50 p-4 scroll-mt-20">
+        <h2 className="text-lg font-semibold text-fairway-900 flex items-center gap-2 mb-3">
+          <span>🙋</span> Guest Players
+        </h2>
+        <div className="space-y-3 text-sm text-gray-700 leading-relaxed">
+          <p>
+            If someone who isn&apos;t registered turns up to play, add them as a{" "}
+            <span className="font-semibold text-fairway-900">guest</span> so their scores still count.
+            Enter their name and Handicap Index. Their playing handicap is worked out from the tee,
+            just like everyone else&apos;s.
+          </p>
+          <ul className="list-disc list-inside space-y-1">
+            <li>
+              <span className="font-semibold">Events</span> — the organiser taps{" "}
+              <span className="font-semibold">+ Add guest player</span> under the player list before the
+              event starts. Add as many as you need; guests are in straight away and can be put in any
+              group, but every group needs at least one member.
+            </li>
+            <li>
+              <span className="font-semibold">Casual rounds</span> — tap{" "}
+              <span className="font-semibold">+ Add guest player</span> on the Select players step (up to
+              8 players in total).
+            </li>
+            <li>
+              A guest&apos;s name can&apos;t match a registered member or another guest in the same
+              event or round. If it does, add a surname initial.
+            </li>
+            <li>
+              Guests can&apos;t sign in. A member in their group enters their scores on the scorecard.
+              Guests are marked with a <span className="font-semibold">Guest</span> tag and count in
+              results like anyone else, but they never get a handicap record.
+            </li>
+          </ul>
+          <div className="bg-fairway-50 rounded-lg p-3 space-y-2">
+            <p className="font-semibold text-fairway-900">When a guest registers</p>
+            <p>
+              The organiser (or whoever set up the casual round) taps{" "}
+              <span className="font-semibold">Assign to member</span> next to the guest. This is on the
+              event page, the round summary or your Profile under{" "}
+              <span className="font-semibold">My Guest Players</span>. Their scores, group places and
+              prize-hole wins move to the new member&apos;s account. Completed Strokeplay rounds are
+              added to their handicap, and they can exclude one from Stats if they wish.
+            </p>
+          </div>
+          <p>
+            A guest who hasn&apos;t scored can be removed. A guest with scores is kept so past results
+            don&apos;t change, but you can <span className="font-semibold">anonymise</span> them, which
+            replaces their name with &ldquo;Guest N&rdquo;. Guests nobody claims are anonymised
+            automatically after 12 months.
+          </p>
+        </div>
+      </div>
+
       {/* Tie-Breaking (Countback) */}
       <div id="countback" className="bg-white rounded-xl border border-fairway-50 p-4 scroll-mt-20">
         <h2 className="text-lg font-semibold text-fairway-900 flex items-center gap-2 mb-3">

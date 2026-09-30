@@ -44,7 +44,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           // Consume the token — it's now bound to this session
           await prisma.passwordResetToken.delete({ where: { tokenHash } });
           const user = await prisma.user.findUnique({ where: { id: record.userId } });
-          if (!user) return null;
+          if (!user || user.isGuest) return null;
           return {
             id: user.id,
             name: user.name,
@@ -67,7 +67,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             ],
           },
         });
-        if (!user) return null;
+        // Guest players are placeholders and can never sign in
+        if (!user || user.isGuest) return null;
 
         const valid = await bcrypt.compare(parsed.data.password, user.passwordHash);
         if (!valid) return null;

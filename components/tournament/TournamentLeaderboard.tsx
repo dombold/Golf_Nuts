@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import GuestBadge from "@/components/guests/GuestBadge";
 import {
   calcSkinsGroups,
   calcTournamentStandings,
@@ -26,11 +27,20 @@ export default function TournamentLeaderboard({ tournamentId, format, isActive, 
   const [skinsGroups, setSkinsGroups] = useState<SkinsGroupResult[]>([]);
   const isSkins = format === "SKINS";
   const [loading, setLoading] = useState(true);
+  // Individual standings and skins totals are keyed by user id — mark guests
+  const [guestIds, setGuestIds] = useState<Set<string>>(new Set());
 
   async function fetchScores() {
     const res = await fetch(`/api/tournaments/${tournamentId}`);
     if (!res.ok) return;
     const { tournament } = await res.json();
+    setGuestIds(
+      new Set(
+        (tournament.rounds ?? []).flatMap((tr: { round: { players: { user: { id: string; isGuest?: boolean } }[] } }) =>
+          tr.round.players.filter((p) => p.user.isGuest).map((p) => p.user.id)
+        )
+      )
+    );
     if (isSkins) {
       setSkinsGroups(calcSkinsGroups(tournament.rounds ?? []));
     } else {
@@ -53,7 +63,7 @@ export default function TournamentLeaderboard({ tournamentId, format, isActive, 
   }
 
   if (isSkins) {
-    return <SkinsGroupsBoard groups={skinsGroups} isActive={isActive} highlightRoundId={highlightRoundId} />;
+    return <SkinsGroupsBoard groups={skinsGroups} isActive={isActive} highlightRoundId={highlightRoundId} guestIds={guestIds} />;
   }
 
   if (entries.length === 0) {
@@ -100,6 +110,7 @@ export default function TournamentLeaderboard({ tournamentId, format, isActive, 
                 <td className="px-4 py-2.5 text-gray-400 font-mono">{i + 1}</td>
                 <td className="px-4 py-2.5 text-gray-800">
                   {entry.name}
+                  {guestIds.has(entry.playerId) && <GuestBadge className="ml-2" />}
                   {entry.countbackLabel && (
                     <span className="ml-2 text-xs text-fairway-600 font-medium">(CB)</span>
                   )}
@@ -130,10 +141,12 @@ function SkinsGroupsBoard({
   groups,
   isActive,
   highlightRoundId,
+  guestIds,
 }: {
   groups: SkinsGroupResult[];
   isActive: boolean;
   highlightRoundId?: string;
+  guestIds: Set<string>;
 }) {
   if (groups.length === 0 || groups.every((g) => g.holesDecided === 0)) {
     return <div className="text-sm text-gray-500">No skins decided yet.</div>;
@@ -184,6 +197,7 @@ function SkinsGroupsBoard({
                       <td className={`px-4 py-2 ${leading ? "font-semibold text-fairway-900" : "text-gray-800"}`}>
                         {leading && !isActive && "🏆 "}
                         {t.name}
+                        {guestIds.has(t.playerId) && <GuestBadge className="ml-2" />}
                         {leading && isActive && <span className="ml-2 text-xs text-fairway-600 font-medium">leading</span>}
                       </td>
                       <td className="px-4 py-2 text-right font-mono text-gray-800">

@@ -8,6 +8,8 @@ import StartRoundButton from "@/components/tournament/StartRoundButton";
 import TournamentLeaderboard from "@/components/tournament/TournamentLeaderboard";
 import PrizeHolesCard from "@/components/tournament/PrizeHolesCard";
 import InviteeStatusControl from "@/components/tournament/InviteeStatusControl";
+import AddEventGuest from "@/components/tournament/AddEventGuest";
+import GuestRow from "@/components/guests/GuestRow";
 import { describeHoles } from "@/lib/nines";
 import { formatDisplayLabel } from "@/lib/gameFormats";
 
@@ -34,7 +36,7 @@ export default async function TournamentDetailPage({
       tee: { select: { id: true, name: true } },
       invitations: {
         include: {
-          user: { select: { id: true, name: true, username: true, handicapIndex: true } },
+          user: { select: { id: true, name: true, username: true, handicapIndex: true, isGuest: true } },
         },
         // Invitees created together share a timestamp — tie-break by name so rows don't jump around
         orderBy: [{ createdAt: "asc" }, { user: { name: "asc" } }],
@@ -45,7 +47,7 @@ export default async function TournamentDetailPage({
           tee: { select: { id: true, name: true } },
           members: {
             include: {
-              user: { select: { id: true, name: true, username: true, handicapIndex: true } },
+              user: { select: { id: true, name: true, username: true, handicapIndex: true, isGuest: true } },
             },
           },
         },
@@ -58,7 +60,8 @@ export default async function TournamentDetailPage({
               course: { select: { name: true } },
               players: {
                 include: {
-                  user: { select: { id: true, name: true } },
+                  user: { select: { id: true, name: true, handicapIndex: true, isGuest: true } },
+                  _count: { select: { scores: true } },
                 },
               },
             },
@@ -80,6 +83,10 @@ export default async function TournamentDetailPage({
     .filter((inv) => inv.status === "ACCEPTED")
     .map((inv) => inv.user);
 
+  const guestNames = tournament.invitations.filter((inv) => inv.user.isGuest).map((inv) => inv.user.name);
+  // Once started, a guest's place is their round player (scores decide remove vs anonymise)
+  const startedGuests = tournament.rounds.flatMap((tr) => tr.round.players.filter((rp) => rp.user.isGuest));
+
   const tees = tournament.course?.tees ?? [];
   const defaultTeeId = tournament.teeId ?? tees[0]?.id ?? "";
 
@@ -88,6 +95,8 @@ export default async function TournamentDetailPage({
   const allAssigned =
     tournament.groups.length > 0 &&
     acceptedPlayers.every((p) => assignedIds.has(p.id));
+  // Guests can't sign in, so every group needs a member to enter scores
+  const guestOnlyGroup = tournament.groups.find((g) => g.members.length > 0 && g.members.every((m) => m.user.isGuest));
 
   // Check if current user is in any group's round
   const myGroupRound = tournament.rounds.find((tr) =>
@@ -170,6 +179,7 @@ export default async function TournamentDetailPage({
           <dt className="text-gray-500">Players</dt>
           <dd className="font-medium text-gray-800">
             {acceptedPlayers.length} accepted
+            {guestNames.length > 0 && ` (${guestNames.length} guest${guestNames.length !== 1 ? "s" : ""})`}
             {tournament.invitations.filter((i) => i.status === "PENDING").length > 0 &&
               ` · ${tournament.invitations.filter((i) => i.status === "PENDING").length} pending`}
           </dd>
@@ -237,7 +247,9 @@ export default async function TournamentDetailPage({
               <div className="space-y-2">
                 <h2 className="text-base font-semibold text-fairway-900">Players</h2>
                 <div className="bg-white rounded-xl border border-gray-100 shadow-sm divide-y divide-gray-50">
-                  {tournament.invitations.map((inv) => (
+                  {tournament.invitations.map((inv) => inv.user.isGuest ? (
+                    <GuestRow key={inv.id} guest={inv.user} canAssign canRemove />
+                  ) : (
                     <div key={inv.id} className="flex items-center justify-between gap-3 px-4 py-3">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-800 break-words">{inv.user.name}</p>
@@ -258,6 +270,7 @@ export default async function TournamentDetailPage({
                     </div>
                   ))}
                 </div>
+                <AddEventGuest tournamentId={id} guestNames={guestNames} />
               </div>
 
               {/* Group arrangement (only if there are accepted players) */}
@@ -292,12 +305,14 @@ export default async function TournamentDetailPage({
                   <h2 className="text-base font-semibold text-fairway-900">Start Round</h2>
                   <StartRoundButton
                     tournamentId={id}
-                    canStart={allAssigned}
+                    canStart={allAssigned && !guestOnlyGroup}
                     blockedReason={
                       tournament.groups.length === 0
                         ? "Save your group arrangement first"
                         : !allAssigned
                         ? "All accepted players must be assigned to a group"
+                        : guestOnlyGroup
+                        ? `Group ${guestOnlyGroup.groupNumber} has only guests — add a member to enter their scores`
                         : undefined
                     }
                   />
@@ -430,6 +445,27 @@ export default async function TournamentDetailPage({
             </div>
           </div>
         </>
+      )}
+
+      {/* Guest players once the event has started — organiser can assign their scores to a member */}
+      {isOrganiser && tournament.status !== "UPCOMING" && startedGuests.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-base font-semibold text-fairway-900">Guest players</h2>
+          <p className="text-xs text-gray-500">
+            If a guest registers, assign their scores to their new account.
+          </p>
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm divide-y divide-gray-50">
+            {startedGuests.map((rp) => (
+              <GuestRow
+                key={rp.id}
+                guest={rp.user}
+                canAssign
+                canRemove={rp._count.scores === 0}
+                canAnonymise
+              />
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Back link */}

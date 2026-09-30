@@ -83,7 +83,7 @@ export async function GET(
       tee: { include: { holes: { orderBy: { number: "asc" } } } },
       players: {
         include: {
-          user: { select: { id: true, name: true } },
+          user: { select: { id: true, name: true, isGuest: true } },
           scores: { orderBy: { holeNumber: "asc" } },
         },
       },

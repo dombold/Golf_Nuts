@@ -6,6 +6,7 @@ import { EventFormatSchema } from "@/lib/gameFormats";
 import { sendTournamentInviteNotification } from "@/lib/push";
 import { validatePrizeHoles } from "@/lib/prizeHoles";
 import { pruneStaleTournaments } from "@/lib/staleTournaments";
+import { pruneGuests } from "@/lib/guests";
 
 const PrizeHoleSchema = z.object({
   holeNumber: z.number().int().min(1).max(18),
@@ -87,6 +88,7 @@ export async function POST(req: NextRequest) {
 
   // Housekeeping: clear out never-started events long past their date
   await pruneStaleTournaments();
+  await pruneGuests();
 
   // Fire push notifications to invitees — non-blocking, won't fail the request
   if (otherInvitees.length > 0) {

@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     where: { credentialId },
     include: { user: true },
   });
-  if (!credential) {
+  if (!credential || credential.user.isGuest) {
     return Response.json({ error: "Credential not found" }, { status: 400 });
   }
 

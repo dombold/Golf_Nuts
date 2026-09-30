@@ -8,10 +8,16 @@ import { oddNumberHint, splitIntoTeams, teamGameLabels, teamWarnings } from "@/l
 import { calcPlayingHandicap } from "@/lib/handicap";
 import { ambroseTeamHandicap } from "@/lib/formats";
 import FormatPicker from "@/components/FormatPicker";
+import AddGuestForm from "@/components/guests/AddGuestForm";
+import GuestBadge from "@/components/guests/GuestBadge";
 
 interface Course { id: string; name: string; suburb: string | null; city: string | null; address?: string | null; phone?: string | null; tees: Tee[] }
 interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
-interface User { id: string; name: string; email: string; handicapIndex?: number }
+interface User { id: string; name: string; email: string; handicapIndex?: number; isGuest?: boolean }
+
+/** Guests exist only in the wizard until Tee Off; this prefix marks their stand-in ids. */
+const GUEST_ID_PREFIX = "tmp-guest-";
+const MAX_PLAYERS = 8;
 
 function CheckCircle({ checked }: { checked: boolean }) {
   return (
@@ -36,7 +42,10 @@ function PlayerButton({ user, selected, onClick }: { user: User; selected: boole
       }`}
     >
       <CheckCircle checked={selected} />
-      <span className="font-medium text-fairway-900 text-left flex-1">{user.name}</span>
+      <span className="font-medium text-fairway-900 text-left flex-1">
+        {user.name}
+        {user.isGuest && <GuestBadge className="ml-2" />}
+      </span>
       {selected && <span className="text-xs text-gray-400">Tap to remove</span>}
     </button>
   );
@@ -70,6 +79,9 @@ function NewRoundForm() {
   const [teams, setTeams] = useState<Record<string, number>>({});
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
   const [playerQuery, setPlayerQuery] = useState("");
+  // Unregistered players added on the Players step (created on the server at Tee Off)
+  const [guests, setGuests] = useState<User[]>([]);
+  const guestSeq = useRef(0);
   const playerSearchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -114,6 +126,8 @@ function NewRoundForm() {
 
   function togglePlayer(id: string) {
     if (id === currentUser?.id) return;
+    // Deselecting a guest removes them altogether
+    if (id.startsWith(GUEST_ID_PREFIX)) setGuests((prev) => prev.filter((g) => g.id !== id));
     setSelectedPlayers((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
     );
@@ -127,6 +141,13 @@ function NewRoundForm() {
       // Keep the keyboard up only if they were typing — avoids popping it open on a plain tap
       playerSearchRef.current?.focus();
     }
+  }
+
+  function addGuest({ name, handicapIndex }: { name: string; handicapIndex: number }) {
+    const id = `${GUEST_ID_PREFIX}${++guestSeq.current}`;
+    setGuests((prev) => [...prev, { id, name, email: "", handicapIndex, isGuest: true }]);
+    setSelectedPlayers((prev) => [...prev, id]);
+    return null;
   }
 
   async function createRound() {
@@ -148,7 +169,8 @@ function NewRoundForm() {
           ...(teamGame
             ? { teams: selectedPlayers.map((userId) => ({ userId, teamNumber: needsTeamsStep ? teams[userId] ?? 1 : 1 })) }
             : {}),
-          playerIds: selectedPlayers,
+          playerIds: selectedPlayers.filter((id) => !id.startsWith(GUEST_ID_PREFIX)),
+          guests: guests.map((g) => ({ tempId: g.id, name: g.name, handicapIndex: g.handicapIndex ?? 0 })),
         }),
       });
       const data = await res.json();
@@ -171,7 +193,7 @@ function NewRoundForm() {
   const teamGame = isTeamGame(format, stablefordTeamSize);
   const needsTeamsStep = teamGame && selectedPlayers.length > teamSize;
   const totalSteps = needsTeamsStep ? 4 : 3;
-  const allPlayers = [...(currentUser ? [currentUser] : []), ...users];
+  const allPlayers = [...(currentUser ? [currentUser] : []), ...users, ...guests];
   const playerById = new Map(allPlayers.map((u) => [u.id, u]));
 
   function goToTeams() {
@@ -200,7 +222,7 @@ function NewRoundForm() {
   // Player step: selected players (in pick order) sit above the search, the rest are filtered below it
   const selectedOthers = selectedPlayers
     .filter((id) => id !== currentUser?.id)
-    .map((id) => users.find((u) => u.id === id))
+    .map((id) => playerById.get(id))
     .filter((u): u is User => !!u);
   const unselectedUsers = users.filter((u) => !selectedPlayers.includes(u.id));
   const playerSearch = playerQuery.trim().toLowerCase();
@@ -385,6 +407,12 @@ function NewRoundForm() {
             {selectedOthers.map((user) => (
               <PlayerButton key={user.id} user={user} selected onClick={() => togglePlayer(user.id)} />
             ))}
+            <AddGuestForm
+              onAdd={addGuest}
+              otherGuestNames={guests.map((g) => g.name)}
+              disabled={selectedPlayers.length >= (format === "MATCH_PLAY" ? 2 : MAX_PLAYERS)}
+              disabledReason={format === "MATCH_PLAY" ? "Match Play already has two players" : `A round can have at most ${MAX_PLAYERS} players`}
+            />
           </div>
 
           {users.length === 0 ? (
@@ -471,6 +499,7 @@ function NewRoundForm() {
                   <div key={id} className="flex items-center gap-2 bg-fairway-50 rounded-lg px-3 py-2">
                     <span className="flex-1 text-sm text-fairway-900">
                       {player?.name}{id === currentUser?.id ? " (You)" : ""}
+                      {player?.isGuest && <GuestBadge className="ml-1.5" />}
                       <span className="text-xs text-gray-400 ml-1">HCP {player?.handicapIndex ?? 0}</span>
                     </span>
                     <select

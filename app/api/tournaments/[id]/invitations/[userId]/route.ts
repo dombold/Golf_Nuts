@@ -35,9 +35,12 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 
   const existing = await prisma.tournamentInvitation.findUnique({
     where: { tournamentId_userId: { tournamentId, userId } },
-    select: { id: true },
+    select: { id: true, user: { select: { isGuest: true } } },
   });
   if (!existing) return Response.json({ error: "Invitation not found" }, { status: 404 });
+  if (existing.user.isGuest) {
+    return Response.json({ error: "Guests are always in — remove the guest instead" }, { status: 409 });
+  }
 
   const invitation = await prisma.$transaction(async (tx) => {
     const updated = await tx.tournamentInvitation.update({
