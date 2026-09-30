@@ -35,7 +35,7 @@ export default function NewTournamentPage() {
   const [startingHole, setStartingHole] = useState<StartingHole>(1);
 
   // Step 3 — Format
-  const [format, setFormat] = useState("STABLEFORD");
+  const [format, setFormat] = useState("STROKEPLAY");
   const [skinsCarryOver, setSkinsCarryOver] = useState(true);
   const [stablefordTeamSize, setStablefordTeamSize] = useState<1 | 2 | 4>(1);
 

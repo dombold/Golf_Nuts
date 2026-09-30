@@ -97,6 +97,7 @@ function TeamScoreCard({ teamNumber, memberNames, strokes, teamHandicap, holePar
         <div className="flex-1 text-center">
           <span className="text-3xl font-bold text-fairway-900">{strokes || "—"}</span>
           <p className="text-xs text-gray-400">team strokes</p>
+          <p className="text-[11px] text-gray-400">Best ball each shot — enter the team&apos;s score</p>
         </div>
         <button
           onClick={() => onChange(strokes + 1)}
@@ -289,7 +290,7 @@ export default function ScoringPage() {
   const holes = holesInPlay(round);
   const hole = holes.find((h) => h.number === currentHole);
   const lastHoleNumber = holes[holes.length - 1]?.number ?? 18;
-  // Team games (Ambrose, team Stableford) score one ball per team
+  // Team games (Ambrose, 2-/4-ball Stableford) are scrambles: one team score per hole
   const isTeam = isTeamGame(round.format, round.stablefordTeamSize);
   const tournament = round.tournamentRounds?.[0]?.tournament;
 

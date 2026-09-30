@@ -13,7 +13,7 @@ const cardClass = (selected: boolean) =>
     selected ? "border-fairway-600 bg-fairway-50" : "border-gray-200 bg-white hover:border-fairway-300"
   }`;
 
-/** A format card with a sub-choice that appears once the card is selected (Ambrose size, Stableford teams). */
+/** A format card with a sub-choice that appears once the card is selected (Ambrose / Stableford 2-ball or 4-ball). */
 function CardWithOptions<V extends string | number>({
   title,
   desc,
@@ -76,7 +76,7 @@ function CardWithOptions<V extends string | number>({
 /**
  * Game format list.
  * - 2- and 4-player Ambrose appear as one "Ambrose" card with a 2-ball / 4-ball choice.
- * - Stableford offers Individual / Teams of 2 / Teams of 4 once picked (when the caller supports it).
+ * - Stableford offers Individual / 2-ball / 4-ball once picked (when the caller supports it).
  */
 export default function FormatPicker({
   formats,
@@ -119,7 +119,7 @@ export default function FormatPicker({
             <CardWithOptions
               key={f.value}
               title={f.label}
-              desc="Points per hole — individually or in teams"
+              desc="Points per hole — individual, 2-ball or 4-ball scramble"
               selected={value === "STABLEFORD"}
               onSelect={() => onChange("STABLEFORD")}
               groupLabel="Stableford teams"

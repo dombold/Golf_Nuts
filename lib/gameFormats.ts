@@ -32,11 +32,11 @@ export function isAmbroseFormat(format: string): boolean {
   return format === "AMBROSE_2" || format === "AMBROSE_4";
 }
 
-/** Stableford can be played individually or as scramble teams of 2 or 4. */
+/** Stableford can be played individually or as a 2-ball / 4-ball scramble, like Ambrose. */
 export const STABLEFORD_TEAM_SIZES = [
   { value: 1, label: "Individual", desc: "Everyone for themselves" },
-  { value: 2, label: "Teams of 2", desc: "Pairs, one ball" },
-  { value: 4, label: "Teams of 4", desc: "Fours (or 3), one ball" },
+  { value: 2, label: "2-ball", desc: "Teams of 2" },
+  { value: 4, label: "4-ball", desc: "Teams of 4 (or 3)" },
 ] as const;
 
 export type TeamSize = 1 | 2 | 4;
@@ -49,15 +49,15 @@ export function teamSizeFor(format: string, stablefordTeamSize: number = 1): Tea
   return 1;
 }
 
-/** Team games play one ball per team (scramble) with a team handicap. */
+/** Team games are scrambles (best shot each time, one team score per hole) with a team handicap. */
 export function isTeamGame(format: string, stablefordTeamSize: number = 1): boolean {
   return teamSizeFor(format, stablefordTeamSize) > 1;
 }
 
-/** e.g. "Stableford — teams of 2"; other formats use their normal label. */
+/** e.g. "2-Ball Stableford"; other formats use their normal label. */
 export function formatDisplayLabel(format: string, stablefordTeamSize: number = 1): string {
   if (format === "STABLEFORD" && isTeamGame(format, stablefordTeamSize)) {
-    return `Stableford — teams of ${stablefordTeamSize}`;
+    return `${stablefordTeamSize}-Ball Stableford`;
   }
   return formatLabel(format);
 }

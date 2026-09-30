@@ -65,7 +65,7 @@ export function teamWarnings(teamSize: number, groups: WarningGroup[]): string[]
 
 /**
  * A hint when the players can't be split evenly for the game, or null.
- * `gameLabel` e.g. "2-player Ambrose" / "Stableford teams of 2"; `largerAlternative` is what to suggest
+ * `gameLabel` e.g. "2-player Ambrose" / "2-ball Stableford"; `largerAlternative` is what to suggest
  * for pairs (e.g. "4-player Ambrose"); `context` tailors where to change it.
  */
 export function oddNumberHint(
@@ -93,5 +93,5 @@ export function teamGameLabels(format: string, teamSize: number): { gameLabel: s
   if (format === "AMBROSE_2" || format === "AMBROSE_4") {
     return { gameLabel: `${teamSize}-player Ambrose`, largerAlternative: teamSize === 2 ? "4-player Ambrose" : undefined };
   }
-  return { gameLabel: `Stableford teams of ${teamSize}`, largerAlternative: teamSize === 2 ? "Stableford teams of 4" : undefined };
+  return { gameLabel: `${teamSize}-ball Stableford`, largerAlternative: teamSize === 2 ? "4-ball Stableford" : undefined };
 }

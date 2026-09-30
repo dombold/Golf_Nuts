@@ -244,7 +244,7 @@ export default function GroupBuilder({
               <div key={member.userId} className="flex items-center gap-2 bg-fairway-50 rounded-lg px-3 py-2">
                 <span className="flex-1 text-sm text-fairway-900">{playerName(member.userId)}</span>
 
-                {/* Team assignment for teams of 2 (Ambrose 2-ball, Stableford pairs) */}
+                {/* Team assignment for 2-ball games (Ambrose, Stableford) */}
                 {teamSize === 2 && (
                   <div className="flex gap-1">
                     {[1, 2].map((t) => (

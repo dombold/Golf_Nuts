@@ -121,7 +121,7 @@ export function calcTournamentStandingsDetailed(
 
     if (isTeamGame(format, round.stablefordTeamSize)) {
       // Team games (Ambrose, team Stableford) are scrambles: one entry per team, the team's
-      // score per hole (members share one ball) less the team-handicap strokes
+      // scramble score per hole (recorded against each member) less the team-handicap strokes
       const teams = new Map<number, StandingsPlayer[]>();
       for (const rp of round.players ?? []) {
         const tn = rp.teamNumber ?? 0;

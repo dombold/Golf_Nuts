@@ -143,10 +143,12 @@ export default function GuidePage() {
                 a birdie, 2 for par, 1 for bogey, 0 for double-bogey or worse. Your handicap strokes
                 are applied per hole so all skill levels compete fairly. After picking Stableford,
                 choose <span className="font-semibold">Individual</span>,{" "}
-                <span className="font-semibold">Teams of 2</span> or{" "}
-                <span className="font-semibold">Teams of 4</span>. Teams play one ball each, like
-                Ambrose, using an Ambrose team handicap (see below), and score Stableford points on
-                the team&apos;s score. Odd numbers are handled the same way as Ambrose.
+                <span className="font-semibold">2-ball</span> or{" "}
+                <span className="font-semibold">4-ball</span>. In 2-ball and 4-ball everyone hits,
+                the team picks the best shot and all play their next shot from there, just like
+                Ambrose, and the team records one score per hole. Points are scored on the
+                team&apos;s net score using the Ambrose team handicap (see below). Odd numbers are
+                handled the same way as Ambrose.
               </li>
               <li>
                 <span className="font-semibold text-fairway-900">Match Play</span> — hole-by-hole
@@ -166,7 +168,8 @@ export default function GuidePage() {
               </li>
               <li>
                 <span className="font-semibold text-fairway-900">Ambrose</span> — a team scramble:
-                each team picks its best drive, then everyone plays from that spot. After picking
+                everyone hits, the team picks the best shot and all play their next shot from that
+                spot, all the way to the hole. The team records one score per hole. After picking
                 Ambrose, choose <span className="font-semibold">2-ball</span> (teams of two) or{" "}
                 <span className="font-semibold">4-ball</span> (teams of four).
               </li>

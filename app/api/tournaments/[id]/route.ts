@@ -174,7 +174,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
         await tx.tournamentPrizeHole.deleteMany({ where: { id: { in: outOfPlay.map((ph) => ph.id) } } });
       }
     }
-    // Changing the team size (format or Stableford teams) invalidates saved team numbers:
+    // Changing the team size (format, or Stableford 2-ball / 4-ball) invalidates saved team numbers:
     // team games get fresh handicap-balanced teams, individual games clear them
     const oldTeamSize = teamSizeFor(tournament.format, tournament.stablefordTeamSize);
     const newTeamSize = teamSizeFor(format ?? tournament.format, stablefordTeamSize ?? tournament.stablefordTeamSize);

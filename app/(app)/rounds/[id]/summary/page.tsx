@@ -105,7 +105,7 @@ export default async function RoundSummaryPage({
           strokes: rp.scores.find((sc) => sc.holeNumber === hole.number)?.strokes ?? 0,
         })),
       })),
-      // The team's score per hole (members share one ball); 0 when nobody has scored it
+      // Scramble: one team score per hole (recorded against each member); 0 when nobody has scored it
       teamHoles: playedHoles.map((hole) => {
         const entered = members
           .map((rp) => rp.scores.find((sc) => sc.holeNumber === hole.number)?.strokes ?? 0)

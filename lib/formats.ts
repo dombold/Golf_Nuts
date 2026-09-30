@@ -333,7 +333,7 @@ export function calcAmbrose(teams: AmbroseTeam[]): AmbroseResult[] {
   return applyCountback(sorted, holeNetMap, true, allHoles, (r) => r.net);
 }
 
-// ─── Team Stableford (scramble teams of 2 or 4) ──────────────────────────────
+// ─── 2-ball / 4-ball Stableford (scramble, like Ambrose) ─────────────────────
 
 export interface StablefordTeamResult {
   teamId: string;
@@ -345,7 +345,8 @@ export interface StablefordTeamResult {
 }
 
 /**
- * Team Stableford, played as a scramble: each team plays one ball, the team handicap is worked out
+ * 2-ball / 4-ball Stableford, played as a scramble like Ambrose: everyone hits, the team plays on from
+ * the best shot and records one score per hole. The team handicap is worked out
  * the Ambrose way (sum ÷ 2 × players), and the team scores Stableford points on its net score.
  * Holes without a team score (strokes 0) earn nothing. Countback on points, higher is better.
  */
