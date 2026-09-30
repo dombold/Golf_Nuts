@@ -41,7 +41,7 @@
     "defu": "6.1.7",
     "effect": "3.21.2",
     "lodash": "4.18.1",
-    "brace-expansion": "1.1.18",
+    "brace-expansion": "1.1.21",
     "nodemailer": "$nodemailer",
     "deepmerge-ts": "^8.0.2",
     "mysql2": "^3.24.4"
