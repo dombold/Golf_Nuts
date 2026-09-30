@@ -1,28 +1,31 @@
 # Golf Nuts
 
-A full-stack golf scoring and social web app built with Next.js 16, Prisma 7, and PostgreSQL.
+A full-stack golf scoring app for a group of friends — rounds, handicaps and events — built with Next.js 16, Prisma 7, and PostgreSQL.
 
 ## Features
 
-- **Round tracking** — log rounds across multiple game formats: Strokeplay, Stableford, Match Play, Skins, Ambrose (2/4 player); play 18 holes or 9 (front or back nine, labelled with the course's nine names where the tee has them)
-- **Scorecards** — per-hole scoring with strokes, penalties, putts, fairways hit, and GIR; hole info panel shows hole number, par, stroke index, and distance; Google Maps hole view displayed below the score entry cards; front/back nine (Out/In) subtotals on the round summary
-- **Handicap system** — World Handicap System index tracking and history, including 9-hole rounds (course rating halved); non-Strokeplay rounds are excluded from the handicap by default, and any round can be included or excluded from the Stats page
-- **Courses** — courses are searched and selected inline when starting a round or creating an event; full tee data shown (rating, slope, par, hole distances in metres); course detail pages display address, postcode, and phone number; tees sorted by total length descending
+- **Game formats** — Strokeplay, Stableford, Match Play, Skins and Ambrose, over 18 holes or 9 (front or back nine, labelled with the course's nine names where the tee has them)
+  - **Stableford** — individual, or a **2-ball / 4-ball** team scramble with an Ambrose-style team handicap and points on the team's net score
+  - **Ambrose** — one choice with a **2-ball / 4-ball** option; team handicap = sum of the team's handicaps ÷ (2 × players in the team), so short teams (e.g. threes) are handled fairly
+  - **Skins** — optional **carry over halved holes** (on: a tied hole's skin rolls on; off: every skin is worth 1)
+  - **Match Play** — two players, casual rounds only; live match status and a "wins 3&2" result with a hole-by-hole column
+- **Round wizard** — course and tee search, format picker (Strokeplay by default, with each format's options inside its card), player search (selected players listed above the search box), and a **Teams** step for team games that auto-splits players by handicap and lets you move them
+- **Scorecards** — per-hole strokes, penalties, putts, fairways hit and GIR; one card per team for team games (showing Stableford points); hole info and a Google Maps hole view; failed saves keep you on the hole with a retry message; finished rounds can be edited; Out/In subtotals and a ✓ beside each hole's skin winner on the round summary
+- **Handicap (WHS)** — score differentials use an adjusted score capped at **net double bogey** (unplayed holes count as net par; 14 of 18 or 7 of 9 holes needed); 9-hole rounds count straight away using the **2024 expected-score** method; index = best N of the last 20 with the WHS adjustments; recalculated when a round is finished, edited, deleted or excluded; only Strokeplay counts
+- **Courses** — all WA courses pre-loaded and searched inline; full tee data (rating, slope, par, hole distances in metres), tees sorted longest first; course pages show address, postcode and phone
 - **Tournaments / events**
-  - Create an event with a date, tee-off time, course and tee, format, and **9 or 18 holes** (front or back nine)
-  - Invite players with a **Select all** / Clear all option; invitees accept or decline on the event page or from the push notification, and the dashboard banner links to pending invites and your next event
-  - Organiser arranges groups by hand or with **Randomise Teams** (pairs players who have played together least), then starts the round — each group gets its own scorecard
-  - Prize holes per nine (one Longest Drive on a par 5, up to two Nearest the Pin on par 3s); scorers get a pop-up on prize holes, and the organiser records the **Longest Drive / Nearest the Pin winners** from a player list
-  - **Live tournament-wide leaderboard** on every player's scoring screen and the event page — all groups ranked together (Stableford points, or net score to par), with a Thru column and your own group highlighted
-  - **One overall winner** across all groups; ties are broken on **countback** (back 9, last 6, last 3, then hole by hole), and the "Won on …" label links to a page that explains the countback step by step
-  - The event completes automatically when the last group finishes; group round summaries show group results only
-  - The Tournaments page shows each completed event's winner and prize winners; completed events move to **Previous Events** a day after finishing, and events that never started are removed a week after their date
-- **Stats & charts** — handicap trend chart, average score (18- and 9-hole rounds averaged separately), fairways and GIR; recent rounds show gross score and score to par (9-hole rounds measured against the par of the nine played)
-- **Social** — friends, round comments, and likes
-- **Auth** — email/password login; **passkey (biometric) login** via WebAuthn, managed on the profile page; password reset via emailed token link (auto-signs in, no current password required); password change on profile page with collapse toggle and per-field show/hide; password visibility toggle on login page; welcome email sent on registration
-- **Profile** — avatar upload, profile details, notification and passkey settings
-- **Push notifications** — invitees receive a phone notification when invited to a tournament, with Accept / Decline actions (Android Chrome; iOS when installed as PWA)
-- **PWA** — installable as a Progressive Web App with service worker support and in-app install prompt banner
+  - Create an event with a date, tee-off time, course and tee, format (not Match Play), and **9 or 18 holes**; details, including format options, are editable until it starts
+  - Invite players with **Select all** / Clear all; invitees accept or decline on the event page or from the push notification, and the organiser can set each player's status (**Accepted / Declined / Pending**) from a dropdown
+  - Groups arranged by hand or with **Randomise Teams**, which spreads players evenly (9 → 3/3/3) and pairs those who have played together least; team games get handicap-balanced teams, and short or uneven teams are flagged but allowed
+  - Prize holes per nine (one Longest Drive on a par 5, up to two Nearest the Pin on par 3s), with scorer pop-ups and organiser-recorded winners
+  - **Live tournament-wide leaderboard** on every player's scoring screen and the event page (points or net to par, players or teams, with a Thru column)
+  - **One overall winner** with **countback** (back 9, last 6, last 3, then hole by hole) and a page explaining the steps; **Skins events have a winner per group** instead
+  - Auto-completes when the last group finishes; completed events move to **Previous Events** a day later; events that never started are hidden a week after their date
+- **Stats & charts** — handicap trend chart, average score (18- and 9-hole rounds separately), fairways and GIR, recent rounds with score to par and an include/exclude handicap switch
+- **Auth** — email/password login; **passkey (biometric) login** via WebAuthn; password reset by emailed link (signs you in, and allows a new password without the old one for 15 minutes); welcome email on registration
+- **Profile** — avatar upload, profile details, password, notification and passkey settings
+- **Push notifications** — tournament invitations with Accept / Decline actions (Android Chrome; iOS when installed as a PWA)
+- **PWA** — installable, with a service worker and an in-app install prompt
 
 ## Tech Stack
 
@@ -103,40 +106,42 @@ See [.env.example](.env.example) for all required variables:
 
 ```
 app/
-  (app)/          # Authenticated routes (dashboard, rounds, courses, tournaments, stats, etc.)
+  (app)/          # Authenticated routes (dashboard, rounds, courses, tournaments, stats, guide, profile)
   (auth)/         # Auth routes (login, register, reset-password)
-  actions/        # Server actions
+  actions/        # Server actions (auth, profile)
   api/            # API route handlers
-  generated/      # Prisma-generated client
+  generated/      # Prisma-generated client (gitignored; `npx prisma generate`)
 components/
-  charts/         # Recharts chart components
-  leaderboard/    # Leaderboard UI
-  push/           # Push notification toggle component
-  scorecard/      # Scorecard entry UI
-  tournament/     # Tournament UI (group builder, leaderboard, prize holes, results summary)
-  ui/             # Shared UI components
-  HolesPicker.tsx # 9/18-hole and front/back nine selector (rounds and events)
-data/             # Static JSON data (courses; gitignored, used by the seed)
+  push/           # Push notification toggle
+  tournament/     # Event UI (group builder, leaderboard, prize holes, invitee status, results summary)
+  FormatPicker.tsx          # Game format picker (Ambrose / Stableford 2-ball·4-ball, Skins carry-over)
+  HolesPicker.tsx           # 9/18-hole and front/back nine selector
+  SkinsCarryOverToggle.tsx  # "Carry over halved holes" checkbox
+data/             # Course JSON used by the seed (gitignored)
 lib/
-  auth.ts               # NextAuth config (credentials + reset-token sign-in, loginMethod JWT claim)
+  apiError.ts           # Reads error messages from API responses (client)
+  auth.ts               # NextAuth config (credentials + reset-token sign-in, reset window)
   countback.ts          # Countback tie-breaking, with a step-by-step trace for the explanation page
-  email.ts              # Nodemailer transactional email (welcome email, password reset)
-  formats.ts            # Game format scoring (strokeplay, stableford, match play, skins, ambrose)
-  handicap.ts           # WHS differential and playing handicap calculations
+  email.ts              # Nodemailer transactional email (welcome, password reset)
+  formats.ts            # Format scoring (strokeplay, stableford, team stableford, match play, skins, ambrose)
+  gameFormats.ts        # Format lists, labels, team sizes (single source for pickers and validation)
+  handicap.ts           # WHS: course handicap, net double bogey, differentials, index table
   nines.ts              # 9-hole helpers (holes in play, nine names)
   prisma.ts             # Prisma client instance
-  push.ts               # Web push notification utility (VAPID)
-  recalcHandicap.ts     # Rebuilds a player's handicap index from their history
-  tournamentStandings.ts# Tournament-wide standings, winner and countback explanation
-  webauthn.ts           # Passkey (WebAuthn) relying-party settings
+  prizeHoles.ts         # Prize-hole rules
+  push.ts               # Web push (VAPID)
+  recalcHandicap.ts     # Records round differentials and rebuilds a player's index
+  staleTournaments.ts   # Hides / prunes never-started events past their date
+  teams.ts              # Team splits by handicap, uneven-team warnings and hints
+  tournamentStandings.ts# Tournament standings, winners, Skins group results, countback explanation
+  webauthn.ts           # Passkey (WebAuthn) settings and challenge handling
 prisma/
   schema.prisma   # Database schema
   migrations/     # SQL migrations (applied in production with `prisma migrate deploy`)
   seed.ts         # Database seeding script
-scripts/          # One-off maintenance scripts (e.g. create test users)
-types/            # TypeScript type definitions
+scripts/          # Local one-off maintenance scripts (gitignored; e.g. recalc-all-handicaps.ts --rebuild)
+types/            # TypeScript declarations (NextAuth session)
 proxy.ts          # Next.js 16 route protection (replaces middleware.ts)
-ecosystem.config.js # PM2 config for production
 ```
 
 ## Testing
@@ -157,7 +162,7 @@ npx tsc --noEmit && npm run lint && npm run build
 
 ## Deployment
 
-Production runs `next start -p 3001` under PM2 (see `ecosystem.config.js`). A deploy pulls `main`, installs dependencies, runs `npx prisma generate` and `npx prisma migrate deploy` (after a database backup when there are new migrations), builds, and restarts the PM2 process.
+Production runs `next start -p 3001` under PM2 (its `ecosystem.config.js` lives on the server, not in the repo). A deploy pulls `main`, installs dependencies, runs `npx prisma generate` and `npx prisma migrate deploy` (after a database backup when there are new migrations), builds, and restarts the PM2 process.
 
 ## Notes
 

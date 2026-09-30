@@ -67,7 +67,14 @@ export default function GuidePage() {
               <span className="font-semibold">Play</span> in the navigation to start the round wizard.
             </li>
             <li>
-              Tap any recent round in the list to view its full scorecard and result summary.
+              A <span className="font-semibold">Round in progress</span> card appears for any round
+              you haven&apos;t finished — tap <span className="font-semibold">Resume</span> to carry
+              on scoring, or <span className="font-semibold">Discard</span> to delete it.
+            </li>
+            <li>
+              <span className="font-semibold">Recent Rounds</span> lists your five most recent
+              finished rounds (newest round date first). Tap one to view its full scorecard and
+              result summary.
             </li>
           </ul>
 
@@ -110,8 +117,8 @@ export default function GuidePage() {
         </h2>
         <div className="space-y-4 text-sm text-gray-700 leading-relaxed">
           <p>
-            Starting a round takes three steps. Tap <span className="font-semibold">Play</span> in
-            the navigation to begin.
+            Starting a round takes three steps — four for a team game with more than one team. Tap{" "}
+            <span className="font-semibold">Play</span> in the navigation to begin.
           </p>
 
           <div>
@@ -130,6 +137,11 @@ export default function GuidePage() {
 
           <div>
             <p className="font-semibold text-fairway-700 mb-2">Step 2 — Choose a format</p>
+            <p className="mb-2">
+              Strokeplay is selected to start with. Some formats show extra choices inside their card
+              once you pick them: Stableford (Individual, 2-ball or 4-ball), Skins (carry over halved
+              holes) and Ambrose (2-ball or 4-ball).
+            </p>
             <ul className="space-y-2">
               <li>
                 <span className="font-semibold text-fairway-900">Strokeplay</span> — lowest{" "}
@@ -152,13 +164,17 @@ export default function GuidePage() {
               </li>
               <li>
                 <span className="font-semibold text-fairway-900">Match Play</span> — hole-by-hole
-                competition. Win a hole, lose a hole, or halve it. Net strokes per hole determine
-                each result.
+                competition between <span className="font-semibold">two players</span>: win a hole,
+                lose a hole, or halve it, on net strokes. The live leaderboard shows the match status
+                (e.g. &ldquo;Alice 2 UP&rdquo;), and the round summary shows the result (e.g.
+                &ldquo;Alice wins 3&amp;2&rdquo;) plus who won each hole. Match Play is for casual
+                rounds only — it isn&apos;t offered for events.
               </li>
               <li>
                 <span className="font-semibold text-fairway-900">Skins</span> — each hole is worth
-                one skin. Win a hole outright (no ties) to claim it. When you pick Skins you choose
-                whether <span className="font-semibold">halved holes carry over</span>: on (the
+                one skin. Win a hole outright (no ties) to claim it. When you pick Skins, a{" "}
+                <span className="font-semibold">Carry over halved holes</span> checkbox appears inside
+                the Skins card: on (the
                 default), a tied hole&apos;s skin rolls on to the next hole, so one win can be worth
                 several skins; off, a tied hole&apos;s skin is lost and every skin is worth 1. For an
                 event the organiser can change this until the event starts. On the round summary
@@ -202,14 +218,7 @@ export default function GuidePage() {
                 In 2-player Ambrose, Randomise pairs each group&apos;s lowest handicap with its
                 highest. Changing the format re-sorts the saved teams to match. The group builder
                 warns about any short or uneven teams, but lets you go ahead. The same applies to
-                Stableford played in teams.
-              </p>
-              <p className="font-semibold text-fairway-900 pt-1">Teams in a casual round</p>
-              <p>
-                For a casual team game (Ambrose, or Stableford in teams) with more players than one
-                team, a <span className="font-semibold">Teams</span> step appears after picking
-                players. It opens with the players split by handicap to keep the teams even, shows
-                each team&apos;s handicap, and lets you move anyone to another team before teeing off.
+                Stableford 2-ball / 4-ball.
               </p>
             </div>
           </div>
@@ -217,8 +226,23 @@ export default function GuidePage() {
           <div>
             <p className="font-semibold text-fairway-700 mb-1">Step 3 — Select players</p>
             <p>
-              You are always included. Tap any other registered user to add them to the round, then tap{" "}
-              <span className="font-semibold">Tee Off!</span> to begin.
+              You are always included. Type part of a name in the{" "}
+              <span className="font-semibold">search box</span> to narrow the list, then tap a player
+              to add them — players in the round are listed above the search box (tap one to remove
+              them). For Match Play, pick exactly one opponent. Then tap{" "}
+              <span className="font-semibold">Tee Off!</span> to begin — or, for a team game with more
+              than one team, <span className="font-semibold">Next: Teams</span>.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-semibold text-fairway-700 mb-1">Step 4 — Teams (team games only)</p>
+            <p>
+              For Ambrose, or Stableford 2-ball / 4-ball, with more players than one team, the Teams
+              step opens with everyone split by handicap to keep the teams even (lowest paired with
+              highest). Each team shows its team handicap. Use the{" "}
+              <span className="font-semibold">Team</span> menu beside a player to move them; any
+              short or uneven team is flagged, but you can still tee off.
             </p>
           </div>
         </div>
@@ -242,6 +266,13 @@ export default function GuidePage() {
             buttons to set each player&apos;s gross strokes. The score badge on each player card
             updates instantly — dark green for eagle or better, medium green for birdie, no colour
             for par, amber for bogey, red for double-bogey or worse.
+          </p>
+          <p>
+            <span className="font-semibold text-fairway-900">Team games</span> — In Ambrose and
+            Stableford 2-ball / 4-ball there is one card per team instead of per player. Enter the
+            team&apos;s score for the hole (best ball each shot). The card shows the team handicap,
+            the strokes the team receives on the hole and its net par — and, for Stableford, the
+            points the team earned.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Stat tracking (optional)</span> —
@@ -271,21 +302,24 @@ export default function GuidePage() {
           <p>
             <span className="font-semibold text-fairway-900">Saving and moving on</span> — Tap{" "}
             <span className="font-semibold">Save &amp; Hole N →</span> (N is the next hole). Scores
-            are saved to the server immediately. You can go back to any previous hole at any time and edit scores
-            before the round is finished.
+            are saved to the server immediately. If a save fails — for example with no phone signal
+            — you stay on the hole and a message asks you to try again, so nothing is lost. You can
+            go back to any previous hole at any time and change a score.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Leaderboard tab</span> — Tap{" "}
             <span className="font-semibold">Leaderboard</span> at the top of the scorecard to see a
-            live running total for all players. Stableford shows cumulative points; all other
-            formats show net score relative to par.
+            live running total for all players (or teams). Stableford shows cumulative points; all
+            other formats show net score relative to par. For Match Play it also shows the match
+            status, such as &ldquo;Alice 2 UP&rdquo;.
           </p>
           <p>
             In a <span className="font-semibold text-fairway-900">tournament</span>, the Leaderboard
             tab shows the <span className="font-semibold">whole event</span> — every group ranked
             together, with a <span className="font-semibold">Thru</span> column (holes played) and
             your own group highlighted. It refreshes each time you open the tab and every 30
-            seconds while it is open.
+            seconds while it is open. In a <span className="font-semibold">Skins</span> event it
+            shows each group&apos;s own skins game instead, since every group plays for its own skins.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Prize holes</span> — In a tournament,
@@ -297,6 +331,14 @@ export default function GuidePage() {
             final hole, tap <span className="font-semibold">Finish Round</span> instead of Save
             &amp; Hole. You will be taken to the round summary, and your Handicap Index is
             recalculated automatically if it was a Strokeplay round.
+          </p>
+          <p>
+            <span className="font-semibold text-fairway-900">Fixing a finished round</span> — Open
+            the round summary and tap <span className="font-semibold">Edit Scores</span>. Changes
+            save straight away, and a Strokeplay round&apos;s handicap differential is updated to
+            match. <span className="font-semibold">Delete</span> on the round summary removes a
+            casual round; a round that is part of an event can&apos;t be deleted on its own —
+            delete the event instead.
           </p>
         </div>
       </div>
@@ -506,9 +548,11 @@ export default function GuidePage() {
               nine.
             </li>
             <li>
-              <span className="font-semibold">Format</span> — choose the scoring format (same
-              options as a regular round), and tick <span className="font-semibold">Prize Holes</span>{" "}
-              if you want Longest Drive / Nearest the Pin holes.
+              <span className="font-semibold">Format</span> — choose the scoring format. The
+              options are the same as a regular round (Strokeplay is selected to start with), except
+              Match Play, which is for two players only. Tick{" "}
+              <span className="font-semibold">Prize Holes</span> if you want Longest Drive / Nearest
+              the Pin holes.
             </li>
             <li>
               <span className="font-semibold">Prize holes</span> (only if ticked) — choose the
@@ -530,8 +574,10 @@ export default function GuidePage() {
             <span className="font-semibold">UPCOMING</span> status badge while you wait for players
             to respond. While it is upcoming, the organiser can tap{" "}
             <span className="font-semibold">Edit event details</span> to change the name, date,{" "}
-            <span className="font-semibold">tee-off time</span>, format, course, tee, or holes.
-            Changing the course, tee, or nine clears any prize holes that no longer apply.
+            <span className="font-semibold">tee-off time</span>, format (including the 2-ball /
+            4-ball choice and Skins carry-over), course, tee, or holes. Changing the course, tee, or
+            nine clears any prize holes that no longer apply, and changing to a different team size
+            re-sorts any saved teams.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Responding to an invitation</span> —
@@ -567,9 +613,19 @@ export default function GuidePage() {
             Use the <span className="font-semibold">+ Add player</span> dropdown to manually fill
             each group (up to four players), or tap{" "}
             <span className="font-semibold">Randomise Teams</span> to auto-assign everyone at once —
-            it puts together players who have played with each other least. Each group can be given
-            its own tee if the course has multiple tee sets. When all accepted players are assigned,
-            tap <span className="font-semibold">Save groups</span>.
+            it spreads players evenly across the groups (5 players make groups of 3 and 2; 9 make
+            three groups of 3) and puts together players who have played with each other least.
+            Each group can be given its own tee if the course has multiple tee sets. When all
+            accepted players are assigned, tap <span className="font-semibold">Save groups</span>.
+          </p>
+          <p>
+            <span className="font-semibold text-fairway-900">Teams in a group</span> — For 2-ball
+            games (Ambrose or Stableford) each player in a group has{" "}
+            <span className="font-semibold">Team 1 / Team 2</span> buttons; Randomise fills them in
+            with handicap-balanced pairs. For 4-ball games each group plays as one team. If the
+            number of players doesn&apos;t divide evenly, the group builder shows a hint (for
+            example, suggesting 4-ball in groups of 3) and lists any short or uneven teams — you can
+            still save and start.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Starting the round</span> — After
@@ -582,7 +638,8 @@ export default function GuidePage() {
             tournament is <span className="font-semibold">ACTIVE</span>, the tournament page and
             every player&apos;s Leaderboard tab show one live leaderboard across all groups —
             Stableford by points, other formats by net score to par — with how many holes each
-            player or team has played.
+            player or team has played. Skins events are the exception: each group plays its own
+            skins game, so the leaderboard shows a card per group with everyone&apos;s skins.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Finishing and the winner</span> — When
@@ -599,6 +656,13 @@ export default function GuidePage() {
             . Each group&apos;s round summary shows only that group&apos;s results, not a winner.
           </p>
           <p>
+            <span className="font-semibold text-fairway-900">Skins events</span> — Because each
+            group plays for its own skins, there is a winner{" "}
+            <span className="font-semibold">per group</span> rather than one overall winner. Each
+            group&apos;s round summary shows a &ldquo;Group N winner&rdquo; banner, and the Final
+            Results list every group&apos;s winner. Players level on skins share the win.
+          </p>
+          <p>
             <span className="font-semibold text-fairway-900">Corrections</span> — If a score needs
             fixing after the event has finished, open that group&apos;s round summary and tap{" "}
             <span className="font-semibold">Edit Scores</span>. The leaderboard and winner update
@@ -606,7 +670,8 @@ export default function GuidePage() {
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Events page</span> — Completed events
-            show their winner and the Longest Drive / Nearest the Pin winners. A day after an event
+            show their winner (or each group&apos;s winner for Skins) and the Longest Drive /
+            Nearest the Pin winners. A day after an event
             finishes it moves into <span className="font-semibold">Previous Events</span> at the
             bottom of the page. Events that never started are removed a week after their date.
           </p>
@@ -638,9 +703,10 @@ export default function GuidePage() {
             When two or more players or teams finish level at the top, Golf Nuts automatically
             applies the standard{" "}
             <span className="font-semibold text-fairway-900">scorecard countback</span> to
-            decide the winner. This applies to Strokeplay, Stableford, and Ambrose events.
-            Strokeplay and Ambrose compare net scores, and the lower total wins each step. In
-            Stableford the comparison uses points, and the higher total wins each step.
+            decide the winner. This applies to Strokeplay, Stableford (individual, 2-ball and
+            4-ball) and Ambrose. Strokeplay and Ambrose compare net scores, and the lower total wins
+            each step. In Stableford the comparison uses points, and the higher total wins each
+            step. Skins has no countback — players level on skins share the win.
           </p>
 
           <div className="bg-fairway-50 rounded-lg p-3 space-y-2">
@@ -762,7 +828,9 @@ export default function GuidePage() {
             <span className="font-semibold text-fairway-900">Password</span> — Change it in the{" "}
             <span className="font-semibold">Password</span> section. If you have forgotten it, tap{" "}
             <span className="font-semibold">Forgot password?</span> on the login page — you will be
-            emailed a reset link that signs you straight in.
+            emailed a reset link (valid for an hour) that signs you straight in. For the next 15
+            minutes you can set a new password without entering the old one; after that the
+            Password section asks for your current password as usual.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Biometric login</span> — In the{" "}
