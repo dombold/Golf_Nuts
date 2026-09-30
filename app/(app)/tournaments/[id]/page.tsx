@@ -133,6 +133,14 @@ export default async function TournamentDetailPage({
           <dt className="text-gray-500">Format</dt>
           <dd className="font-medium text-gray-800">{formatLabel(tournament.format)}</dd>
         </div>
+        {tournament.format === "SKINS" && (
+          <div className="flex justify-between px-4 py-3">
+            <dt className="text-gray-500">Skins</dt>
+            <dd className="font-medium text-gray-800">
+              {tournament.skinsCarryOver ? "Carry over halved holes" : "No carry-over"}
+            </dd>
+          </div>
+        )}
         {tournament.date && (
           <div className="flex justify-between px-4 py-3">
             <dt className="text-gray-500">Date</dt>

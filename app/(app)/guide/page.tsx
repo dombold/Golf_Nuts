@@ -150,8 +150,14 @@ export default function GuidePage() {
               </li>
               <li>
                 <span className="font-semibold text-fairway-900">Skins</span> — each hole is worth
-                one skin. Win a hole outright (no ties) to claim it. Tied holes carry the skin
-                forward to the next hole.
+                one skin. Win a hole outright (no ties) to claim it. When you pick Skins you choose
+                whether <span className="font-semibold">halved holes carry over</span>: on (the
+                default), a tied hole&apos;s skin rolls on to the next hole, so one win can be worth
+                several skins; off, a tied hole&apos;s skin is lost and every skin is worth 1. For an
+                event the organiser can change this until the event starts. On the round summary
+                scorecard, a green <span className="font-semibold text-green-600">✓</span> marks who
+                won each hole&apos;s skin (with the number of skins when a carried-over win is worth
+                more than one).
               </li>
               <li>
                 <span className="font-semibold text-fairway-900">2-Player Ambrose</span> — each

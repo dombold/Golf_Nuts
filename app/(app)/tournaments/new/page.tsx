@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import HolesPicker from "@/components/HolesPicker";
 import { isHoleInPlay, type HolesCount, type StartingHole } from "@/lib/nines";
 import { EVENT_FORMATS } from "@/lib/gameFormats";
+import SkinsCarryOverToggle from "@/components/SkinsCarryOverToggle";
 
 interface Course { id: string; name: string; tees: Tee[]; suburb?: string | null; city?: string | null; address?: string | null; phone?: string | null }
 interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
@@ -34,6 +35,7 @@ export default function NewTournamentPage() {
 
   // Step 3 — Format
   const [format, setFormat] = useState("STABLEFORD");
+  const [skinsCarryOver, setSkinsCarryOver] = useState(true);
 
   // Step 3 — Prize Holes toggle
   const [prizeHolesEnabled, setPrizeHolesEnabled] = useState(false);
@@ -132,6 +134,7 @@ export default function NewTournamentPage() {
         body: JSON.stringify({
           name,
           format,
+          ...(format === "SKINS" ? { skinsCarryOver } : {}),
           courseId: selectedCourse.id,
           teeId: selectedTee.id,
           holesCount,
@@ -339,6 +342,8 @@ export default function NewTournamentPage() {
               </button>
             ))}
           </div>
+
+          {format === "SKINS" && <SkinsCarryOverToggle checked={skinsCarryOver} onChange={setSkinsCarryOver} />}
 
           {/* Prize Holes checkbox */}
           <div

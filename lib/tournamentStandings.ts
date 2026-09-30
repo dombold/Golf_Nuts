@@ -27,6 +27,8 @@ export interface StandingsRound {
     /** Which holes are in play (defaults to all 18 from hole 1) */
     holesCount?: number;
     startingHole?: number;
+    /** Skins: whether a halved hole's skin rolls on (defaults to true) */
+    skinsCarryOver?: boolean;
     tee?: { holes: StandingsHole[] } | null;
     players: StandingsPlayer[];
   } | null;
@@ -243,7 +245,10 @@ export interface SkinsGroupResult {
   winners: string[];
   /** Holes everyone in the group has scored */
   holesDecided: number;
-  /** Skins riding on unwon holes at the end of the holes decided so far */
+  /** Whether halved holes carry over in this group's game */
+  carryOver: boolean;
+  /** Carry-over on: skins riding on unwon holes at the end of the holes decided so far.
+   *  Carry-over off: how many holes were halved (their skins are lost). */
   carried: number;
 }
 
@@ -253,6 +258,7 @@ export function calcSkinsGroups(rounds: StandingsRound[]): SkinsGroupResult[] {
     .filter((tr): tr is StandingsRound & { round: NonNullable<StandingsRound["round"]> } => !!tr.round)
     .sort((a, b) => a.roundNumber - b.roundNumber)
     .map(({ roundNumber, round }) => {
+      const carryOver = round.skinsCarryOver ?? true;
       const holes = (round.tee?.holes ?? [])
         .filter((h) => isHoleInPlay(h.number, round.holesCount ?? 18, round.startingHole ?? 1))
         .sort((a, b) => a.number - b.number);
@@ -268,13 +274,18 @@ export function calcSkinsGroups(rounds: StandingsRound[]): SkinsGroupResult[] {
             strokeIndex: h.strokeIndex,
             strokes: p.scores.find((s) => s.holeNumber === h.number)?.strokes ?? 0,
           })),
-        }))
+        })),
+        { carryOver }
       );
 
       const sorted = [...totals].sort((a, b) => b.skins - a.skins || a.name.localeCompare(b.name));
       const top = sorted[0]?.skins ?? 0;
       let carried = 0;
-      for (let i = skins.length - 1; i >= 0 && skins[i].winnerId === null; i--) carried++;
+      if (carryOver) {
+        for (let i = skins.length - 1; i >= 0 && skins[i].winnerId === null; i--) carried++;
+      } else {
+        carried = skins.filter((s) => s.winnerId === null).length;
+      }
 
       return {
         groupNumber: roundNumber,
@@ -282,6 +293,7 @@ export function calcSkinsGroups(rounds: StandingsRound[]): SkinsGroupResult[] {
         totals: sorted,
         winners: top > 0 ? sorted.filter((t) => t.skins === top).map((t) => t.name) : [],
         holesDecided: skins.length,
+        carryOver,
         carried,
       };
     });

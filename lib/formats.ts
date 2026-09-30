@@ -214,7 +214,15 @@ export interface SkinsResults {
   totals: { playerId: string; name: string; skins: number }[];
 }
 
-export function calcSkins(players: PlayerRoundResult[]): SkinsResults {
+/**
+ * Skins: the lowest net score on a hole wins its skin outright.
+ * With `carryOver` (the default) a halved hole's skin rolls on to the next hole;
+ * without it, a halved hole's skin is simply lost and every skin is worth 1.
+ */
+export function calcSkins(
+  players: PlayerRoundResult[],
+  { carryOver = true }: { carryOver?: boolean } = {}
+): SkinsResults {
   const skins: SkinResult[] = [];
   let carryover = 0;
 
@@ -238,7 +246,7 @@ export function calcSkins(players: PlayerRoundResult[]): SkinsResults {
       carryover = 0;
     } else {
       skins.push({ holeNumber: holeNum, winnerId: null, winner: null, carried: false, value: 0 });
-      carryover++;
+      if (carryOver) carryover++;
     }
   }
 

@@ -167,7 +167,7 @@ function SkinsGroupsBoard({
               <h3 className="font-semibold text-fairway-800 text-sm">Group {g.groupNumber}</h3>
               <p className="text-xs text-gray-500">
                 {g.holesDecided} hole{g.holesDecided !== 1 ? "s" : ""} decided
-                {g.carried > 0 && ` · ${g.carried} carried`}
+                {g.carried > 0 && (g.carryOver ? ` · ${g.carried} carried` : ` · ${g.carried} halved`)}
               </p>
             </div>
             <table className="w-full text-sm">

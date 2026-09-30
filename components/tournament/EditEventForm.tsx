@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import HolesPicker from "@/components/HolesPicker";
 import type { HolesCount, StartingHole } from "@/lib/nines";
 import { EVENT_FORMATS } from "@/lib/gameFormats";
+import SkinsCarryOverToggle from "@/components/SkinsCarryOverToggle";
 
 interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
 interface Course { id: string; name: string; tees: Tee[]; suburb?: string | null; city?: string | null; address?: string | null; phone?: string | null }
@@ -17,6 +18,7 @@ interface TournamentData {
   teeOffTime: string | null;
   holesCount: HolesCount;
   startingHole: StartingHole;
+  skinsCarryOver: boolean;
   course: Course | null;
   tee: Tee | null;
 }
@@ -29,6 +31,7 @@ export default function EditEventForm({ tournament }: { tournament: TournamentDa
   );
   const [teeOffTime, setTeeOffTime] = useState(tournament.teeOffTime ?? "");
   const [format, setFormat] = useState(tournament.format);
+  const [skinsCarryOver, setSkinsCarryOver] = useState(tournament.skinsCarryOver);
   const [holesCount, setHolesCount] = useState<HolesCount>(tournament.holesCount);
   const [startingHole, setStartingHole] = useState<StartingHole>(tournament.startingHole);
 
@@ -89,6 +92,7 @@ export default function EditEventForm({ tournament }: { tournament: TournamentDa
           courseId: selectedCourse?.id ?? null,
           teeId: selectedTee?.id ?? null,
           holesCount,
+          ...(format === "SKINS" ? { skinsCarryOver } : {}),
           startingHole,
         }),
       });
@@ -168,6 +172,7 @@ export default function EditEventForm({ tournament }: { tournament: TournamentDa
             </button>
           ))}
         </div>
+        {format === "SKINS" && <SkinsCarryOverToggle checked={skinsCarryOver} onChange={setSkinsCarryOver} />}
       </div>
 
       {/* Course */}

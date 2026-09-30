@@ -139,6 +139,7 @@ model Round {
   status    RoundStatus @default(SETUP)
   holesCount   Int @default(18)
   startingHole Int @default(1)
+  skinsCarryOver Boolean @default(true)
   notes     String?
   createdAt DateTime    @default(now())
 
@@ -266,6 +267,7 @@ model Tournament {
   teeOffTime  String?
   holesCount   Int             @default(18)
   startingHole Int             @default(1)
+  skinsCarryOver Boolean       @default(true)
   completedAt DateTime?
   createdAt   DateTime         @default(now())
 

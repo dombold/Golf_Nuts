@@ -74,6 +74,7 @@ const PatchSchema = z.object({
   holesCount: z.union([z.literal(9), z.literal(18)]).optional(),
   startingHole: z.union([z.literal(1), z.literal(10)]).optional(),
   status: z.enum(["UPCOMING", "ACTIVE", "COMPLETE"]).optional(),
+  skinsCarryOver: z.boolean().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
@@ -92,11 +93,11 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const parsed = PatchSchema.safeParse(body);
   if (!parsed.success) return Response.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const { name, format, date, teeOffTime, courseId, teeId, holesCount, startingHole, status } = parsed.data;
+  const { name, format, date, teeOffTime, courseId, teeId, holesCount, startingHole, status, skinsCarryOver } = parsed.data;
 
   const isFieldEdit = name !== undefined || format !== undefined || date !== undefined
     || teeOffTime !== undefined || courseId !== undefined || teeId !== undefined
-    || holesCount !== undefined || startingHole !== undefined;
+    || holesCount !== undefined || startingHole !== undefined || skinsCarryOver !== undefined;
 
   if (isFieldEdit && tournament.status !== "UPCOMING") {
     return Response.json(
@@ -140,6 +141,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (teeOffTime !== undefined) data.teeOffTime = teeOffTime;
   if (courseId !== undefined) data.courseId = courseId;
   if (teeId !== undefined) data.teeId = teeId;
+  if (skinsCarryOver !== undefined) data.skinsCarryOver = skinsCarryOver;
   if (status !== undefined && status !== tournament.status) {
     data.status = status;
     // Record when the event finished (drives the move to Previous Events); clear it if re-opened

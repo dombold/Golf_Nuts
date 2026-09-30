@@ -74,6 +74,8 @@ export default async function RoundSummaryPage({
   // `lead` marks the row(s) to highlight when it isn't simply the first row (e.g. a Skins tie)
   let results: { id: string; name: string; score: string; sub?: string; lead?: boolean; rank?: number }[] = [];
   let match: MatchPlayResult | null = null;
+  // Skins: which player won each hole's skin, and what it was worth (for the scorecard ticks)
+  const skinWins = new Map<number, { winnerId: string; value: number }>();
   let winner = "";
   let winnerCountbackLabel: string | undefined;
 
@@ -104,7 +106,11 @@ export default async function RoundSummaryPage({
     winner = r[0]?.name ?? "";
     winnerCountbackLabel = r[0]?.countbackLabel;
   } else if (format === "SKINS") {
-    const totals = [...calcSkins(players).totals].sort((a, b) => b.skins - a.skins || a.name.localeCompare(b.name));
+    const skinsResult = calcSkins(players, { carryOver: round.skinsCarryOver });
+    for (const skin of skinsResult.skins) {
+      if (skin.winnerId) skinWins.set(skin.holeNumber, { winnerId: skin.winnerId, value: skin.value });
+    }
+    const totals = [...skinsResult.totals].sort((a, b) => b.skins - a.skins || a.name.localeCompare(b.name));
     const top = totals[0]?.skins ?? 0;
     // Everyone level on the most skins shares the win; nobody wins with 0 skins
     const winners = top > 0 ? totals.filter((t) => t.skins === top).map((t) => t.name) : [];
@@ -294,6 +300,12 @@ export default async function RoundSummaryPage({
       <div className="bg-white rounded-xl shadow-sm border border-fairway-50 overflow-hidden">
         <div className="bg-fairway-900 text-white px-4 py-3">
           <h2 className="font-semibold">Full Scorecard — Par {totalPar}</h2>
+          {format === "SKINS" && (
+            <p className="text-xs text-fairway-300 mt-0.5">
+              {round.skinsCarryOver ? "Halved holes carry over" : "No carry-over"} ·{" "}
+              <span className="text-green-400 font-bold">✓</span> won the skin
+            </p>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -315,9 +327,12 @@ export default async function RoundSummaryPage({
                     <td className="px-2 py-1.5 text-center text-gray-600">{hole.par}</td>
                     {round.players.map((p) => {
                       const score = p.scores.find((s) => s.holeNumber === hole.number);
+                      const skin = skinWins.get(hole.number);
+                      const wonSkin = skin?.winnerId === p.id;
                       return (
-                        <td key={p.id} className="px-2 py-1.5 text-center">
+                        <td key={p.id} className="px-2 py-1.5 text-center whitespace-nowrap">
                           {score ? (
+                            <>
                             <span className={`inline-flex items-center justify-center w-6 h-6 text-xs font-bold rounded ${
                               score.strokes <= hole.par - 2 ? "bg-fairway-900 text-white rounded-full" :
                               score.strokes === hole.par - 1 ? "bg-fairway-500 text-white rounded-full" :
@@ -327,6 +342,16 @@ export default async function RoundSummaryPage({
                             }`}>
                               {score.strokes}
                             </span>
+                            {wonSkin && (
+                              <span
+                                className="ml-0.5 text-green-600 font-bold"
+                                aria-label={skin.value > 1 ? `won ${skin.value} skins` : "won the skin"}
+                                title={skin.value > 1 ? `Won ${skin.value} skins` : "Won the skin"}
+                              >
+                                ✓{skin.value > 1 && <span className="text-[10px]">{skin.value}</span>}
+                              </span>
+                            )}
+                            </>
                           ) : "—"}
                         </td>
                       );

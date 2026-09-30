@@ -44,6 +44,7 @@ export default async function EditTournamentPage({
         teeOffTime: tournament.teeOffTime ?? null,
         holesCount: tournament.holesCount === 9 ? 9 : 18,
         startingHole: tournament.startingHole === 10 ? 10 : 1,
+        skinsCarryOver: tournament.skinsCarryOver,
         course: tournament.course
           ? {
               id: tournament.course.id,

@@ -14,6 +14,7 @@ const CreateRoundSchema = z
     format: GameFormatSchema,
     playerIds: z.array(z.string()).min(1).max(8),
     date: z.string().refine((d) => !Number.isNaN(Date.parse(d)), "Invalid date").optional(),
+    skinsCarryOver: z.boolean().default(true),
   })
   .refine((d) => d.format !== "MATCH_PLAY" || new Set(d.playerIds).size === 2, {
     message: "Match Play needs exactly 2 players",
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: { message: parsed.error.issues[0]?.message ?? "Invalid request" } }, { status: 400 });
   }
 
-  const { courseId, teeId, format, date } = parsed.data;
+  const { courseId, teeId, format, date, skinsCarryOver } = parsed.data;
   const holesCount = parsed.data.holesCount;
   const startingHole = holesCount === 18 ? 1 : parsed.data.startingHole;
   const playerIds = [...new Set(parsed.data.playerIds)];
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
       holesCount,
       startingHole,
       format,
+      skinsCarryOver,
       date: date ? new Date(date) : new Date(),
       status: "ACTIVE",
       players: {

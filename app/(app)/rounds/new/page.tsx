@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import HolesPicker from "@/components/HolesPicker";
 import { GAME_FORMATS } from "@/lib/gameFormats";
+import SkinsCarryOverToggle from "@/components/SkinsCarryOverToggle";
 
 interface Course { id: string; name: string; suburb: string | null; city: string | null; address?: string | null; phone?: string | null; tees: Tee[] }
 interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
@@ -60,6 +61,7 @@ function NewRoundForm() {
   const [holesCount, setHolesCount] = useState<9 | 18>(18);
   const [startingHole, setStartingHole] = useState<1 | 10>(1);
   const [format, setFormat] = useState("STROKEPLAY");
+  const [skinsCarryOver, setSkinsCarryOver] = useState(true);
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
   const [playerQuery, setPlayerQuery] = useState("");
   const playerSearchRef = useRef<HTMLInputElement>(null);
@@ -135,6 +137,7 @@ function NewRoundForm() {
           holesCount,
           startingHole,
           format,
+          ...(format === "SKINS" ? { skinsCarryOver } : {}),
           playerIds: selectedPlayers,
         }),
       });
@@ -314,6 +317,7 @@ function NewRoundForm() {
               </button>
             ))}
           </div>
+          {format === "SKINS" && <SkinsCarryOverToggle checked={skinsCarryOver} onChange={setSkinsCarryOver} />}
           <div className="flex gap-3">
             <button onClick={() => setStep(1)} className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50">
               ← Back
