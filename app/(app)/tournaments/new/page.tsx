@@ -23,6 +23,7 @@ export default function NewTournamentPage() {
   // Step 1 — Name & Date
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
+  const [teeOffTime, setTeeOffTime] = useState("");
 
   // Step 2 — Course & Tee
   const [courseQuery, setCourseQuery] = useState("");
@@ -122,6 +123,7 @@ export default function NewTournamentPage() {
           holesCount,
           startingHole,
           date: date || undefined,
+          teeOffTime: teeOffTime || undefined,
           inviteeIds,
           prizeHoles: selectedPrizeHoles,
         }),
@@ -182,6 +184,18 @@ export default function NewTournamentPage() {
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-fairway-500 text-sm"
+            />
+          </div>
+          <div>
+            <label htmlFor="tee-off-time" className="block text-sm font-medium text-gray-700 mb-1">
+              Tee Off Time <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <input
+              id="tee-off-time"
+              type="time"
+              value={teeOffTime}
+              onChange={(e) => setTeeOffTime(e.target.value)}
               className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-fairway-500 text-sm"
             />
           </div>
