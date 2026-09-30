@@ -78,36 +78,6 @@ export default function GuidePage() {
               result summary.
             </li>
           </ul>
-
-          <div className="mt-4 pt-4 border-t border-fairway-50">
-            <p className="font-semibold text-fairway-900 mb-2">📲 Add Golf Nuts to your home screen</p>
-            <p className="mb-3">
-              Golf Nuts works like a native app when installed on your phone — full screen, no browser
-              bar, and quick to launch from your home screen.
-            </p>
-
-            <div className="space-y-3">
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="font-semibold text-fairway-800 mb-1">Android (Chrome)</p>
-                <ol className="list-decimal list-inside space-y-1 text-gray-600">
-                  <li>Open Golf Nuts in Chrome.</li>
-                  <li>Tap the <span className="font-semibold">⋮</span> menu in the top-right corner.</li>
-                  <li>Tap <span className="font-semibold">Add to Home screen</span>.</li>
-                  <li>Tap <span className="font-semibold">Add</span> to confirm.</li>
-                </ol>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="font-semibold text-fairway-800 mb-1">iPhone / iPad (Safari)</p>
-                <ol className="list-decimal list-inside space-y-1 text-gray-600">
-                  <li>Open Golf Nuts in Safari.</li>
-                  <li>Tap the <span className="font-semibold">Share</span> button (the box with an arrow pointing up) at the bottom of the screen.</li>
-                  <li>Scroll down and tap <span className="font-semibold">Add to Home Screen</span>.</li>
-                  <li>Tap <span className="font-semibold">Add</span> in the top-right corner.</li>
-                </ol>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -147,7 +117,8 @@ export default function GuidePage() {
               <li>
                 <span className="font-semibold text-fairway-900">Strokeplay</span> — lowest{" "}
                 <span className="font-semibold">net</span> score wins (your gross strokes minus the
-                handicap strokes you receive). Strokeplay rounds count toward your Handicap Index — see{" "}
+                handicap strokes you receive; a plus handicap adds strokes instead, starting on the
+                easiest holes). Strokeplay rounds count toward your Handicap Index — see{" "}
                 <a href="#stats" className="text-fairway-700 underline">Stats &amp; Handicap</a>.
               </li>
               <li>
@@ -166,9 +137,12 @@ export default function GuidePage() {
               <li>
                 <span className="font-semibold text-fairway-900">Match Play</span> — hole-by-hole
                 competition between <span className="font-semibold">two players</span>: win a hole,
-                lose a hole, or halve it, on net strokes. The live leaderboard shows the match status
-                (e.g. &ldquo;Alice 2 UP&rdquo;), and the round summary shows the result (e.g.
-                &ldquo;Alice wins 3&amp;2&rdquo;) plus who won each hole. Match Play is for casual
+                lose a hole, or halve it, on net strokes. The higher handicap receives the{" "}
+                <span className="font-semibold">difference</span> between the two handicaps, on the
+                hardest holes, and the lower handicap plays off scratch. The live leaderboard shows the
+                match status (e.g. &ldquo;Alice 2 UP&rdquo;), and the round summary shows the result
+                (e.g. &ldquo;Alice wins 3&amp;2&rdquo;) plus who won each hole. The match ends as soon
+                as it&apos;s decided — holes played after that don&apos;t change the result. Match Play is for casual
                 rounds only — it isn&apos;t offered for events.
               </li>
               <li>
@@ -330,8 +304,11 @@ export default function GuidePage() {
           <p>
             <span className="font-semibold text-fairway-900">Finishing the round</span> — On the
             final hole, tap <span className="font-semibold">Finish Round</span> instead of Save
-            &amp; Hole. You will be taken to the round summary, and your Handicap Index is
-            recalculated automatically if it was a Strokeplay round.
+            &amp; Hole. Every player (or team) needs a score on every hole first — if any are
+            missing, a warning lists who is missing which holes, with a button to jump to the first
+            one. In Match Play the holes after the match is decided aren&apos;t needed. You will then
+            be taken to the round summary, and your Handicap Index is recalculated automatically if
+            it was a Strokeplay round.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Fixing a finished round</span> — Open
@@ -645,9 +622,9 @@ export default function GuidePage() {
           <p>
             <span className="font-semibold text-fairway-900">Finishing and the winner</span> — When
             the last group taps <span className="font-semibold">Finish Round</span>, the event
-            completes automatically (the organiser can also tap{" "}
-            <span className="font-semibold">Mark tournament complete</span> if a group can&apos;t
-            finish). There is <span className="font-semibold">one overall winner</span> — the best
+            completes automatically. The organiser&apos;s{" "}
+            <span className="font-semibold">Mark tournament complete</span> button only works once
+            every group has finished its card, so results never include unfinished rounds. There is <span className="font-semibold">one overall winner</span> — the best
             player or team across all groups — shown in the{" "}
             <span className="font-semibold">Final Results</span> on the event page. Ties are decided
             by{" "}
@@ -896,6 +873,36 @@ export default function GuidePage() {
             <span className="font-semibold">Use Biometrics</span> on the login page. Register each
             phone or computer you use separately.
           </p>
+
+          <div className="mt-4 pt-4 border-t border-fairway-50">
+            <p className="font-semibold text-fairway-900 mb-2">📲 Add Golf Nuts to your home screen</p>
+            <p className="mb-3">
+              Golf Nuts works like a native app when installed on your phone — full screen, no browser
+              bar, and quick to launch from your home screen.
+            </p>
+
+            <div className="space-y-3">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="font-semibold text-fairway-800 mb-1">Android (Chrome)</p>
+                <ol className="list-decimal list-inside space-y-1 text-gray-600">
+                  <li>Open Golf Nuts in Chrome.</li>
+                  <li>Tap the <span className="font-semibold">⋮</span> menu in the top-right corner.</li>
+                  <li>Tap <span className="font-semibold">Add to Home screen</span>.</li>
+                  <li>Tap <span className="font-semibold">Add</span> to confirm.</li>
+                </ol>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="font-semibold text-fairway-800 mb-1">iPhone / iPad (Safari)</p>
+                <ol className="list-decimal list-inside space-y-1 text-gray-600">
+                  <li>Open Golf Nuts in Safari.</li>
+                  <li>Tap the <span className="font-semibold">Share</span> button (the box with an arrow pointing up) at the bottom of the screen.</li>
+                  <li>Scroll down and tap <span className="font-semibold">Add to Home Screen</span>.</li>
+                  <li>Tap <span className="font-semibold">Add</span> in the top-right corner.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -6,8 +6,19 @@ import { GameFormatSchema } from "@/lib/gameFormats";
 import { isHoleInPlay } from "@/lib/nines";
 import { splitIntoTeams } from "@/lib/teams";
 import { teamSizeFor } from "@/lib/gameFormats";
+import { unfinishedGroupsMessage } from "@/lib/roundCompletion";
 
 type Ctx = { params: Promise<{ id: string }> };
+
+/** Group numbers whose round hasn't been finished (every card complete). */
+async function unfinishedGroups(tournamentId: string): Promise<number[]> {
+  const rounds = await prisma.tournamentRound.findMany({
+    where: { tournamentId, round: { status: { not: "COMPLETE" } } },
+    select: { roundNumber: true },
+    orderBy: { roundNumber: "asc" },
+  });
+  return rounds.map((r) => r.roundNumber);
+}
 
 export async function GET(_req: NextRequest, { params }: Ctx) {
   const session = await auth();
@@ -121,6 +132,11 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
         { error: `Can't change an ${tournament.status.toLowerCase()} event to ${status.toLowerCase()}` },
         { status: 409 }
       );
+    }
+    // Finishing early is only allowed once every group has a complete card
+    if (status === "COMPLETE") {
+      const unfinished = await unfinishedGroups(id);
+      if (unfinished.length > 0) return Response.json({ error: unfinishedGroupsMessage(unfinished) }, { status: 409 });
     }
   }
 

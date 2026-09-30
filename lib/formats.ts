@@ -21,15 +21,21 @@ export interface PlayerRoundResult {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-/** Strokes received on a hole given playing handicap and stroke index */
+/**
+ * Strokes received on a hole given playing handicap and stroke index.
+ * A plus (negative) handicap gives strokes back, starting from the easiest holes (SI 18, 17, …),
+ * so the result is negative there — net = gross − strokes adds them to the score.
+ */
 export function strokesOnHole(
   playingHandicap: number,
   strokeIndex: number
 ): number {
-  if (playingHandicap <= 0) return 0;
-  const full = Math.floor(playingHandicap / 18);
-  const extra = playingHandicap % 18;
-  return full + (strokeIndex <= extra ? 1 : 0);
+  if (playingHandicap === 0) return 0;
+  const size = Math.abs(playingHandicap);
+  const full = Math.floor(size / 18);
+  const extra = size % 18;
+  if (playingHandicap > 0) return full + (strokeIndex <= extra ? 1 : 0);
+  return -(full + (strokeIndex > 18 - extra ? 1 : 0)) || 0; // avoid -0
 }
 
 /** Net strokes on a hole */
@@ -109,9 +115,10 @@ export function calcStableford(players: PlayerRoundResult[]): StablefordResult[]
   const allHoles = players[0]?.holes.map((h) => h.holeNumber) ?? [];
 
   const raw: StablefordResult[] = players.map((p) => {
+    // Holes without a score (strokes 0) earn nothing
     const holes: StablefordHoleResult[] = p.holes.map((h) => ({
       holeNumber: h.holeNumber,
-      points: stablefordPoints(netStrokes(h, p.playingHandicap), h.par),
+      points: h.strokes > 0 ? stablefordPoints(netStrokes(h, p.playingHandicap), h.par) : 0,
     }));
     return {
       playerId: p.playerId,
@@ -138,6 +145,16 @@ export function calcStableford(players: PlayerRoundResult[]): StablefordResult[]
 
 // ─── Match Play (2 players) ───────────────────────────────────────────────────
 
+/**
+ * Match Play handicap allowance: the higher handicap receives the difference between the two
+ * playing handicaps (on the lowest stroke indexes); the lower handicap plays off scratch.
+ * Returns [player 1's strokes, player 2's strokes].
+ */
+export function matchPlayAllowances(playingHandicap1: number, playingHandicap2: number): [number, number] {
+  const diff = playingHandicap1 - playingHandicap2;
+  return diff > 0 ? [diff, 0] : [0, -diff || 0]; // avoid -0 when level
+}
+
 export type HoleResult = "player1" | "player2" | "halved";
 
 export interface MatchPlayResult {
@@ -149,8 +166,9 @@ export interface MatchPlayResult {
 }
 
 /**
- * Net match play between two players over `totalHoles` holes (9 or 18).
- * Holes where either player has no score yet (strokes 0) are not counted.
+ * Net match play between two players over `totalHoles` holes (9 or 18), using the handicap
+ * difference (matchPlayAllowances). Holes where either player has no score yet (strokes 0) are
+ * not counted, and nothing after the hole the match was decided on counts (e.g. won 3&2).
  */
 export function calcMatchPlay(
   p1: PlayerRoundResult,
@@ -160,13 +178,16 @@ export function calcMatchPlay(
   let p1Holes = 0;
   let p2Holes = 0;
   const holes: MatchPlayResult["holes"] = [];
+  const [allowance1, allowance2] = matchPlayAllowances(p1.playingHandicap, p2.playingHandicap);
 
-  for (const h1 of p1.holes) {
+  for (const h1 of [...p1.holes].sort((a, b) => a.holeNumber - b.holeNumber)) {
+    // The match is over once the lead is bigger than the holes left
+    if (Math.abs(p1Holes - p2Holes) > totalHoles - holes.length) break;
     const h2 = p2.holes.find((h) => h.holeNumber === h1.holeNumber);
     if (!h2 || h1.strokes <= 0 || h2.strokes <= 0) continue;
 
-    const net1 = netStrokes(h1, p1.playingHandicap);
-    const net2 = netStrokes(h2, p2.playingHandicap);
+    const net1 = netStrokes(h1, allowance1);
+    const net2 = netStrokes(h2, allowance2);
 
     let result: HoleResult;
     if (net1 < net2) {

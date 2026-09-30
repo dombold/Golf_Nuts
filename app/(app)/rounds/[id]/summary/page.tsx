@@ -7,6 +7,7 @@ import {
   calcSkins,
   calcAmbrose,
   calcMatchPlay,
+  matchPlayAllowances,
   calcStablefordTeams,
   type MatchPlayResult,
   type PlayerRoundResult,
@@ -205,9 +206,12 @@ export default async function RoundSummaryPage({
     const [p1, p2] = players;
     match = calcMatchPlay(p1, p2, playedHoles.length);
     const won = (who: "player1" | "player2") => match!.holes.filter((h) => h.result === who).length;
+    // The higher handicap receives the difference
+    const [a1, a2] = matchPlayAllowances(p1.playingHandicap, p2.playingHandicap);
+    const hcpLabel = (ph: number, allowance: number) => `Hcp ${ph}${allowance > 0 ? ` · receives ${allowance}` : ""}`;
     results = [
-      { id: p1.playerId, name: p1.name, score: `${won("player1")} won`, sub: `Hcp ${p1.playingHandicap}` },
-      { id: p2.playerId, name: p2.name, score: `${won("player2")} won`, sub: `Hcp ${p2.playingHandicap}` },
+      { id: p1.playerId, name: p1.name, score: `${won("player1")} won`, sub: hcpLabel(p1.playingHandicap, a1) },
+      { id: p2.playerId, name: p2.name, score: `${won("player2")} won`, sub: hcpLabel(p2.playingHandicap, a2) },
     ].sort((a, b) => parseInt(b.score) - parseInt(a.score));
     winner = match.status;
   } else {

@@ -12,6 +12,7 @@ import AddEventGuest from "@/components/tournament/AddEventGuest";
 import GuestRow from "@/components/guests/GuestRow";
 import { describeHoles } from "@/lib/nines";
 import { formatDisplayLabel } from "@/lib/gameFormats";
+import { unfinishedGroupsMessage } from "@/lib/roundCompletion";
 
 const STATUS_STYLES: Record<string, string> = {
   UPCOMING: "bg-acorn-100 text-acorn-700",
@@ -97,6 +98,9 @@ export default async function TournamentDetailPage({
     acceptedPlayers.every((p) => assignedIds.has(p.id));
   // Guests can't sign in, so every group needs a member to enter scores
   const guestOnlyGroup = tournament.groups.find((g) => g.members.length > 0 && g.members.every((m) => m.user.isGuest));
+
+  // Groups still out on the course — the organiser can't close the event until they finish
+  const unfinishedGroups = tournament.rounds.filter((tr) => tr.round.status !== "COMPLETE").map((tr) => tr.roundNumber);
 
   // Check if current user is in any group's round
   const myGroupRound = tournament.rounds.find((tr) =>
@@ -391,18 +395,28 @@ export default async function TournamentDetailPage({
           {/* Mark complete (organiser only) */}
           {isOrganiser && (
             <form
+              className="space-y-2"
               action={async () => {
                 "use server";
-                // Inline server action to mark complete
+                // Inline server action to mark complete — only once every group has finished its card
                 const { prisma: db } = await import("@/lib/prisma");
-                await db.tournament.update({ where: { id }, data: { status: "COMPLETE", completedAt: new Date() } });
+                const open = await db.tournamentRound.count({ where: { tournamentId: id, round: { status: { not: "COMPLETE" } } } });
+                if (open === 0) {
+                  await db.tournament.updateMany({ where: { id, status: "ACTIVE" }, data: { status: "COMPLETE", completedAt: new Date() } });
+                }
                 const { revalidatePath } = await import("next/cache");
                 revalidatePath(`/tournaments/${id}`);
               }}
             >
+              {unfinishedGroups.length > 0 && (
+                <p role="status" className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  {unfinishedGroupsMessage(unfinishedGroups)}
+                </p>
+              )}
               <button
                 type="submit"
-                className="w-full py-2.5 border border-gray-300 text-gray-600 rounded-xl text-sm font-medium hover:border-gray-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                disabled={unfinishedGroups.length > 0}
+                className="w-full py-2.5 border border-gray-300 text-gray-600 rounded-xl text-sm font-medium hover:border-gray-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-gray-300"
               >
                 Mark tournament complete
               </button>

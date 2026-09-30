@@ -4,13 +4,14 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import HoleMap from "@/components/HoleMap";
 import TournamentLeaderboard from "@/components/tournament/TournamentLeaderboard";
 import { useParams, useRouter } from "next/navigation";
-import { strokesOnHole, ambroseTeamHandicap, calcMatchPlay, stablefordPoints } from "@/lib/formats";
+import { strokesOnHole, ambroseTeamHandicap, calcMatchPlay, matchPlayAllowances, stablefordPoints } from "@/lib/formats";
 import { calcTournamentStandings, formatStandingScore } from "@/lib/tournamentStandings";
 import { formatDisplayLabel, isTeamGame } from "@/lib/gameFormats";
 import { joinNames } from "@/lib/teams";
 import { isHoleInPlay } from "@/lib/nines";
 import { apiErrorMessage } from "@/lib/apiError";
 import GuestBadge from "@/components/guests/GuestBadge";
+import { formatMissing, missingScores, type MissingScores } from "@/lib/roundCompletion";
 
 interface Hole { id: string; number: number; par: number; strokeIndex: number; distance?: number; teeLat?: number | null; teeLng?: number | null; greenLat?: number | null; greenLng?: number | null; }
 interface ScoreEntry { strokes: number; penalties: number; putts?: number; fairwayHit?: boolean; gir?: boolean }
@@ -39,6 +40,12 @@ function scoreBadgeClass(strokes: number, par: number, handicap: number, strokeI
   if (diff === 0) return "score-par";
   if (diff === 1) return "score-bogey";
   return "score-double";
+}
+
+/** "+1 shot", "+2 shots", or for a plus handicap "gives 1 back" */
+function shotsLabel(shots: number) {
+  if (shots < 0) return `gives ${-shots} back`;
+  return `+${shots} shot${shots !== 1 ? "s" : ""}`;
 }
 
 /** Holes in play for the round, in playing order */
@@ -70,7 +77,7 @@ function TeamScoreCard({ teamNumber, memberNames, strokes, teamHandicap, holePar
           <p className="text-sm font-medium text-fairway-700 mt-0.5">
             Team Hcap {teamHandicap}
             <span className="mx-1.5 text-fairway-300">·</span>
-            +{handi} shot{handi !== 1 ? "s" : ""}
+            {shotsLabel(handi)}
             <span className="mx-1.5 text-fairway-300">·</span>
             Net par {netPar}
           </p>
@@ -120,6 +127,8 @@ export default function ScoringPage() {
   const [scores, setScores] = useState<Record<string, Record<number, ScoreEntry>>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  // Finish Round was tapped with holes still to score — who's missing what
+  const [missing, setMissing] = useState<MissingScores[] | null>(null);
   const [tab, setTab] = useState<"score" | "leaderboard">("score");
   const firstLoadRef = useRef(true);
   const [popupDismissedForHole, setPopupDismissedForHole] = useState<number | null>(null);
@@ -186,10 +195,12 @@ export default function ScoringPage() {
   // Moving to another hole clears the dismissed flag so the popup shows again on return
   function changeHole(next: number | ((h: number) => number)) {
     setCurrentHole(next);
+    setMissing(null);
     setPopupDismissedForHole(null);
   }
 
   function updateScore(roundPlayerId: string, holeNumber: number, field: keyof ScoreEntry, value: number | boolean) {
+    setMissing(null);
     setScores((prev) => ({
       ...prev,
       [roundPlayerId]: {
@@ -203,6 +214,7 @@ export default function ScoringPage() {
   }
 
   function updateTeamScore(teamNumber: number, holeNumber: number, strokes: number) {
+    setMissing(null);
     setScores((prev) => {
       const next = { ...prev };
       for (const player of round!.players) {
@@ -265,11 +277,30 @@ export default function ScoringPage() {
   }
 
   async function finishRound() {
-    if (!(await saveHole())) return;
-    if (round?.status !== "COMPLETE") {
+    if (!round || !(await saveHole())) return;
+    if (round.status !== "COMPLETE") {
+      // Every card must be complete first (the server enforces this too)
+      const stillMissing = missingScores({
+        format: round.format,
+        stablefordTeamSize: round.stablefordTeamSize,
+        holes: holesInPlay(round),
+        players: round.players.map((p) => ({
+          name: p.user.name,
+          playingHandicap: p.playingHandicap,
+          teamNumber: p.teamNumber ?? null,
+          scores: new Map(Object.entries(scores[p.id] ?? {}).map(([hole, s]) => [Number(hole), s.strokes])),
+        })),
+      });
+      if (stillMissing.length > 0) {
+        setMissing(stillMissing);
+        return;
+      }
       const res = await fetch(`/api/rounds/${id}/complete`, { method: "POST" }).catch(() => null);
       if (!res?.ok) {
-        setSaveError(res ? await apiErrorMessage(res, "Couldn't finish the round — please try again.") : "No connection — couldn't finish the round.");
+        const data = res ? await res.json().catch(() => null) : null;
+        // A 409 lists holes another phone hasn't saved yet
+        if (Array.isArray(data?.error?.missing)) setMissing(data.error.missing);
+        else setSaveError(typeof data?.error?.message === "string" ? data.error.message : typeof data?.error === "string" ? data.error : res ? "Couldn't finish the round — please try again." : "No connection — couldn't finish the round.");
         return;
       }
     }
@@ -332,6 +363,14 @@ export default function ScoringPage() {
     round.format,
     false
   );
+
+  // Match Play strokes per player (the handicap difference goes to the higher handicap)
+  const matchAllowance = new Map<string, number>();
+  if (round.format === "MATCH_PLAY" && round.players.length === 2) {
+    const [a, b] = round.players;
+    const [sa, sb] = matchPlayAllowances(a.playingHandicap, b.playingHandicap);
+    matchAllowance.set(a.id, sa).set(b.id, sb);
+  }
 
   const match = round.format === "MATCH_PLAY" && round.players.length === 2
     ? calcMatchPlay(
@@ -421,7 +460,9 @@ export default function ScoringPage() {
               })
             : round.players.map((player) => {
                 const s = scores[player.id]?.[currentHole] ?? { strokes: 0, penalties: 0 };
-                const handi = strokesOnHole(player.playingHandicap, hole.strokeIndex);
+                // Match Play: the higher handicap receives the difference; otherwise the full handicap
+                const allowance = matchAllowance.get(player.id) ?? player.playingHandicap;
+                const handi = strokesOnHole(allowance, hole.strokeIndex);
                 const netPar = hole.par + handi;
                 return (
                   <div key={player.id} className="bg-white rounded-xl p-4 shadow-sm border border-fairway-50">
@@ -433,14 +474,15 @@ export default function ScoringPage() {
                         </p>
                         <p className="text-sm font-medium text-fairway-700 mt-0.5">
                           Hcap {player.playingHandicap}
+                          {matchAllowance.size > 0 && ` (plays off ${allowance})`}
                           <span className="mx-1.5 text-fairway-300">·</span>
-                          +{handi} shot{handi !== 1 ? "s" : ""}
+                          {shotsLabel(handi)}
                           <span className="mx-1.5 text-fairway-300">·</span>
                           Net par {netPar}
                         </p>
                       </div>
                       {s.strokes > 0 && (
-                        <span className={`w-9 h-9 flex items-center justify-center font-bold text-sm ${scoreBadgeClass(s.strokes, hole.par, player.playingHandicap, hole.strokeIndex)}`}>
+                        <span className={`w-9 h-9 flex items-center justify-center font-bold text-sm ${scoreBadgeClass(s.strokes, hole.par, allowance, hole.strokeIndex)}`}>
                           {s.strokes}
                         </span>
                       )}
@@ -522,6 +564,21 @@ export default function ScoringPage() {
               </button>
             )}
           </div>
+
+          {missing && missing.length > 0 && (
+            <div role="alert" className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-3 py-3 space-y-2">
+              <p>
+                <span className="font-semibold">Scores missing</span> — enter every hole before finishing the round.
+              </p>
+              <p className="text-amber-800">{formatMissing(missing)}</p>
+              <button
+                onClick={() => changeHole(Math.min(...missing.flatMap((m) => m.holes)))}
+                className="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 active:bg-amber-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
+              >
+                Go to hole {Math.min(...missing.flatMap((m) => m.holes))}
+              </button>
+            </div>
+          )}
 
           {saveError && (
             <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
