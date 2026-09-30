@@ -12,6 +12,7 @@ import {
   type AmbroseTeam,
 } from "@/lib/formats";
 import Link from "next/link";
+import { skinsGroupWinnerLabel } from "@/lib/tournamentStandings";
 import DeleteRoundButton from "@/components/DeleteRoundButton";
 
 export default async function RoundSummaryPage({
@@ -44,7 +45,8 @@ export default async function RoundSummaryPage({
   if (!round) notFound();
 
   // In a multi-group tournament there is one overall winner, decided across all groups —
-  // so this round's summary shows group results only, with no winner.
+  // so this round's summary shows group results only, with no winner. Skins is the exception:
+  // each group plays its own skins game, so each group has its own winner.
   const tournamentRound = round.tournamentRounds[0];
   const isMultiGroupEvent = (tournamentRound?.tournament._count.rounds ?? 0) > 1;
 
@@ -68,7 +70,9 @@ export default async function RoundSummaryPage({
   }));
 
   const format = round.format;
-  let results: { id: string; name: string; score: string; sub?: string }[] = [];
+  const showsOwnWinner = !isMultiGroupEvent || format === "SKINS";
+  // `lead` marks the row(s) to highlight when it isn't simply the first row (e.g. a Skins tie)
+  let results: { id: string; name: string; score: string; sub?: string; lead?: boolean; rank?: number }[] = [];
   let match: MatchPlayResult | null = null;
   let winner = "";
   let winnerCountbackLabel: string | undefined;
@@ -100,14 +104,19 @@ export default async function RoundSummaryPage({
     winner = r[0]?.name ?? "";
     winnerCountbackLabel = r[0]?.countbackLabel;
   } else if (format === "SKINS") {
-    const r = calcSkins(players);
-    results = r.totals.map((t) => ({
+    const totals = [...calcSkins(players).totals].sort((a, b) => b.skins - a.skins || a.name.localeCompare(b.name));
+    const top = totals[0]?.skins ?? 0;
+    // Everyone level on the most skins shares the win; nobody wins with 0 skins
+    const winners = top > 0 ? totals.filter((t) => t.skins === top).map((t) => t.name) : [];
+    results = totals.map((t) => ({
       id: t.playerId,
       name: t.name,
       score: `${t.skins} skin${t.skins !== 1 ? "s" : ""}`,
+      lead: top > 0 && t.skins === top,
+      // Level on skins = same position
+      rank: 1 + totals.filter((o) => o.skins > t.skins).length,
     }));
-    const top = [...r.totals].sort((a, b) => b.skins - a.skins);
-    winner = top[0]?.name ?? "";
+    winner = skinsGroupWinnerLabel({ winners, totals }) ?? "";
   } else if (format === "AMBROSE_2" || format === "AMBROSE_4") {
     const teamSize = format === "AMBROSE_2" ? 2 : 4;
 
@@ -240,10 +249,12 @@ export default async function RoundSummaryPage({
         </div>
       )}
 
-      {winner && !isMultiGroupEvent && (
+      {winner && showsOwnWinner && (
         <div className="bg-fairway-900 text-white rounded-2xl p-5 text-center">
           <p className="text-fairway-300 text-xs uppercase tracking-widest mb-1">
-            {match ? (match.finished ? "Result" : "Match status") : "Winner"}
+            {match
+              ? (match.finished ? "Result" : "Match status")
+              : isMultiGroupEvent ? `Group ${tournamentRound.roundNumber} winner` : "Winner"}
           </p>
           <p className="text-2xl font-bold">{match && !match.winner ? winner : `🏆 ${winner}`}</p>
           {winnerCountbackLabel && (
@@ -255,23 +266,23 @@ export default async function RoundSummaryPage({
       {/* Results */}
       <div className="space-y-3">
         {results.map((r, index) => {
-          // Only highlight first place when this round decides a winner
-          const i = isMultiGroupEvent ? -1 : index;
+          // Only highlight the leader(s) when this round decides a winner
+          const highlight = showsOwnWinner && (r.lead ?? index === 0);
           return (
           <div
             key={r.id}
             className={`flex items-center gap-4 p-4 rounded-xl ${
-              i === 0 ? "bg-fairway-800 text-white" : "bg-white border border-fairway-50"
+              highlight ? "bg-fairway-800 text-white" : "bg-white border border-fairway-50"
             }`}
           >
-            <span className={`text-xl font-bold w-6 ${i === 0 ? "text-fairway-300" : "text-gray-300"}`}>
-              {index + 1}
+            <span className={`text-xl font-bold w-6 ${highlight ? "text-fairway-300" : "text-gray-300"}`}>
+              {r.rank ?? index + 1}
             </span>
             <div className="flex-1">
-              <p className={`font-semibold ${i === 0 ? "text-white" : "text-fairway-900"}`}>{r.name}</p>
-              {r.sub && <p className={`text-xs ${i === 0 ? "text-fairway-300" : "text-gray-400"}`}>{r.sub}</p>}
+              <p className={`font-semibold ${highlight ? "text-white" : "text-fairway-900"}`}>{r.name}</p>
+              {r.sub && <p className={`text-xs ${highlight ? "text-fairway-300" : "text-gray-400"}`}>{r.sub}</p>}
             </div>
-            <span className={`font-bold text-lg ${i === 0 ? "text-fairway-300" : "text-fairway-700"}`}>
+            <span className={`font-bold text-lg ${highlight ? "text-fairway-300" : "text-fairway-700"}`}>
               {r.score}
             </span>
           </div>

@@ -9,13 +9,19 @@ import TournamentResultSummary, {
   type TournamentResult,
 } from "@/components/tournament/TournamentResultSummary";
 import {
+  calcSkinsGroups,
   calcTournamentStandings,
+  skinsGroupWinnerLabel,
   tournamentWinner,
   type StandingsRound,
 } from "@/lib/tournamentStandings";
 
-/** Overall winner and prize winners for a completed tournament, from its saved scores. */
+/** Overall winner (or, for Skins, each group's winner) and prize winners for a completed tournament. */
 function tournamentResult(t: { id: string; format: string; rounds: StandingsRound[]; prizeHoles: PrizeResult[] }): TournamentResult {
+  if (t.format === "SKINS") {
+    const groupWinners = calcSkinsGroups(t.rounds).map((g) => ({ groupNumber: g.groupNumber, label: skinsGroupWinnerLabel(g) }));
+    return { tournamentId: t.id, winner: null, groupWinners, prizeHoles: t.prizeHoles };
+  }
   const standings = calcTournamentStandings(t.rounds, t.format, true);
   return { tournamentId: t.id, winner: tournamentWinner(standings, t.format), prizeHoles: t.prizeHoles };
 }

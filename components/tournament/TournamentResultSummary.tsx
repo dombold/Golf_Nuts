@@ -10,6 +10,8 @@ export interface PrizeResult {
 export interface TournamentResult {
   tournamentId: string;
   winner: TournamentWinner | null;
+  /** Skins events: each group has its own winner (label is null when nobody won a skin) */
+  groupWinners?: { groupNumber: number; label: string | null }[];
   prizeHoles: PrizeResult[];
 }
 
@@ -26,7 +28,8 @@ export default function TournamentResultSummary({ result }: { result: Tournament
   const longestDrive = prizeLine(result.prizeHoles.filter((p) => p.type === "LONGEST_DRIVE"));
   const nearestPin = prizeLine(result.prizeHoles.filter((p) => p.type === "NEAREST_PIN"));
 
-  if (!result.winner && !longestDrive && !nearestPin) return null;
+  const groupWinners = result.groupWinners ?? [];
+  if (!result.winner && groupWinners.length === 0 && !longestDrive && !nearestPin) return null;
 
   return (
     <dl className="px-4 py-3 space-y-1.5 text-sm border-b border-fairway-50">
@@ -44,6 +47,23 @@ export default function TournamentResultSummary({ result }: { result: Tournament
                 {result.winner.countbackLabel} →
               </Link>
             )}
+          </dd>
+        </div>
+      )}
+      {groupWinners.length > 0 && (
+        <div className="flex gap-2">
+          <dt className="shrink-0">🏆 <span className="text-gray-500">Group winners</span></dt>
+          <dd>
+            <ul className="space-y-0.5">
+              {groupWinners.map((g) => (
+                <li key={g.groupNumber}>
+                  <span className="text-gray-500">Group {g.groupNumber}: </span>
+                  <span className={g.label ? "font-semibold text-fairway-900" : "text-gray-500"}>
+                    {g.label ?? "No skins won"}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </dd>
         </div>
       )}

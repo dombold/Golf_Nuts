@@ -3,8 +3,9 @@
  * Pure functions — shared by the live leaderboard (client) and server-rendered results.
  */
 
-import { strokesOnHole, stablefordPoints, ambroseTeamHandicap } from "./formats";
+import { strokesOnHole, stablefordPoints, ambroseTeamHandicap, calcSkins } from "./formats";
 import { applyCountback, traceCountback, type CountbackTrace } from "./countback";
+import { isHoleInPlay } from "./nines";
 
 export interface StandingsHole {
   number: number;
@@ -23,6 +24,9 @@ export interface StandingsRound {
   roundNumber: number;
   round: {
     id: string;
+    /** Which holes are in play (defaults to all 18 from hole 1) */
+    holesCount?: number;
+    startingHole?: number;
     tee?: { holes: StandingsHole[] } | null;
     players: StandingsPlayer[];
   } | null;
@@ -226,4 +230,69 @@ export function tournamentWinner(standings: Standing[], format: string): Tournam
   }
 
   return { name: label(first), detail, countbackLabel: first.countbackLabel };
+}
+
+// ─── Skins events: each group plays its own skins game ─────────────────────
+
+export interface SkinsGroupResult {
+  groupNumber: number;
+  roundId: string;
+  /** Every player in the group, most skins first */
+  totals: { playerId: string; name: string; skins: number }[];
+  /** Names of the leader(s) — more than one when tied; empty until someone wins a skin */
+  winners: string[];
+  /** Holes everyone in the group has scored */
+  holesDecided: number;
+  /** Skins riding on unwon holes at the end of the holes decided so far */
+  carried: number;
+}
+
+/** Skins results per group, in group order. A hole counts once everyone in the group has scored it. */
+export function calcSkinsGroups(rounds: StandingsRound[]): SkinsGroupResult[] {
+  return rounds
+    .filter((tr): tr is StandingsRound & { round: NonNullable<StandingsRound["round"]> } => !!tr.round)
+    .sort((a, b) => a.roundNumber - b.roundNumber)
+    .map(({ roundNumber, round }) => {
+      const holes = (round.tee?.holes ?? [])
+        .filter((h) => isHoleInPlay(h.number, round.holesCount ?? 18, round.startingHole ?? 1))
+        .sort((a, b) => a.number - b.number);
+
+      const { skins, totals } = calcSkins(
+        round.players.map((p) => ({
+          playerId: p.user.id,
+          name: p.user.name,
+          playingHandicap: p.playingHandicap,
+          holes: holes.map((h) => ({
+            holeNumber: h.number,
+            par: h.par,
+            strokeIndex: h.strokeIndex,
+            strokes: p.scores.find((s) => s.holeNumber === h.number)?.strokes ?? 0,
+          })),
+        }))
+      );
+
+      const sorted = [...totals].sort((a, b) => b.skins - a.skins || a.name.localeCompare(b.name));
+      const top = sorted[0]?.skins ?? 0;
+      let carried = 0;
+      for (let i = skins.length - 1; i >= 0 && skins[i].winnerId === null; i--) carried++;
+
+      return {
+        groupNumber: roundNumber,
+        roundId: round.id,
+        totals: sorted,
+        winners: top > 0 ? sorted.filter((t) => t.skins === top).map((t) => t.name) : [],
+        holesDecided: skins.length,
+        carried,
+      };
+    });
+}
+
+/** "Alice Green · 4 skins", "Alice & Bob (tied) · 3 skins each", or null if nobody has won a skin. */
+export function skinsGroupWinnerLabel(group: Pick<SkinsGroupResult, "winners" | "totals">): string | null {
+  if (group.winners.length === 0) return null;
+  const skins = group.totals[0].skins;
+  const plural = `skin${skins !== 1 ? "s" : ""}`;
+  if (group.winners.length === 1) return `${group.winners[0]} · ${skins} ${plural}`;
+  const names = group.winners.map(firstName);
+  return `${names.slice(0, -1).join(", ")} & ${names[names.length - 1]} (tied) · ${skins} ${plural} each`;
 }

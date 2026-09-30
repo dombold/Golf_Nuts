@@ -3,10 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
+  calcSkinsGroups,
   calcTournamentStandings,
   formatStandingScore,
   isAmbroseFormat,
+  skinsGroupWinnerLabel,
   tournamentWinner,
+  type SkinsGroupResult,
   type Standing,
 } from "@/lib/tournamentStandings";
 
@@ -20,14 +23,21 @@ interface Props {
 
 export default function TournamentLeaderboard({ tournamentId, format, isActive, highlightRoundId }: Props) {
   const [entries, setEntries] = useState<Standing[]>([]);
+  // Skins: each group plays its own game, so results are per group rather than one ranking
+  const [skinsGroups, setSkinsGroups] = useState<SkinsGroupResult[]>([]);
+  const isSkins = format === "SKINS";
   const [loading, setLoading] = useState(true);
 
   async function fetchScores() {
     const res = await fetch(`/api/tournaments/${tournamentId}`);
     if (!res.ok) return;
     const { tournament } = await res.json();
-    // Countback only once the tournament is complete
-    setEntries(calcTournamentStandings(tournament.rounds ?? [], format, !isActive));
+    if (isSkins) {
+      setSkinsGroups(calcSkinsGroups(tournament.rounds ?? []));
+    } else {
+      // Countback only once the tournament is complete
+      setEntries(calcTournamentStandings(tournament.rounds ?? [], format, !isActive));
+    }
     setLoading(false);
   }
 
@@ -41,6 +51,10 @@ export default function TournamentLeaderboard({ tournamentId, format, isActive, 
 
   if (loading) {
     return <div className="text-sm text-gray-500 animate-pulse">Loading leaderboard…</div>;
+  }
+
+  if (isSkins) {
+    return <SkinsGroupsBoard groups={skinsGroups} isActive={isActive} highlightRoundId={highlightRoundId} />;
   }
 
   if (entries.length === 0) {
@@ -108,6 +122,82 @@ export default function TournamentLeaderboard({ tournamentId, format, isActive, 
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+/** Skins event results: a card per group, plus a "Group winners" banner once the event is complete. */
+function SkinsGroupsBoard({
+  groups,
+  isActive,
+  highlightRoundId,
+}: {
+  groups: SkinsGroupResult[];
+  isActive: boolean;
+  highlightRoundId?: string;
+}) {
+  if (groups.length === 0 || groups.every((g) => g.holesDecided === 0)) {
+    return <div className="text-sm text-gray-500">No skins decided yet.</div>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {!isActive && (
+        <div className="bg-fairway-900 text-white rounded-2xl p-5 text-center">
+          <p className="text-fairway-300 text-xs uppercase tracking-widest mb-2">Group winners</p>
+          <ul className="space-y-1">
+            {groups.map((g) => (
+              <li key={g.roundId}>
+                <span className="text-fairway-300 text-sm">Group {g.groupNumber}: </span>
+                <span className="font-bold">{skinsGroupWinnerLabel(g) ? `🏆 ${skinsGroupWinnerLabel(g)}` : "No skins won"}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {groups.map((g) => {
+        const leaderSkins = g.winners.length > 0 ? g.totals[0].skins : null;
+        return (
+          <div
+            key={g.roundId}
+            className={`rounded-xl border overflow-hidden ${g.roundId === highlightRoundId ? "border-fairway-400" : "border-gray-200"}`}
+          >
+            <div className="bg-fairway-50 px-4 py-2 flex items-baseline justify-between">
+              <h3 className="font-semibold text-fairway-800 text-sm">Group {g.groupNumber}</h3>
+              <p className="text-xs text-gray-500">
+                {g.holesDecided} hole{g.holesDecided !== 1 ? "s" : ""} decided
+                {g.carried > 0 && ` · ${g.carried} carried`}
+              </p>
+            </div>
+            <table className="w-full text-sm">
+              <thead className="sr-only">
+                <tr>
+                  <th>Player</th>
+                  <th>Skins</th>
+                </tr>
+              </thead>
+              <tbody>
+                {g.totals.map((t) => {
+                  const leading = leaderSkins !== null && t.skins === leaderSkins;
+                  return (
+                    <tr key={t.playerId} className="border-t border-gray-100">
+                      <td className={`px-4 py-2 ${leading ? "font-semibold text-fairway-900" : "text-gray-800"}`}>
+                        {leading && !isActive && "🏆 "}
+                        {t.name}
+                        {leading && isActive && <span className="ml-2 text-xs text-fairway-600 font-medium">leading</span>}
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono text-gray-800">
+                        {t.skins} skin{t.skins !== 1 ? "s" : ""}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
     </div>
   );
 }
