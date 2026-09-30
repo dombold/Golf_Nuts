@@ -9,6 +9,7 @@ import TournamentLeaderboard from "@/components/tournament/TournamentLeaderboard
 import PrizeHolesCard from "@/components/tournament/PrizeHolesCard";
 import InviteeStatusControl from "@/components/tournament/InviteeStatusControl";
 import AddEventGuest from "@/components/tournament/AddEventGuest";
+import ScoreLockToggle from "@/components/tournament/ScoreLockToggle";
 import GuestRow from "@/components/guests/GuestRow";
 import { describeHoles } from "@/lib/nines";
 import { formatDisplayLabel } from "@/lib/gameFormats";
@@ -392,35 +393,11 @@ export default async function TournamentDetailPage({
             />
           </div>
 
-          {/* Mark complete (organiser only) */}
-          {isOrganiser && (
-            <form
-              className="space-y-2"
-              action={async () => {
-                "use server";
-                // Inline server action to mark complete — only once every group has finished its card
-                const { prisma: db } = await import("@/lib/prisma");
-                const open = await db.tournamentRound.count({ where: { tournamentId: id, round: { status: { not: "COMPLETE" } } } });
-                if (open === 0) {
-                  await db.tournament.updateMany({ where: { id, status: "ACTIVE" }, data: { status: "COMPLETE", completedAt: new Date() } });
-                }
-                const { revalidatePath } = await import("next/cache");
-                revalidatePath(`/tournaments/${id}`);
-              }}
-            >
-              {unfinishedGroups.length > 0 && (
-                <p role="status" className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                  {unfinishedGroupsMessage(unfinishedGroups)}
-                </p>
-              )}
-              <button
-                type="submit"
-                disabled={unfinishedGroups.length > 0}
-                className="w-full py-2.5 border border-gray-300 text-gray-600 rounded-xl text-sm font-medium hover:border-gray-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-gray-300"
-              >
-                Mark tournament complete
-              </button>
-            </form>
+          {/* The event completes by itself once every group has finished its card */}
+          {isOrganiser && unfinishedGroups.length > 0 && (
+            <p role="status" className="text-xs text-gray-500">
+              {unfinishedGroupsMessage(unfinishedGroups)}
+            </p>
           )}
         </>
       )}
@@ -428,6 +405,12 @@ export default async function TournamentDetailPage({
       {/* ── COMPLETE STATE ── */}
       {tournament.status === "COMPLETE" && (
         <>
+          {!isOrganiser && tournament.scoresLockedAt && (
+            <p role="status" className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+              🔒 Scores locked by the organiser.
+            </p>
+          )}
+
           <div className="space-y-2">
             <h2 className="text-base font-semibold text-fairway-900">Final Results</h2>
             <TournamentLeaderboard
@@ -448,16 +431,31 @@ export default async function TournamentDetailPage({
                       {tr.round.players.map((p) => p.user.name.split(" ")[0]).join(", ")}
                     </p>
                   </div>
-                  <Link
-                    href={`/rounds/${tr.round.id}/summary`}
-                    className="text-xs text-fairway-700 hover:underline font-medium"
-                  >
-                    View →
-                  </Link>
+                  <div className="flex items-center gap-3">
+                    {/* The organiser can correct any group's card, locked or not */}
+                    {isOrganiser && (
+                      <Link
+                        href={`/rounds/${tr.round.id}/score`}
+                        className="text-xs text-fairway-700 hover:underline font-medium"
+                      >
+                        Edit →
+                      </Link>
+                    )}
+                    <Link
+                      href={`/rounds/${tr.round.id}/summary`}
+                      className="text-xs text-fairway-700 hover:underline font-medium"
+                    >
+                      View →
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
+
+          {isOrganiser && (
+            <ScoreLockToggle tournamentId={id} lockedAt={tournament.scoresLockedAt?.toISOString() ?? null} />
+          )}
         </>
       )}
 

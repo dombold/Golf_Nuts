@@ -45,7 +45,7 @@ export default async function RoundSummaryPage({
         take: 1,
         select: {
           roundNumber: true,
-          tournament: { select: { id: true, _count: { select: { rounds: true } } } },
+          tournament: { select: { id: true, createdById: true, scoresLockedAt: true, _count: { select: { rounds: true } } } },
         },
       },
     },
@@ -63,6 +63,8 @@ export default async function RoundSummaryPage({
   const guestPlayers = round.players.filter((rp) => rp.user.isGuest);
   const guestRoundPlayerIds = new Set(guestPlayers.map((rp) => rp.id));
   const canManageGuests = !tournamentRound && !!session?.user && round.createdById === session.user.id;
+  // Locked events: only the organiser can still change scores
+  const scoresLocked = !!tournamentRound?.tournament.scoresLockedAt && tournamentRound.tournament.createdById !== session?.user?.id;
 
   const playedHoles = round.tee.holes.filter(
     (h) => h.number >= round.startingHole && h.number < round.startingHole + round.holesCount
@@ -437,12 +439,21 @@ export default async function RoundSummaryPage({
         >
           ← Back to Dashboard
         </Link>
-        <Link
-          href={`/rounds/${id}/score`}
-          className="flex-1 text-center py-3 bg-white border border-fairway-200 text-fairway-800 rounded-xl font-semibold hover:bg-fairway-50 transition-colors"
-        >
-          Edit Scores
-        </Link>
+        {scoresLocked ? (
+          <span
+            role="status"
+            className="flex-1 text-center py-3 bg-gray-50 border border-gray-200 text-gray-500 rounded-xl font-semibold"
+          >
+            🔒 Scores locked
+          </span>
+        ) : (
+          <Link
+            href={`/rounds/${id}/score`}
+            className="flex-1 text-center py-3 bg-white border border-fairway-200 text-fairway-800 rounded-xl font-semibold hover:bg-fairway-50 transition-colors"
+          >
+            Edit Scores
+          </Link>
+        )}
         <DeleteRoundButton roundId={id} />
       </div>
     </div>

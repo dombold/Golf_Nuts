@@ -280,6 +280,8 @@ model Tournament {
   skinsCarryOver Boolean       @default(true)
   stablefordTeamSize Int       @default(1)
   completedAt DateTime?
+  /// Set when the organiser locks scores (players can no longer edit; the organiser still can)
+  scoresLockedAt DateTime?
   createdAt   DateTime         @default(now())
 
   createdById String

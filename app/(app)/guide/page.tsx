@@ -622,9 +622,11 @@ export default function GuidePage() {
           <p>
             <span className="font-semibold text-fairway-900">Finishing and the winner</span> — When
             the last group taps <span className="font-semibold">Finish Round</span>, the event
-            completes automatically. The organiser&apos;s{" "}
-            <span className="font-semibold">Mark tournament complete</span> button only works once
-            every group has finished its card, so results never include unfinished rounds. There is <span className="font-semibold">one overall winner</span> — the best
+            completes automatically — results never include unfinished cards. Once it&apos;s complete
+            the organiser can tap <span className="font-semibold">🔒 Lock scores</span> so players
+            can&apos;t change their scores any further; the organiser can still correct any
+            group&apos;s card (the <span className="font-semibold">Edit →</span> link beside each
+            group) and can unlock the scores again. There is <span className="font-semibold">one overall winner</span> — the best
             player or team across all groups — shown in the{" "}
             <span className="font-semibold">Final Results</span> on the event page. Ties are decided
             by{" "}

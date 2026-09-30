@@ -167,6 +167,8 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     data.status = status;
     // Record when the event finished (drives the move to Previous Events); clear it if re-opened
     data.completedAt = status === "COMPLETE" ? new Date() : null;
+    // A re-opened event is back in play — any score lock no longer applies
+    if (status === "ACTIVE") data.scoresLockedAt = null;
   }
 
   const newHolesCount = holesCount ?? tournament.holesCount;

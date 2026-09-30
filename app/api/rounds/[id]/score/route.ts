@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isHoleInPlay } from "@/lib/nines";
 import { recordRoundDifferential } from "@/lib/recalcHandicap";
+import { scoreAccess } from "@/lib/scoreAccess";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -42,8 +43,10 @@ export async function POST(
     },
   });
   if (!round) return Response.json({ error: "Round not found" }, { status: 404 });
-  if (!round.players.some((p) => p.userId === session.user.id)) {
-    return Response.json({ error: "Forbidden" }, { status: 403 });
+  // Players in the round, or the event organiser (who can still edit once scores are locked)
+  const access = await scoreAccess(roundId, session.user.id);
+  if (!access?.canEdit) {
+    return Response.json({ error: access?.reason ?? "Forbidden" }, { status: 403 });
   }
   const roundPlayer = round.players.find((p) => p.id === roundPlayerId);
   if (!roundPlayer) {
@@ -107,5 +110,6 @@ export async function GET(
 
   if (!round) return Response.json({ error: "Round not found" }, { status: 404 });
 
-  return Response.json({ round });
+  const access = await scoreAccess(roundId, session.user.id);
+  return Response.json({ round, access });
 }

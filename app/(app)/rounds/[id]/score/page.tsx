@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
 import HoleMap from "@/components/HoleMap";
 import TournamentLeaderboard from "@/components/tournament/TournamentLeaderboard";
 import { useParams, useRouter } from "next/navigation";
@@ -118,6 +119,8 @@ function TeamScoreCard({ teamNumber, memberNames, strokes, teamHandicap, holePar
   );
 }
 
+interface ScoreAccessInfo { canEdit: boolean; locked: boolean; isOrganiser: boolean }
+
 export default function ScoringPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -132,8 +135,11 @@ export default function ScoringPage() {
   const [tab, setTab] = useState<"score" | "leaderboard">("score");
   const firstLoadRef = useRef(true);
   const [popupDismissedForHole, setPopupDismissedForHole] = useState<number | null>(null);
+  // Whether this viewer may enter scores (players, or the event organiser; players are shut out once scores are locked)
+  const [access, setAccess] = useState<ScoreAccessInfo | null>(null);
 
-  const applyRoundData = useCallback((data: { round?: Round }) => {
+  const applyRoundData = useCallback((data: { round?: Round; access?: ScoreAccessInfo | null }) => {
+    if (data.access) setAccess(data.access);
     if (data.round) {
       // Flatten prize holes from the tournament relation onto the round
       data.round.prizeHoles =
@@ -319,6 +325,34 @@ export default function ScoringPage() {
     );
   }
 
+  // Can't enter scores here: the event's scores are locked, or the viewer isn't in this group
+  if (access && !access.canEdit) {
+    return (
+      <div className="space-y-4 max-w-xl">
+        <div className="bg-fairway-900 text-white rounded-2xl px-4 py-3">
+          <p className="font-bold">{round.course.name}</p>
+          <p className="text-fairway-300 text-xs">{round.tee.name} tees · {formatDisplayLabel(round.format, round.stablefordTeamSize)}</p>
+        </div>
+        <div role="status" className="bg-white rounded-xl border border-gray-200 p-4 space-y-3 text-sm text-gray-700">
+          <p className="font-semibold text-fairway-900">
+            {access.locked ? "🔒 Scores are locked by the organiser" : "Only this group's players can enter its scores"}
+          </p>
+          <p>
+            {access.locked
+              ? "The event is finished and its scores can no longer be changed. Contact the organiser if something needs fixing."
+              : "You can follow along on the event leaderboard or view the round summary."}
+          </p>
+          <Link
+            href={`/rounds/${id}/summary`}
+            className="inline-block px-3 py-2 bg-fairway-700 text-white rounded-lg text-sm font-semibold hover:bg-fairway-800 active:bg-fairway-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500 focus-visible:ring-offset-2"
+          >
+            View summary →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const holes = holesInPlay(round);
   const hole = holes.find((h) => h.number === currentHole);
   const lastHoleNumber = holes[holes.length - 1]?.number ?? 18;
@@ -397,7 +431,9 @@ export default function ScoringPage() {
           <p className="font-bold">{round.course.name}</p>
           <p className="text-fairway-300 text-xs">{round.tee.name} tees · {formatDisplayLabel(round.format, round.stablefordTeamSize)}</p>
           {round.status === "COMPLETE" && (
-            <p className="text-xs text-acorn-400 mt-0.5">Editing saved round</p>
+            <p className="text-xs text-acorn-400 mt-0.5">
+              {access?.locked ? "Organiser edit — scores are locked for players" : "Editing saved round"}
+            </p>
           )}
         </div>
         <div className="text-right">

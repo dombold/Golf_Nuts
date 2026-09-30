@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { recordRoundDifferential } from "@/lib/recalcHandicap";
 import { formatMissing, missingScores } from "@/lib/roundCompletion";
 import { isHoleInPlay } from "@/lib/nines";
+import { scoreAccess } from "@/lib/scoreAccess";
 import type { NextRequest } from "next/server";
 
 export async function POST(
@@ -35,8 +36,10 @@ export async function POST(
     },
   });
   if (!round) return Response.json({ error: "Round not found" }, { status: 404 });
-  if (!round.players.some((p) => p.userId === session.user.id)) {
-    return Response.json({ error: "Forbidden" }, { status: 403 });
+  // Players in the round, or the event organiser finishing a group's card for them
+  const access = await scoreAccess(roundId, session.user.id);
+  if (!access?.canEdit) {
+    return Response.json({ error: access?.reason ?? "Forbidden" }, { status: 403 });
   }
   if (round.status === "COMPLETE") return Response.json({ success: true, alreadyComplete: true });
 
