@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import HolesPicker from "@/components/HolesPicker";
 import { isHoleInPlay, type HolesCount, type StartingHole } from "@/lib/nines";
 import { EVENT_FORMATS } from "@/lib/gameFormats";
-import SkinsCarryOverToggle from "@/components/SkinsCarryOverToggle";
 import FormatPicker from "@/components/FormatPicker";
 
 interface Course { id: string; name: string; tees: Tee[]; suburb?: string | null; city?: string | null; address?: string | null; phone?: string | null }
@@ -335,9 +334,10 @@ export default function NewTournamentPage() {
             onChange={setFormat}
             stablefordTeamSize={stablefordTeamSize}
             onStablefordTeamSizeChange={setStablefordTeamSize}
+            skinsCarryOver={skinsCarryOver}
+            onSkinsCarryOverChange={setSkinsCarryOver}
           />
 
-          {format === "SKINS" && <SkinsCarryOverToggle checked={skinsCarryOver} onChange={setSkinsCarryOver} />}
 
           {/* Prize Holes checkbox */}
           <div

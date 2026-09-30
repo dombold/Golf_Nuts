@@ -7,7 +7,6 @@ import { GAME_FORMATS, isTeamGame, teamSizeFor } from "@/lib/gameFormats";
 import { oddNumberHint, splitIntoTeams, teamGameLabels, teamWarnings } from "@/lib/teams";
 import { calcPlayingHandicap } from "@/lib/handicap";
 import { ambroseTeamHandicap } from "@/lib/formats";
-import SkinsCarryOverToggle from "@/components/SkinsCarryOverToggle";
 import FormatPicker from "@/components/FormatPicker";
 
 interface Course { id: string; name: string; suburb: string | null; city: string | null; address?: string | null; phone?: string | null; tees: Tee[] }
@@ -349,8 +348,9 @@ function NewRoundForm() {
             onChange={setFormat}
             stablefordTeamSize={stablefordTeamSize}
             onStablefordTeamSizeChange={setStablefordTeamSize}
+            skinsCarryOver={skinsCarryOver}
+            onSkinsCarryOverChange={setSkinsCarryOver}
           />
-          {format === "SKINS" && <SkinsCarryOverToggle checked={skinsCarryOver} onChange={setSkinsCarryOver} />}
           <div className="flex gap-3">
             <button onClick={() => setStep(1)} className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50">
               ← Back

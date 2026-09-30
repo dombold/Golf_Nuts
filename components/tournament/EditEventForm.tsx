@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import HolesPicker from "@/components/HolesPicker";
 import type { HolesCount, StartingHole } from "@/lib/nines";
 import { EVENT_FORMATS } from "@/lib/gameFormats";
-import SkinsCarryOverToggle from "@/components/SkinsCarryOverToggle";
 import FormatPicker from "@/components/FormatPicker";
 
 interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
@@ -168,8 +167,9 @@ export default function EditEventForm({ tournament }: { tournament: TournamentDa
           onChange={setFormat}
           stablefordTeamSize={stablefordTeamSize}
           onStablefordTeamSizeChange={setStablefordTeamSize}
+          skinsCarryOver={skinsCarryOver}
+          onSkinsCarryOverChange={setSkinsCarryOver}
         />
-        {format === "SKINS" && <SkinsCarryOverToggle checked={skinsCarryOver} onChange={setSkinsCarryOver} />}
       </div>
 
       {/* Course */}
