@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { canOrganise, logTournamentAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -15,7 +16,7 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
   const { id } = await params;
   const tournament = await prisma.tournament.findUnique({ where: { id }, select: { createdById: true, status: true } });
   if (!tournament) return Response.json({ error: "Tournament not found" }, { status: 404 });
-  if (tournament.createdById !== session.user.id) return Response.json({ error: "Forbidden" }, { status: 403 });
+  if (!(await canOrganise(tournament.createdById, session.user.id))) return Response.json({ error: "Forbidden" }, { status: 403 });
   if (tournament.status !== "COMPLETE") {
     return Response.json({ error: "Scores can only be locked once the event is complete" }, { status: 409 });
   }
@@ -28,5 +29,6 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
     data: { scoresLockedAt: parsed.data.locked ? new Date() : null },
     select: { scoresLockedAt: true },
   });
+  await logTournamentAction(session.user.id, "tournament.lock", { id, createdById: tournament.createdById }, parsed.data.locked ? "Locked scores" : "Unlocked scores");
   return Response.json({ scoresLockedAt: updated.scoresLockedAt });
 }

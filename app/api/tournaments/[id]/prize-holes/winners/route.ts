@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { canOrganise, logTournamentAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { z } from "zod";
@@ -31,7 +32,7 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
     },
   });
   if (!tournament) return Response.json({ error: "Tournament not found" }, { status: 404 });
-  if (tournament.createdById !== session.user.id) return Response.json({ error: "Forbidden" }, { status: 403 });
+  if (!(await canOrganise(tournament.createdById, session.user.id))) return Response.json({ error: "Forbidden" }, { status: 403 });
   if (tournament.status === "UPCOMING") {
     return Response.json({ error: "Prize winners can be recorded once the event has started" }, { status: 409 });
   }
@@ -66,5 +67,6 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
     orderBy: { holeNumber: "asc" },
   });
 
+  await logTournamentAction(session.user.id, "tournament.prizeWinners", { id, createdById: tournament.createdById }, "Recorded prize winners");
   return Response.json({ prizeHoles });
 }

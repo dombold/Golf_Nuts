@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiErrorMessage } from "@/lib/apiError";
 
-export default function DeleteTournamentButton({ tournamentId }: { tournamentId: string }) {
+/** `warning`: what else goes with the event (its rounds, handicap effects) — shown at the confirm step. */
+export default function DeleteTournamentButton({ tournamentId, warning }: { tournamentId: string; warning?: string }) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -25,7 +26,8 @@ export default function DeleteTournamentButton({ tournamentId }: { tournamentId:
 
   if (confirming) {
     return (
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {warning && <p className="w-full text-xs text-red-700 text-right">{warning}</p>}
         <button
           onClick={() => setConfirming(false)}
           className="text-xs px-2 py-1 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50"

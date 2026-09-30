@@ -4,6 +4,7 @@ import { recordRoundDifferential } from "@/lib/recalcHandicap";
 import { formatMissing, missingScores } from "@/lib/roundCompletion";
 import { isHoleInPlay } from "@/lib/nines";
 import { scoreAccess } from "@/lib/scoreAccess";
+import { logAdminAction, roundLabel } from "@/lib/permissions";
 import type { NextRequest } from "next/server";
 
 export async function POST(
@@ -66,6 +67,10 @@ export async function POST(
     data: { status: "COMPLETE" },
   });
   if (count === 0) return Response.json({ success: true, alreadyComplete: true });
+
+  if (access.isAdmin) {
+    await logAdminAction(session.user.id, "round.complete", { type: "round", id: roundId, ownerId: access.ownerId }, `Completed round: ${await roundLabel(roundId)}`);
+  }
 
   // Tournament rounds: once every group has finished, the tournament is complete
   const tournamentRound = await prisma.tournamentRound.findFirst({

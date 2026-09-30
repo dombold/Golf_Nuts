@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { isHoleInPlay } from "@/lib/nines";
 import { recordRoundDifferential } from "@/lib/recalcHandicap";
 import { scoreAccess } from "@/lib/scoreAccess";
+import { logAdminAction, roundLabel } from "@/lib/permissions";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -43,7 +44,7 @@ export async function POST(
     },
   });
   if (!round) return Response.json({ error: "Round not found" }, { status: 404 });
-  // Players in the round, or the event organiser (who can still edit once scores are locked)
+  // Players in the round, or the event organiser / an admin (who can still edit once scores are locked)
   const access = await scoreAccess(roundId, session.user.id);
   if (!access?.canEdit) {
     return Response.json({ error: access?.reason ?? "Forbidden" }, { status: 403 });
@@ -61,6 +62,16 @@ export async function POST(
     update: { strokes, penalties, putts, fairwayHit, gir },
     create: { roundPlayerId, holeNumber, strokes, penalties, putts, fairwayHit, gir },
   });
+
+  if (access.isAdmin) {
+    await logAdminAction(
+      session.user.id,
+      "score.edit",
+      { type: "round", id: roundId, ownerId: access.ownerId },
+      `Edited scores: ${await roundLabel(roundId)}${access.locked ? " (event locked)" : ""}`,
+      { dedupeMinutes: 60 }
+    );
+  }
 
   // Editing a finished strokeplay round must refresh that player's handicap differential
   if (round.status === "COMPLETE" && round.format === "STROKEPLAY") {

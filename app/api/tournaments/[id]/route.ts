@@ -1,4 +1,6 @@
 import { auth } from "@/lib/auth";
+import { canOrganise, logTournamentAction } from "@/lib/permissions";
+import { deleteTournamentWithRounds } from "@/lib/deleteTournament";
 import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { z } from "zod";
@@ -99,7 +101,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 
   const tournament = await prisma.tournament.findUnique({ where: { id } });
   if (!tournament) return Response.json({ error: "Tournament not found" }, { status: 404 });
-  if (tournament.createdById !== session.user.id) {
+  if (!(await canOrganise(tournament.createdById, session.user.id))) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -214,6 +216,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     return tx.tournament.update({ where: { id }, data });
   });
 
+  await logTournamentAction(session.user.id, "tournament.edit", { id, createdById: tournament.createdById }, "Edited event");
   return Response.json({ tournament: updated });
 }
 
@@ -225,11 +228,12 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
 
   const tournament = await prisma.tournament.findUnique({ where: { id } });
   if (!tournament) return Response.json({ error: "Tournament not found" }, { status: 404 });
-  if (tournament.createdById !== session.user.id) {
+  if (!(await canOrganise(tournament.createdById, session.user.id))) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  await prisma.tournament.delete({ where: { id } });
+  await logTournamentAction(session.user.id, "tournament.delete", { id, createdById: tournament.createdById }, "Deleted event");
+  await deleteTournamentWithRounds(id);
 
   return Response.json({ success: true });
 }

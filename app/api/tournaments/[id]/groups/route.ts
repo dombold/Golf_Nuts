@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { canOrganise, logTournamentAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { z } from "zod";
@@ -34,7 +35,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     },
   });
   if (!tournament) return Response.json({ error: "Tournament not found" }, { status: 404 });
-  if (tournament.createdById !== session.user.id) {
+  if (!(await canOrganise(tournament.createdById, session.user.id))) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
   if (tournament.status !== "UPCOMING") {
@@ -90,5 +91,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
   });
 
+  await logTournamentAction(session.user.id, "tournament.groups", { id: tournamentId, createdById: tournament.createdById }, "Edited groups");
   return Response.json({ success: true });
 }

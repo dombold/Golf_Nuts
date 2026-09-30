@@ -19,7 +19,13 @@ function getInitials(name: string): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-export default function NavBar({ user }: { user: { name: string; username: string; avatarUrl?: string | null } }) {
+export default function NavBar({
+  user,
+  isAdmin = false,
+}: {
+  user: { name: string; username: string; avatarUrl?: string | null };
+  isAdmin?: boolean;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -86,6 +92,17 @@ export default function NavBar({ user }: { user: { name: string; username: strin
                   View Profile
                 </Link>
 
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:bg-gray-50"
+                  >
+                    <span aria-hidden="true">🛡️</span>
+                    Admin
+                  </Link>
+                )}
+
                 <div className="border-t border-gray-100 mt-1 pt-1">
                   <form action={logout}>
                     <button
@@ -145,6 +162,19 @@ export default function NavBar({ user }: { user: { name: string; username: strin
             );
           })}
         </div>
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-400 ${
+              pathname === "/admin" || pathname.startsWith("/admin/")
+                ? "bg-fairway-700 text-white"
+                : "text-fairway-400 hover:bg-fairway-800 hover:text-white"
+            }`}
+          >
+            <span className="text-base" aria-hidden="true">🛡️</span>
+            Admin
+          </Link>
+        )}
       </aside>
     </>
   );

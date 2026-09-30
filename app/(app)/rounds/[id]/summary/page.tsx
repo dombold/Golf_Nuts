@@ -21,6 +21,7 @@ import DeleteRoundButton from "@/components/DeleteRoundButton";
 import GuestBadge from "@/components/guests/GuestBadge";
 import GuestRow from "@/components/guests/GuestRow";
 import { auth } from "@/lib/auth";
+import { isAdmin } from "@/lib/permissions";
 
 export default async function RoundSummaryPage({
   params,
@@ -62,9 +63,11 @@ export default async function RoundSummaryPage({
   // to a member (event guests are managed from the event page)
   const guestPlayers = round.players.filter((rp) => rp.user.isGuest);
   const guestRoundPlayerIds = new Set(guestPlayers.map((rp) => rp.id));
-  const canManageGuests = !tournamentRound && !!session?.user && round.createdById === session.user.id;
+  const admin = !!session?.user && (await isAdmin(session.user.id));
+  const canManageGuests = !tournamentRound && !!session?.user && (round.createdById === session.user.id || admin);
   // Locked events: only the organiser can still change scores
-  const scoresLocked = !!tournamentRound?.tournament.scoresLockedAt && tournamentRound.tournament.createdById !== session?.user?.id;
+  const scoresLocked =
+    !!tournamentRound?.tournament.scoresLockedAt && tournamentRound.tournament.createdById !== session?.user?.id && !admin;
 
   const playedHoles = round.tee.holes.filter(
     (h) => h.number >= round.startingHole && h.number < round.startingHole + round.holesCount

@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { canOrganise } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { splitIntoTeams } from "@/lib/teams";
@@ -92,7 +93,7 @@ export async function GET(
     select: { createdById: true, status: true, format: true, stablefordTeamSize: true, teeId: true, course: { select: { tees: { select: { id: true }, take: 1 } } } },
   });
   if (!tournament) return Response.json({ error: "Tournament not found" }, { status: 404 });
-  if (tournament.createdById !== session.user.id) {
+  if (!(await canOrganise(tournament.createdById, session.user.id))) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
   if (tournament.status !== "UPCOMING") {

@@ -1,8 +1,10 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isAdmin } from "@/lib/permissions";
 import Link from "next/link";
 import { liveTournamentWhere } from "@/lib/staleTournaments";
 import DeleteTournamentButton from "@/components/DeleteTournamentButton";
+import { eventDeletionWarning } from "@/lib/deleteTournament";
 import PastTournamentsDropdown from "@/components/tournament/PastTournamentsDropdown";
 import TournamentResultSummary, {
   type PrizeResult,
@@ -35,6 +37,7 @@ function daysAgo(days: number): Date {
 export default async function TournamentsPage() {
   const session = await auth();
   const userId = session!.user.id;
+  const admin = await isAdmin(userId);
 
   // Completed events stay at the top for a day after finishing, then move to Previous Events
   const finishedCutoff = daysAgo(1);
@@ -47,7 +50,7 @@ export default async function TournamentsPage() {
           tee: { select: { holes: { select: { number: true, strokeIndex: true, par: true } } } },
           players: {
             include: {
-              user: { select: { id: true, name: true } },
+              user: { select: { id: true, name: true, isGuest: true } },
               scores: { select: { holeNumber: true, strokes: true } },
             },
           },
@@ -205,10 +208,10 @@ export default async function TournamentsPage() {
                   </div>
                 )}
 
-                {/* Delete (organiser only) */}
-                {t.createdById === userId && (
+                {/* Delete (organiser or admin) */}
+                {(t.createdById === userId || admin) && (
                   <div className="px-4 py-2 border-t border-fairway-50 flex justify-end">
-                    <DeleteTournamentButton tournamentId={t.id} />
+                    <DeleteTournamentButton tournamentId={t.id} warning={eventDeletionWarning(t.rounds.map((tr) => tr.round))} />
                   </div>
                 )}
               </div>

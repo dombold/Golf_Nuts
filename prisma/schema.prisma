@@ -20,6 +20,8 @@ model User {
   // Guest (temporary) players: added by an organiser, cannot log in, scored by teammates.
   isGuest          Boolean  @default(false)
   guestCreatedById String?
+  // Administrators act as organiser on every event and casual round, and can use /admin
+  isAdmin        Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -39,6 +41,7 @@ model User {
   guestCreatedBy         User?                    @relation("GuestCreator", fields: [guestCreatedById], references: [id], onDelete: SetNull)
   createdGuests          User[]                   @relation("GuestCreator")
   createdRounds          Round[]                  @relation("RoundCreator")
+  adminActions           AdminAuditLog[]
 
   @@index([isGuest])
   @@map("users")
@@ -409,4 +412,21 @@ model WebAuthnChallenge {
   user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("webauthn_challenges")
+}
+
+/// Actions an administrator took on something they don't own (another organiser's event, a member's account, ...)
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  targetType String
+  targetId   String?
+  /// Human-readable; kept even after the target is deleted
+  summary    String
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@map("admin_audit_log")
 }

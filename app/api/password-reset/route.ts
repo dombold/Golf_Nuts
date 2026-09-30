@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendPasswordResetEmail } from "@/lib/email";
-import crypto from "crypto";
+import { issuePasswordReset } from "@/lib/passwordReset";
 import { z } from "zod";
 
 const Schema = z.object({ email: z.email() });
@@ -19,23 +18,7 @@ export async function POST(req: NextRequest) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || user.isGuest) return ok();
 
-  await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
-
-  const plaintext = crypto.randomBytes(32).toString("hex");
-  const tokenHash = crypto.createHash("sha256").update(plaintext).digest("hex");
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
-
-  await prisma.passwordResetToken.create({
-    data: { tokenHash, email, userId: user.id, expiresAt },
-  });
-
-  const resetUrl = `${process.env.NEXTAUTH_URL}/reset-password/${plaintext}`;
-
-  try {
-    await sendPasswordResetEmail(email, resetUrl);
-  } catch (err) {
-    console.error("[password-reset] email send failed:", err);
-  }
+  await issuePasswordReset({ id: user.id, email });
 
   return ok();
 }

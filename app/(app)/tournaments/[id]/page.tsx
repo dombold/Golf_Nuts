@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isAdmin } from "@/lib/permissions";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import InvitationResponseCard from "@/components/tournament/InvitationResponseCard";
@@ -79,7 +80,9 @@ export default async function TournamentDetailPage({
 
   if (!tournament) notFound();
 
-  const isOrganiser = tournament.createdById === userId;
+  // Administrators get the organiser's controls on every event
+  const isOwner = tournament.createdById === userId;
+  const isOrganiser = isOwner || (await isAdmin(userId));
   const myInvitation = tournament.invitations.find((inv) => inv.userId === userId);
   const acceptedPlayers = tournament.invitations
     .filter((inv) => inv.status === "ACCEPTED")
@@ -191,6 +194,12 @@ export default async function TournamentDetailPage({
         </div>
       </dl>
 
+      {isOrganiser && !isOwner && (
+        <p role="status" className="text-xs text-acorn-700 bg-acorn-50 border border-acorn-200 rounded-lg px-3 py-2">
+          Admin: you&apos;re managing {tournament.createdBy.name}&apos;s event. Changes are recorded in the audit log.
+        </p>
+      )}
+
       {/* Edit event details — organiser only, UPCOMING only */}
       {isOrganiser && tournament.status === "UPCOMING" && (
         <Link
@@ -220,7 +229,7 @@ export default async function TournamentDetailPage({
       {tournament.status === "UPCOMING" && (
         <>
           {/* Invitation response (non-organiser, pending) */}
-          {!isOrganiser && myInvitation?.status === "PENDING" && (
+          {!isOwner && myInvitation?.status === "PENDING" && (
             <InvitationResponseCard
               tournamentId={id}
               tournamentName={tournament.name}
@@ -232,14 +241,14 @@ export default async function TournamentDetailPage({
           )}
 
           {/* Accepted non-organiser — waiting */}
-          {!isOrganiser && myInvitation?.status === "ACCEPTED" && (
+          {!isOwner && myInvitation?.status === "ACCEPTED" && (
             <div className="rounded-xl border border-fairway-200 bg-fairway-50 px-4 py-3 text-sm text-fairway-700">
               You&apos;re in! The organiser will arrange groups before the round starts.
             </div>
           )}
 
           {/* Declined */}
-          {!isOrganiser && myInvitation?.status === "DECLINED" && (
+          {!isOwner && myInvitation?.status === "DECLINED" && (
             <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
               You&apos;re not playing in this event.
             </div>

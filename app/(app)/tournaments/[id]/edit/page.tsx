@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canOrganise } from "@/lib/permissions";
 import { notFound, redirect } from "next/navigation";
 import EditEventForm from "@/components/tournament/EditEventForm";
 
@@ -30,7 +31,7 @@ export default async function EditTournamentPage({
   });
 
   if (!tournament) notFound();
-  if (tournament.createdById !== userId || tournament.status !== "UPCOMING") {
+  if (!(await canOrganise(tournament.createdById, userId)) || tournament.status !== "UPCOMING") {
     redirect(`/tournaments/${id}`);
   }
 

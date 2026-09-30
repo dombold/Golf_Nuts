@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
+import { canOrganise, logTournamentAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { GuestInputSchema, createGuest, pruneGuests, validateGuestName } from "@/lib/guests";
 
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     select: { createdById: true, status: true },
   });
   if (!tournament) return Response.json({ error: "Tournament not found" }, { status: 404 });
-  if (tournament.createdById !== session.user.id) return Response.json({ error: "Forbidden" }, { status: 403 });
+  if (!(await canOrganise(tournament.createdById, session.user.id))) return Response.json({ error: "Forbidden" }, { status: 403 });
   if (tournament.status !== "UPCOMING") {
     return Response.json({ error: "Guests can only be added before the event starts" }, { status: 409 });
   }
@@ -41,5 +42,6 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   });
 
   await pruneGuests();
+  await logTournamentAction(session.user.id, "tournament.guest", { id, createdById: tournament.createdById }, "Added a guest");
   return Response.json({ guest }, { status: 201 });
 }

@@ -119,7 +119,7 @@ function TeamScoreCard({ teamNumber, memberNames, strokes, teamHandicap, holePar
   );
 }
 
-interface ScoreAccessInfo { canEdit: boolean; locked: boolean; isOrganiser: boolean }
+interface ScoreAccessInfo { canEdit: boolean; locked: boolean; isOrganiser: boolean; isAdmin?: boolean }
 
 export default function ScoringPage() {
   const { id } = useParams<{ id: string }>();
@@ -430,7 +430,11 @@ export default function ScoringPage() {
         <div>
           <p className="font-bold">{round.course.name}</p>
           <p className="text-fairway-300 text-xs">{round.tee.name} tees · {formatDisplayLabel(round.format, round.stablefordTeamSize)}</p>
-          {round.status === "COMPLETE" && (
+          {access?.isAdmin ? (
+            <p className="text-xs text-acorn-400 mt-0.5">
+              Admin edit{access.locked ? " — scores are locked for players" : ""} · recorded in the audit log
+            </p>
+          ) : round.status === "COMPLETE" && (
             <p className="text-xs text-acorn-400 mt-0.5">
               {access?.locked ? "Organiser edit — scores are locked for players" : "Editing saved round"}
             </p>

@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { MemberDetailsSchema } from "@/lib/memberSchema";
 import { signIn, signOut, auth, isFreshResetSession } from "@/lib/auth";
 import { sendWelcomeEmail } from "@/lib/email";
 import bcrypt from "bcryptjs";
@@ -27,17 +28,7 @@ const RegisterSchema = z.object({
   handicapIndex: z.coerce.number().min(0).max(54).default(0),
 });
 
-const UpdateProfileSchema = z.object({
-  username: z
-    .string()
-    .min(3, "Username must be at least 3 characters")
-    .max(30, "Username must be 30 characters or fewer")
-    .regex(/^[a-zA-Z0-9_]+$/, "Username may only contain letters, numbers, and underscores")
-    .refine((u) => !/^guest_/i.test(u), "Usernames starting with guest_ are reserved")
-    .trim(),
-  firstName: z.string().min(1, "First name is required").trim(),
-  lastName: z.string().min(1, "Last name is required").trim(),
-  email: z.email("Invalid email address").trim(),
+const UpdateProfileSchema = MemberDetailsSchema.extend({
   handicapIndex: z.coerce.number().min(0, "Handicap must be 0 or above").max(54, "Handicap must be 54 or below"),
 });
 

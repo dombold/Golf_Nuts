@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
+import { isAdmin, logAdminAction } from "@/lib/permissions";
 import type { Prisma } from "@/app/generated/prisma/client";
 import { recordRoundDifferential, updateHandicapIndex } from "@/lib/recalcHandicap";
 import { type GuestInput, guestNameProblem, normaliseGuestName } from "@/lib/guestNames";
@@ -93,12 +94,29 @@ async function loadGuest(guestId: string) {
 }
 
 /** The guest's creator, the organiser of an event they're in, or the creator of a round they played. */
-function canManage(guest: Awaited<ReturnType<typeof loadGuest>>, actorId: string): boolean {
+function isGuestOwner(guest: Awaited<ReturnType<typeof loadGuest>>, actorId: string): boolean {
   return (
     guest.guestCreatedById === actorId ||
     guest.tournamentInvitations.some((i) => i.tournament.createdById === actorId) ||
     guest.rounds.some((rp) => rp.round.createdById === actorId)
   );
+}
+
+/**
+ * Throw 403 unless the actor owns the guest or is an administrator.
+ * Returns a callback to run once the action succeeds, which logs an administrator's override.
+ */
+async function authorise(
+  guest: Awaited<ReturnType<typeof loadGuest>>,
+  actorId: string,
+  action: "reassign" | "remove" | "anonymise",
+  message: string
+): Promise<() => Promise<void>> {
+  if (isGuestOwner(guest, actorId)) return async () => {};
+  if (!(await isAdmin(actorId))) throw new GuestError(403, message);
+  const verb = { reassign: "Reassigned", remove: "Removed", anonymise: "Anonymised" }[action];
+  const summary = `${verb} guest ${guest.name}`;
+  return () => logAdminAction(actorId, `guest.${action}`, { type: "guest", id: guest.id }, summary);
 }
 
 /**
@@ -108,7 +126,7 @@ function canManage(guest: Awaited<ReturnType<typeof loadGuest>>, actorId: string
  */
 export async function reassignGuest(guestId: string, targetUserId: string, actorId: string) {
   const guest = await loadGuest(guestId);
-  if (!canManage(guest, actorId)) throw new GuestError(403, "Only the organiser can reassign this guest");
+  const logOverride = await authorise(guest, actorId, "reassign", "Only the organiser can reassign this guest");
 
   const target = await prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true, isGuest: true, name: true } });
   if (!target || target.isGuest) throw new GuestError(404, "Member not found");
@@ -151,6 +169,7 @@ export async function reassignGuest(guestId: string, targetUserId: string, actor
   }
   if (counted.length > 0) await updateHandicapIndex(targetUserId);
 
+  await logOverride();
   return { rounds: roundIds.length, events: tournamentIds.length, handicapRounds: counted.length };
 }
 
@@ -160,7 +179,7 @@ export async function reassignGuest(guestId: string, targetUserId: string, actor
  */
 export async function deleteGuest(guestId: string, actorId: string) {
   const guest = await loadGuest(guestId);
-  if (!canManage(guest, actorId)) throw new GuestError(403, "Only the organiser can remove this guest");
+  const logOverride = await authorise(guest, actorId, "remove", "Only the organiser can remove this guest");
   if (guest.rounds.some((rp) => rp._count.scores > 0)) {
     throw new GuestError(409, `${guest.name} has scores recorded — anonymise them instead`);
   }
@@ -176,6 +195,7 @@ export async function deleteGuest(guestId: string, actorId: string) {
     });
     await tx.user.delete({ where: { id: guestId } });
   });
+  await logOverride();
 }
 
 /** Next free "Guest N" number. */
@@ -195,8 +215,9 @@ async function anonymise(db: Prisma.TransactionClient, guestId: string) {
 
 export async function anonymiseGuest(guestId: string, actorId: string) {
   const guest = await loadGuest(guestId);
-  if (!canManage(guest, actorId)) throw new GuestError(403, "Only the organiser can anonymise this guest");
+  const logOverride = await authorise(guest, actorId, "anonymise", "Only the organiser can anonymise this guest");
   await prisma.$transaction((tx) => anonymise(tx, guestId));
+  await logOverride();
 }
 
 /**

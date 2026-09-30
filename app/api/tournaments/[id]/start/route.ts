@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { canOrganise, logTournamentAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { calcPlayingHandicap } from "@/lib/handicap";
 import { NextRequest } from "next/server";
@@ -25,7 +26,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   });
 
   if (!tournament) return Response.json({ error: "Tournament not found" }, { status: 404 });
-  if (tournament.createdById !== session.user.id) {
+  if (!(await canOrganise(tournament.createdById, session.user.id))) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
   if (tournament.status !== "UPCOMING") {
@@ -96,5 +97,6 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     });
   });
 
+  await logTournamentAction(session.user.id, "tournament.start", { id: tournament.id, createdById: tournament.createdById }, "Started event");
   return Response.json({ success: true });
 }
