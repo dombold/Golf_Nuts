@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { isHoleInPlay } from "@/lib/nines";
+import PrizeHolePicker from "@/components/tournament/PrizeHolePicker";
 
 interface PrizeHole {
   holeNumber: number;
@@ -60,24 +61,6 @@ export default function PrizeHolesCard({
       .catch(() => setTeeHoles([]))
       .finally(() => setHolesLoading(false));
   }, [editing, teeId, teeHoles.length]);
-
-  function togglePrizeHole(holeNumber: number, type: "LONGEST_DRIVE" | "NEAREST_PIN") {
-    const isFront = holeNumber <= 9;
-    setSelected((prev) => {
-      if (prev.find((p) => p.holeNumber === holeNumber)) {
-        return prev.filter((p) => p.holeNumber !== holeNumber);
-      }
-      const sameTypeAndNine = prev.filter((p) => p.type === type && (p.holeNumber <= 9) === isFront);
-      if (type === "NEAREST_PIN") {
-        if (sameTypeAndNine.length >= 2) return prev;
-        return [...prev, { holeNumber, type }];
-      }
-      return [
-        ...prev.filter((p) => !(p.type === type && (p.holeNumber <= 9) === isFront)),
-        { holeNumber, type },
-      ];
-    });
-  }
 
   function handleCancel() {
     setSelected(prizeHoles);
@@ -229,47 +212,12 @@ export default function PrizeHolesCard({
 
   // Edit mode
   const inPlay = teeHoles.filter((h) => isHoleInPlay(h.number, holesCount, startingHole));
-  const frontNine = inPlay.filter((h) => h.number <= 9);
-  const backNine  = inPlay.filter((h) => h.number >= 10);
-  const par5s = (nine: TeeHole[]) => nine.filter((h) => h.par === 5);
-  const par3s = (nine: TeeHole[]) => nine.filter((h) => h.par === 3);
-
-  function renderGroup(holes: TeeHole[], type: "LONGEST_DRIVE" | "NEAREST_PIN", label: string) {
-    if (holes.length === 0) return null;
-    return (
-      <div className="space-y-1.5">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
-        <div className="flex flex-wrap gap-2">
-          {holes.map((h) => {
-            const active = selected.some((p) => p.holeNumber === h.number);
-            return (
-              <button
-                key={h.number}
-                onClick={() => togglePrizeHole(h.number, type)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500 ${
-                  active
-                    ? "bg-fairway-600 text-white border-fairway-600"
-                    : "bg-white text-fairway-800 border-gray-200 hover:border-fairway-400"
-                }`}
-              >
-                Hole {h.number}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  const hasFront = par5s(frontNine).length > 0 || par3s(frontNine).length > 0;
-  const hasBack  = par5s(backNine).length  > 0 || par3s(backNine).length  > 0;
-  const noEligible = !holesLoading && teeHoles.length > 0 && !hasFront && !hasBack;
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm text-sm">
       <div className="px-4 py-3 border-b border-gray-50">
         <h2 className="font-semibold text-fairway-900">Prize Holes</h2>
-        <p className="text-xs text-gray-500 mt-0.5">One Longest Drive and up to two Nearest to Pin holes per nine.</p>
+        <p className="text-xs text-gray-500 mt-0.5">Up to two Longest Drive holes (par 5s, or par 4s you choose) and up to two Nearest the Pin holes (par 3s) per nine.</p>
       </div>
 
       <div className="px-4 py-4 space-y-5">
@@ -281,24 +229,8 @@ export default function PrizeHolesCard({
           <p className="text-gray-400 text-center py-4">Loading holes…</p>
         )}
 
-        {noEligible && (
-          <p className="text-gray-400 text-center py-4">No Par 3 or Par 5 holes found for this tee.</p>
-        )}
-
-        {!holesLoading && hasFront && (
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-fairway-800 border-b border-fairway-100 pb-1">Front Nine</p>
-            {renderGroup(par5s(frontNine), "LONGEST_DRIVE", "Longest Drive (Par 5)")}
-            {renderGroup(par3s(frontNine), "NEAREST_PIN",   "Nearest to Pin (Par 3)")}
-          </div>
-        )}
-
-        {!holesLoading && hasBack && (
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-fairway-800 border-b border-fairway-100 pb-1">Back Nine</p>
-            {renderGroup(par5s(backNine), "LONGEST_DRIVE", "Longest Drive (Par 5)")}
-            {renderGroup(par3s(backNine), "NEAREST_PIN",   "Nearest to Pin (Par 3)")}
-          </div>
+        {!holesLoading && teeHoles.length > 0 && (
+          <PrizeHolePicker holes={inPlay} selected={selected} onChange={setSelected} />
         )}
 
         <div className="flex gap-3 pt-1">

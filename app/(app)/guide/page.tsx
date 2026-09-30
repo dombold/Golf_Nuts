@@ -577,9 +577,10 @@ export default function GuidePage() {
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Prize holes</span> — Each prize hole is
-            marked as <span className="font-semibold">Longest Drive</span> (par 5s) or{" "}
-            <span className="font-semibold">Nearest the Pin</span> (par 3s). You can select one
-            Longest Drive and up to two Nearest the Pin holes per nine, from the holes being played.
+            marked as <span className="font-semibold">Longest Drive</span> (par 5s, or any par 4 the
+            organiser picks from the dropdown) or <span className="font-semibold">Nearest the Pin</span>{" "}
+            (par 3s). You can select up to two Longest Drive and up to two Nearest the Pin holes per
+            nine, from the holes being played.
             Prize holes appear on the event page, and scorers get a reminder when they reach one.
             Once the event has started, the organiser taps{" "}
             <span className="font-semibold">Record winners</span> on the Prize Holes card and picks
