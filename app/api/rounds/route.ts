@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { calcPlayingHandicap } from "@/lib/handicap";
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { GameFormatSchema } from "@/lib/gameFormats";
+import { GameFormatSchema, teamSizeFor } from "@/lib/gameFormats";
+import { splitIntoTeams } from "@/lib/teams";
 
 const CreateRoundSchema = z
   .object({
@@ -15,6 +16,9 @@ const CreateRoundSchema = z
     playerIds: z.array(z.string()).min(1).max(8),
     date: z.string().refine((d) => !Number.isNaN(Date.parse(d)), "Invalid date").optional(),
     skinsCarryOver: z.boolean().default(true),
+    stablefordTeamSize: z.union([z.literal(1), z.literal(2), z.literal(4)]).default(1),
+    /** Team games: which team each player is on (auto-split by handicap if omitted) */
+    teams: z.array(z.object({ userId: z.string(), teamNumber: z.int().min(1).max(8) })).optional(),
   })
   .refine((d) => d.format !== "MATCH_PLAY" || new Set(d.playerIds).size === 2, {
     message: "Match Play needs exactly 2 players",
@@ -32,6 +36,8 @@ export async function POST(req: NextRequest) {
   }
 
   const { courseId, teeId, format, date, skinsCarryOver } = parsed.data;
+  const stablefordTeamSize = format === "STABLEFORD" ? parsed.data.stablefordTeamSize : 1;
+  const teamSize = teamSizeFor(format, stablefordTeamSize);
   const holesCount = parsed.data.holesCount;
   const startingHole = holesCount === 18 ? 1 : parsed.data.startingHole;
   const playerIds = [...new Set(parsed.data.playerIds)];
@@ -52,6 +58,19 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: { message: "One or more players no longer exist" } }, { status: 400 });
   }
 
+  // Team games (Ambrose, team Stableford): every player needs a team
+  let teamOf = new Map<string, number>();
+  if (teamSize > 1) {
+    if (parsed.data.teams) {
+      teamOf = new Map(parsed.data.teams.map((t) => [t.userId, t.teamNumber]));
+      if (teamOf.size !== parsed.data.teams.length || playerIds.some((id) => !teamOf.has(id)) || teamOf.size !== playerIds.length) {
+        return Response.json({ error: { message: "Every player must be on exactly one team" } }, { status: 400 });
+      }
+    } else {
+      teamOf = splitIntoTeams(players.map((p) => ({ userId: p.id, handicap: p.handicapIndex })), teamSize);
+    }
+  }
+
   const round = await prisma.round.create({
     data: {
       courseId,
@@ -60,6 +79,7 @@ export async function POST(req: NextRequest) {
       startingHole,
       format,
       skinsCarryOver,
+      stablefordTeamSize,
       date: date ? new Date(date) : new Date(),
       status: "ACTIVE",
       players: {
@@ -72,6 +92,7 @@ export async function POST(req: NextRequest) {
             tee.par
           ),
           excludeFromHandicap: format !== "STROKEPLAY",
+          teamNumber: teamOf.get(p.id) ?? null,
         })),
       },
     },

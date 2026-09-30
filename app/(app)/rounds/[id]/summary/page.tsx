@@ -7,12 +7,15 @@ import {
   calcSkins,
   calcAmbrose,
   calcMatchPlay,
+  calcStablefordTeams,
   type MatchPlayResult,
   type PlayerRoundResult,
   type AmbroseTeam,
 } from "@/lib/formats";
 import Link from "next/link";
 import { skinsGroupWinnerLabel } from "@/lib/tournamentStandings";
+import { formatDisplayLabel, isTeamGame } from "@/lib/gameFormats";
+import { joinNames } from "@/lib/teams";
 import DeleteRoundButton from "@/components/DeleteRoundButton";
 
 export default async function RoundSummaryPage({
@@ -79,6 +82,44 @@ export default async function RoundSummaryPage({
   let winner = "";
   let winnerCountbackLabel: string | undefined;
 
+  // Team games (Ambrose, team Stableford) are scrambles: one team score per hole
+  const teamGame = isTeamGame(format, round.stablefordTeamSize);
+  const roundPlayers = round.players;
+  function buildTeams(): AmbroseTeam[] {
+    const teamMap = new Map<number, typeof roundPlayers>();
+    for (const rp of roundPlayers) {
+      const tn = rp.teamNumber ?? 0;
+      teamMap.set(tn, [...(teamMap.get(tn) ?? []), rp]);
+    }
+    return [...teamMap].sort((a, b) => a[0] - b[0]).map(([teamNumber, members]) => ({
+      teamId: `team-${teamNumber}`,
+      name: joinNames(members.map((m) => m.user.name.split(" ")[0])) + ` (Team ${teamNumber})`,
+      players: members.map((rp) => ({
+        playerId: rp.id,
+        name: rp.user.name,
+        playingHandicap: rp.playingHandicap,
+        holes: playedHoles.map((hole) => ({
+          holeNumber: hole.number,
+          par: hole.par,
+          strokeIndex: hole.strokeIndex,
+          strokes: rp.scores.find((sc) => sc.holeNumber === hole.number)?.strokes ?? 0,
+        })),
+      })),
+      // The team's score per hole (members share one ball); 0 when nobody has scored it
+      teamHoles: playedHoles.map((hole) => {
+        const entered = members
+          .map((rp) => rp.scores.find((sc) => sc.holeNumber === hole.number)?.strokes ?? 0)
+          .filter((st) => st > 0);
+        return {
+          holeNumber: hole.number,
+          par: hole.par,
+          strokeIndex: hole.strokeIndex,
+          strokes: entered.length ? Math.min(...entered) : 0,
+        };
+      }),
+    }));
+  }
+
   if (format === "STROKEPLAY") {
     const r = calcStrokeplay(players);
     results = r.map((p) => ({
@@ -92,6 +133,16 @@ export default async function RoundSummaryPage({
       ]
         .filter(Boolean)
         .join(" · "),
+    }));
+    winner = r[0]?.name ?? "";
+    winnerCountbackLabel = r[0]?.countbackLabel;
+  } else if (format === "STABLEFORD" && teamGame) {
+    const r = calcStablefordTeams(buildTeams());
+    results = r.map((t) => ({
+      id: t.teamId,
+      name: t.name,
+      score: `${t.totalPoints} pts`,
+      sub: [`Hcp ${t.teamHandicap}`, t.countbackLabel].filter(Boolean).join(" · "),
     }));
     winner = r[0]?.name ?? "";
     winnerCountbackLabel = r[0]?.countbackLabel;
@@ -124,62 +175,8 @@ export default async function RoundSummaryPage({
     }));
     winner = skinsGroupWinnerLabel({ winners, totals }) ?? "";
   } else if (format === "AMBROSE_2" || format === "AMBROSE_4") {
-    const teamSize = format === "AMBROSE_2" ? 2 : 4;
-
-    // Group players by teamNumber
-    const teamMap = new Map<number, typeof round.players>();
-    for (const rp of round.players) {
-      const tn = rp.teamNumber ?? 0;
-      if (!teamMap.has(tn)) teamMap.set(tn, []);
-      teamMap.get(tn)!.push(rp);
-    }
-
-    const teams: AmbroseTeam[] = [];
-    for (const [teamNumber, members] of teamMap) {
-      const teamPlayers: PlayerRoundResult[] = members.map((rp) => ({
-        playerId: rp.id,
-        name: rp.user.name,
-        playingHandicap: rp.playingHandicap,
-        holes: playedHoles.map((hole) => {
-          const score = rp.scores.find((s) => s.holeNumber === hole.number);
-          return {
-            holeNumber: hole.number,
-            par: hole.par,
-            strokeIndex: hole.strokeIndex,
-            strokes: score?.strokes ?? 0,
-          };
-        }),
-      }));
-
-      // Best-ball per hole across team members
-      const teamHoles = playedHoles.map((hole) => {
-        const bestBall = Math.min(
-          ...members.map((rp) => {
-            const sc = rp.scores.find((s) => s.holeNumber === hole.number);
-            return sc?.strokes ?? 0;
-          })
-        );
-        return {
-          holeNumber: hole.number,
-          par: hole.par,
-          strokeIndex: hole.strokeIndex,
-          strokes: bestBall,
-        };
-      });
-
-      const teamName =
-        members.map((m) => m.user.name.split(" ")[0]).join(" & ") +
-        ` (Team ${teamNumber})`;
-
-      teams.push({
-        teamId: `team-${teamNumber}`,
-        name: teamName,
-        players: teamPlayers,
-        teamHoles,
-      });
-    }
-
-    const r = calcAmbrose(teams, teamSize as 2 | 4);
+    const teams = buildTeams();
+    const r = calcAmbrose(teams);
     results = r.map((t) => ({
       id: t.teamId,
       name: t.name,
@@ -239,7 +236,7 @@ export default async function RoundSummaryPage({
             month: "long",
             year: "numeric",
           })}{" "}
-          · {round.tee.name} Tees · {round.format.replace(/_/g, " ")}
+          · {round.tee.name} Tees · {formatDisplayLabel(round.format, round.stablefordTeamSize)}
         </p>
       </div>
 

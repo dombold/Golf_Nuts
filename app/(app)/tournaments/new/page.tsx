@@ -6,6 +6,7 @@ import HolesPicker from "@/components/HolesPicker";
 import { isHoleInPlay, type HolesCount, type StartingHole } from "@/lib/nines";
 import { EVENT_FORMATS } from "@/lib/gameFormats";
 import SkinsCarryOverToggle from "@/components/SkinsCarryOverToggle";
+import FormatPicker from "@/components/FormatPicker";
 
 interface Course { id: string; name: string; tees: Tee[]; suburb?: string | null; city?: string | null; address?: string | null; phone?: string | null }
 interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
@@ -36,6 +37,7 @@ export default function NewTournamentPage() {
   // Step 3 — Format
   const [format, setFormat] = useState("STABLEFORD");
   const [skinsCarryOver, setSkinsCarryOver] = useState(true);
+  const [stablefordTeamSize, setStablefordTeamSize] = useState<1 | 2 | 4>(1);
 
   // Step 3 — Prize Holes toggle
   const [prizeHolesEnabled, setPrizeHolesEnabled] = useState(false);
@@ -135,6 +137,7 @@ export default function NewTournamentPage() {
           name,
           format,
           ...(format === "SKINS" ? { skinsCarryOver } : {}),
+          ...(format === "STABLEFORD" ? { stablefordTeamSize } : {}),
           courseId: selectedCourse.id,
           teeId: selectedTee.id,
           holesCount,
@@ -326,22 +329,13 @@ export default function NewTournamentPage() {
       {step === 3 && (
         <div className="space-y-4">
           <h2 className="font-semibold text-fairway-800">Choose format</h2>
-          <div className="space-y-2">
-            {EVENT_FORMATS.map((f) => (
-              <button
-                key={f.value}
-                onClick={() => setFormat(f.value)}
-                className={`w-full text-left px-4 py-3 rounded-xl border transition-colors ${
-                  format === f.value
-                    ? "border-fairway-600 bg-fairway-50"
-                    : "border-gray-200 bg-white hover:border-fairway-300"
-                }`}
-              >
-                <p className="font-medium text-fairway-900">{f.label}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{f.desc}</p>
-              </button>
-            ))}
-          </div>
+          <FormatPicker
+            formats={EVENT_FORMATS}
+            value={format}
+            onChange={setFormat}
+            stablefordTeamSize={stablefordTeamSize}
+            onStablefordTeamSizeChange={setStablefordTeamSize}
+          />
 
           {format === "SKINS" && <SkinsCarryOverToggle checked={skinsCarryOver} onChange={setSkinsCarryOver} />}
 

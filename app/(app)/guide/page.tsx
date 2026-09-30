@@ -141,7 +141,12 @@ export default function GuidePage() {
                 <span className="font-semibold text-fairway-900">Stableford</span> — you earn points
                 per hole based on your net score: 5 for an albatross or better, 4 for an eagle, 3 for
                 a birdie, 2 for par, 1 for bogey, 0 for double-bogey or worse. Your handicap strokes
-                are applied per hole so all skill levels compete fairly.
+                are applied per hole so all skill levels compete fairly. After picking Stableford,
+                choose <span className="font-semibold">Individual</span>,{" "}
+                <span className="font-semibold">Teams of 2</span> or{" "}
+                <span className="font-semibold">Teams of 4</span>. Teams play one ball each, like
+                Ambrose, using an Ambrose team handicap (see below), and score Stableford points on
+                the team&apos;s score. Odd numbers are handled the same way as Ambrose.
               </li>
               <li>
                 <span className="font-semibold text-fairway-900">Match Play</span> — hole-by-hole
@@ -160,13 +165,10 @@ export default function GuidePage() {
                 more than one).
               </li>
               <li>
-                <span className="font-semibold text-fairway-900">2-Player Ambrose</span> — each
-                pair picks the best drive then all play from that spot. A team scramble format for
-                pairs.
-              </li>
-              <li>
-                <span className="font-semibold text-fairway-900">4-Player Ambrose</span> — same as
-                2-Player but for a team of four.
+                <span className="font-semibold text-fairway-900">Ambrose</span> — a team scramble:
+                each team picks its best drive, then everyone plays from that spot. After picking
+                Ambrose, choose <span className="font-semibold">2-ball</span> (teams of two) or{" "}
+                <span className="font-semibold">4-ball</span> (teams of four).
               </li>
             </ul>
 
@@ -174,16 +176,37 @@ export default function GuidePage() {
               <p className="font-semibold text-fairway-900">Ambrose team handicap</p>
               <p>
                 The team receives a combined handicap calculated as the{" "}
-                <span className="font-semibold">sum of all players&apos; handicaps divided by twice the number of players</span>{" "}
-                — which is the same as the average handicap halved.
+                <span className="font-semibold">sum of the team&apos;s handicaps divided by twice the number of players in the team</span>{" "}
+                — which is the same as the average handicap halved. It uses the team&apos;s actual
+                size, so a short team is handled fairly.
               </p>
               <div className="space-y-1 text-gray-600">
                 <p>2-player team: (H1 + H2) ÷ 4</p>
+                <p>3-player team: (H1 + H2 + H3) ÷ 6</p>
                 <p>4-player team: (H1 + H2 + H3 + H4) ÷ 8</p>
+                <p>Player on their own: H ÷ 2</p>
               </div>
               <p className="text-gray-500 text-xs">
                 Example: a four-player team with handicaps of 10, 14, 18, and 22 receives a team
                 handicap of (10 + 14 + 18 + 22) ÷ 8 = <span className="font-semibold">8</span>.
+              </p>
+              <p className="font-semibold text-fairway-900 pt-1">Odd numbers of players</p>
+              <p>
+                If an odd number of players accept a 2-player Ambrose event, one team will be
+                short. Before the event starts the organiser can switch it to 4-player Ambrose (Edit
+                event details). With 9 players, for example, <span className="font-semibold">Randomise
+                Teams</span> makes three groups of three, and each group plays as a team of three.
+                In 2-player Ambrose, Randomise pairs each group&apos;s lowest handicap with its
+                highest. Changing the format re-sorts the saved teams to match. The group builder
+                warns about any short or uneven teams, but lets you go ahead. The same applies to
+                Stableford played in teams.
+              </p>
+              <p className="font-semibold text-fairway-900 pt-1">Teams in a casual round</p>
+              <p>
+                For a casual team game (Ambrose, or Stableford in teams) with more players than one
+                team, a <span className="font-semibold">Teams</span> step appears after picking
+                players. It opens with the players split by handicap to keep the teams even, shows
+                each team&apos;s handicap, and lets you move anyone to another team before teeing off.
               </p>
             </div>
           </div>

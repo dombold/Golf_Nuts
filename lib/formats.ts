@@ -281,24 +281,22 @@ export interface AmbroseResult {
 }
 
 /**
- * Ambrose team handicap:
- *  2-player: (H1 + H2) / 4
- *  4-player: (H1 + H2 + H3 + H4) / 8
+ * Ambrose team handicap = sum of the team's handicaps ÷ (2 × players in the team), rounded.
+ * Uses the team's actual size, so short teams are handled fairly:
+ *  pair ÷4, three ÷6, four ÷8, a player on their own ÷2.
  */
-export function ambroseTeamHandicap(
-  handicaps: number[],
-  teamSize: 2 | 4
-): number {
+export function ambroseTeamHandicap(handicaps: number[]): number {
+  if (handicaps.length === 0) return 0;
   const sum = handicaps.reduce((a, b) => a + b, 0);
-  return Math.round(sum / (teamSize * 2));
+  return Math.round(sum / (2 * handicaps.length));
 }
 
-export function calcAmbrose(teams: AmbroseTeam[], teamSize: 2 | 4): AmbroseResult[] {
+export function calcAmbrose(teams: AmbroseTeam[]): AmbroseResult[] {
   const allHoles = teams[0]?.teamHoles.map((h) => h.holeNumber) ?? [];
 
   const raw: AmbroseResult[] = teams.map((team) => {
     const handicaps = team.players.map((p) => p.playingHandicap);
-    const teamHandicap = ambroseTeamHandicap(handicaps, teamSize);
+    const teamHandicap = ambroseTeamHandicap(handicaps);
     const gross = team.teamHoles.reduce((sum, h) => sum + h.strokes, 0);
     // Per-hole handicap application (same WHS stroke-index distribution as individual)
     const net = team.teamHoles.reduce(
@@ -324,7 +322,7 @@ export function calcAmbrose(teams: AmbroseTeam[], teamSize: 2 | 4): AmbroseResul
   const holeNetMap = new Map<string, Map<number, number>>();
   for (const team of teams) {
     const handicaps = team.players.map((p) => p.playingHandicap);
-    const teamHandicap = ambroseTeamHandicap(handicaps, teamSize);
+    const teamHandicap = ambroseTeamHandicap(handicaps);
     const holeMap = new Map<number, number>();
     for (const h of team.teamHoles) {
       holeMap.set(h.holeNumber, h.strokes - strokesOnHole(teamHandicap, h.strokeIndex));
@@ -333,4 +331,45 @@ export function calcAmbrose(teams: AmbroseTeam[], teamSize: 2 | 4): AmbroseResul
   }
 
   return applyCountback(sorted, holeNetMap, true, allHoles, (r) => r.net);
+}
+
+// ─── Team Stableford (scramble teams of 2 or 4) ──────────────────────────────
+
+export interface StablefordTeamResult {
+  teamId: string;
+  playerId: string; // alias for teamId, satisfies applyCountback constraint
+  name: string;
+  teamHandicap: number;
+  totalPoints: number;
+  countbackLabel?: string;
+}
+
+/**
+ * Team Stableford, played as a scramble: each team plays one ball, the team handicap is worked out
+ * the Ambrose way (sum ÷ 2 × players), and the team scores Stableford points on its net score.
+ * Holes without a team score (strokes 0) earn nothing. Countback on points, higher is better.
+ */
+export function calcStablefordTeams(teams: AmbroseTeam[]): StablefordTeamResult[] {
+  const allHoles = teams[0]?.teamHoles.map((h) => h.holeNumber) ?? [];
+  const holePoints = new Map<string, Map<number, number>>();
+
+  const raw: StablefordTeamResult[] = teams.map((team) => {
+    const teamHandicap = ambroseTeamHandicap(team.players.map((p) => p.playingHandicap));
+    const points = new Map<number, number>();
+    for (const h of team.teamHoles) {
+      if (h.strokes <= 0) continue;
+      points.set(h.holeNumber, stablefordPoints(h.strokes - strokesOnHole(teamHandicap, h.strokeIndex), h.par));
+    }
+    holePoints.set(team.teamId, points);
+    return {
+      teamId: team.teamId,
+      playerId: team.teamId,
+      name: team.name,
+      teamHandicap,
+      totalPoints: [...points.values()].reduce((a, b) => a + b, 0),
+    };
+  });
+
+  const sorted = raw.sort((a, b) => b.totalPoints - a.totalPoints);
+  return applyCountback(sorted, holePoints, false, allHoles, (r) => r.totalPoints);
 }

@@ -45,6 +45,7 @@ export default async function EditTournamentPage({
         holesCount: tournament.holesCount === 9 ? 9 : 18,
         startingHole: tournament.startingHole === 10 ? 10 : 1,
         skinsCarryOver: tournament.skinsCarryOver,
+        stablefordTeamSize: tournament.stablefordTeamSize,
         course: tournament.course
           ? {
               id: tournament.course.id,

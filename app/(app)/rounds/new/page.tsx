@@ -3,12 +3,16 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import HolesPicker from "@/components/HolesPicker";
-import { GAME_FORMATS } from "@/lib/gameFormats";
+import { GAME_FORMATS, isTeamGame, teamSizeFor } from "@/lib/gameFormats";
+import { oddNumberHint, splitIntoTeams, teamGameLabels, teamWarnings } from "@/lib/teams";
+import { calcPlayingHandicap } from "@/lib/handicap";
+import { ambroseTeamHandicap } from "@/lib/formats";
 import SkinsCarryOverToggle from "@/components/SkinsCarryOverToggle";
+import FormatPicker from "@/components/FormatPicker";
 
 interface Course { id: string; name: string; suburb: string | null; city: string | null; address?: string | null; phone?: string | null; tees: Tee[] }
 interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
-interface User { id: string; name: string; email: string }
+interface User { id: string; name: string; email: string; handicapIndex?: number }
 
 function CheckCircle({ checked }: { checked: boolean }) {
   return (
@@ -62,6 +66,9 @@ function NewRoundForm() {
   const [startingHole, setStartingHole] = useState<1 | 10>(1);
   const [format, setFormat] = useState("STROKEPLAY");
   const [skinsCarryOver, setSkinsCarryOver] = useState(true);
+  const [stablefordTeamSize, setStablefordTeamSize] = useState<1 | 2 | 4>(1);
+  // Team games: team number per player, set on the Teams step
+  const [teams, setTeams] = useState<Record<string, number>>({});
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
   const [playerQuery, setPlayerQuery] = useState("");
   const playerSearchRef = useRef<HTMLInputElement>(null);
@@ -138,6 +145,10 @@ function NewRoundForm() {
           startingHole,
           format,
           ...(format === "SKINS" ? { skinsCarryOver } : {}),
+          ...(format === "STABLEFORD" ? { stablefordTeamSize } : {}),
+          ...(teamGame
+            ? { teams: selectedPlayers.map((userId) => ({ userId, teamNumber: needsTeamsStep ? teams[userId] ?? 1 : 1 })) }
+            : {}),
           playerIds: selectedPlayers,
         }),
       });
@@ -156,6 +167,37 @@ function NewRoundForm() {
 
   const matchPlayNeedsTwo = format === "MATCH_PLAY" && selectedPlayers.length !== 2;
 
+  // Team games (Ambrose, team Stableford): a Teams step when the players make more than one team
+  const teamSize = teamSizeFor(format, stablefordTeamSize);
+  const teamGame = isTeamGame(format, stablefordTeamSize);
+  const needsTeamsStep = teamGame && selectedPlayers.length > teamSize;
+  const totalSteps = needsTeamsStep ? 4 : 3;
+  const allPlayers = [...(currentUser ? [currentUser] : []), ...users];
+  const playerById = new Map(allPlayers.map((u) => [u.id, u]));
+
+  function goToTeams() {
+    const split = splitIntoTeams(
+      selectedPlayers.map((id) => ({ userId: id, handicap: playerById.get(id)?.handicapIndex ?? 0 })),
+      teamSize
+    );
+    setTeams(Object.fromEntries(split));
+    setStep(4);
+  }
+
+  const teamCount = Math.max(1, Math.ceil(selectedPlayers.length / teamSize));
+  const teamNumbers = Array.from({ length: teamCount }, (_, i) => i + 1);
+  const teamMembers = (t: number) => selectedPlayers.filter((id) => (teams[id] ?? 1) === t);
+  const teamHandicap = (t: number) =>
+    selectedTee
+      ? ambroseTeamHandicap(teamMembers(t).map((id) =>
+          calcPlayingHandicap(playerById.get(id)?.handicapIndex ?? 0, selectedTee.slope, selectedTee.rating, selectedTee.par)))
+      : null;
+  const { gameLabel } = teamGameLabels(format, teamSize);
+  const teamsHint = needsTeamsStep ? oddNumberHint(gameLabel, teamSize, selectedPlayers.length, { context: "round" }) : null;
+  const teamsWarnings = needsTeamsStep
+    ? teamWarnings(teamSize, [{ members: selectedPlayers.map((id) => ({ userId: id, teamNumber: teams[id] ?? 1 })) }])
+    : [];
+
   // Player step: selected players (in pick order) sit above the search, the rest are filtered below it
   const selectedOthers = selectedPlayers
     .filter((id) => id !== currentUser?.id)
@@ -173,7 +215,7 @@ function NewRoundForm() {
 
       {/* Step indicator */}
       <div className="flex gap-2">
-        {[1, 2, 3].map((s) => (
+        {Array.from({ length: totalSteps }, (_, i) => i + 1).map((s) => (
           <div
             key={s}
             className={`h-1.5 flex-1 rounded-full transition-colors ${
@@ -301,22 +343,13 @@ function NewRoundForm() {
       {step === 2 && (
         <div className="space-y-4">
           <h2 className="font-semibold text-fairway-800">Choose format</h2>
-          <div className="space-y-2">
-            {GAME_FORMATS.map((f) => (
-              <button
-                key={f.value}
-                onClick={() => setFormat(f.value)}
-                className={`w-full text-left px-4 py-3 rounded-xl border transition-colors ${
-                  format === f.value
-                    ? "border-fairway-600 bg-fairway-50"
-                    : "border-gray-200 bg-white hover:border-fairway-300"
-                }`}
-              >
-                <p className="font-medium text-fairway-900">{f.label}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{f.desc}</p>
-              </button>
-            ))}
-          </div>
+          <FormatPicker
+            formats={GAME_FORMATS}
+            value={format}
+            onChange={setFormat}
+            stablefordTeamSize={stablefordTeamSize}
+            onStablefordTeamSizeChange={setStablefordTeamSize}
+          />
           {format === "SKINS" && <SkinsCarryOverToggle checked={skinsCarryOver} onChange={setSkinsCarryOver} />}
           <div className="flex gap-3">
             <button onClick={() => setStep(1)} className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50">
@@ -389,9 +422,87 @@ function NewRoundForm() {
             <button onClick={() => setStep(2)} className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50">
               ← Back
             </button>
+            {needsTeamsStep ? (
+              <button
+                onClick={goToTeams}
+                className="flex-1 py-3 bg-fairway-700 text-white rounded-xl font-semibold hover:bg-fairway-800 transition-colors"
+              >
+                Next: Teams →
+              </button>
+            ) : (
+              <button
+                onClick={createRound}
+                disabled={loading || selectedPlayers.length === 0 || matchPlayNeedsTwo}
+                className="flex-1 py-3 bg-fairway-700 text-white rounded-xl font-semibold hover:bg-fairway-800 transition-colors disabled:opacity-40"
+              >
+                {loading ? "Starting…" : "Tee Off! ⛳"}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Step 4: Teams (team games with more than one team) */}
+      {step === 4 && needsTeamsStep && (
+        <div className="space-y-4">
+          <div>
+            <h2 className="font-semibold text-fairway-800">Teams</h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Split by handicap to keep teams even — move anyone with the Team menu.
+            </p>
+          </div>
+
+          {teamsHint && (
+            <p className="text-sm text-acorn-800 bg-acorn-50 border border-acorn-200 rounded-xl px-3 py-2">{teamsHint}</p>
+          )}
+
+          {teamNumbers.map((t) => (
+            <div key={t} className="rounded-xl border border-gray-200 bg-white p-4 space-y-2">
+              <div className="flex items-baseline justify-between">
+                <h3 className="font-semibold text-fairway-900">Team {t}</h3>
+                {teamMembers(t).length > 0 && teamHandicap(t) !== null && (
+                  <p className="text-xs text-gray-500">Team hcap {teamHandicap(t)}</p>
+                )}
+              </div>
+              {teamMembers(t).length === 0 && <p className="text-xs text-gray-400">No players</p>}
+              {teamMembers(t).map((id) => {
+                const player = playerById.get(id);
+                return (
+                  <div key={id} className="flex items-center gap-2 bg-fairway-50 rounded-lg px-3 py-2">
+                    <span className="flex-1 text-sm text-fairway-900">
+                      {player?.name}{id === currentUser?.id ? " (You)" : ""}
+                      <span className="text-xs text-gray-400 ml-1">HCP {player?.handicapIndex ?? 0}</span>
+                    </span>
+                    <select
+                      value={teams[id] ?? 1}
+                      onChange={(e) => setTeams((prev) => ({ ...prev, [id]: Number(e.target.value) }))}
+                      aria-label={`${player?.name}'s team`}
+                      className="text-xs border border-gray-300 rounded-lg px-2 py-1 bg-white text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500"
+                    >
+                      {teamNumbers.map((n) => <option key={n} value={n}>Team {n}</option>)}
+                    </select>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+
+          {teamsWarnings.length > 0 && (
+            <div role="status" className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 space-y-0.5">
+              <p className="font-semibold">Uneven teams — you can still tee off:</p>
+              <ul className="list-disc list-inside">
+                {teamsWarnings.map((w) => <li key={w}>{w}</li>)}
+              </ul>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button onClick={() => setStep(3)} className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50">
+              ← Back
+            </button>
             <button
               onClick={createRound}
-              disabled={loading || selectedPlayers.length === 0 || matchPlayNeedsTwo}
+              disabled={loading}
               className="flex-1 py-3 bg-fairway-700 text-white rounded-xl font-semibold hover:bg-fairway-800 transition-colors disabled:opacity-40"
             >
               {loading ? "Starting…" : "Tee Off! ⛳"}

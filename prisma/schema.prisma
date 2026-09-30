@@ -140,6 +140,7 @@ model Round {
   holesCount   Int @default(18)
   startingHole Int @default(1)
   skinsCarryOver Boolean @default(true)
+  stablefordTeamSize Int @default(1)
   notes     String?
   createdAt DateTime    @default(now())
 
@@ -268,6 +269,7 @@ model Tournament {
   holesCount   Int             @default(18)
   startingHole Int             @default(1)
   skinsCarryOver Boolean       @default(true)
+  stablefordTeamSize Int       @default(1)
   completedAt DateTime?
   createdAt   DateTime         @default(now())
 

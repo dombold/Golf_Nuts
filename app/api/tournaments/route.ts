@@ -23,6 +23,7 @@ const CreateSchema = z.object({
   inviteeIds: z.array(z.string()).default([]),
   prizeHoles: z.array(PrizeHoleSchema).default([]),
   skinsCarryOver: z.boolean().default(true),
+  stablefordTeamSize: z.union([z.literal(1), z.literal(2), z.literal(4)]).default(1),
 });
 
 export async function POST(req: NextRequest) {
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
   const parsed = CreateSchema.safeParse(body);
   if (!parsed.success) return Response.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const { name, format, courseId, teeId, holesCount, date, inviteeIds, prizeHoles, skinsCarryOver } = parsed.data;
+  const { name, format, courseId, teeId, holesCount, date, inviteeIds, prizeHoles, skinsCarryOver, stablefordTeamSize } = parsed.data;
   const startingHole = holesCount === 18 ? 1 : parsed.data.startingHole;
   const organiserId = session.user.id;
 
@@ -69,6 +70,7 @@ export async function POST(req: NextRequest) {
       holesCount,
       startingHole,
       skinsCarryOver,
+      stablefordTeamSize: format === "STABLEFORD" ? stablefordTeamSize : 1,
       date: date ? new Date(date) : null,
       createdById: organiserId,
       invitations: {

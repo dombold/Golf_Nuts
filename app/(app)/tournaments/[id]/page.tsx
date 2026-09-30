@@ -9,7 +9,7 @@ import TournamentLeaderboard from "@/components/tournament/TournamentLeaderboard
 import PrizeHolesCard from "@/components/tournament/PrizeHolesCard";
 import InviteeStatusControl from "@/components/tournament/InviteeStatusControl";
 import { describeHoles } from "@/lib/nines";
-import { formatLabel } from "@/lib/gameFormats";
+import { formatDisplayLabel } from "@/lib/gameFormats";
 
 const STATUS_STYLES: Record<string, string> = {
   UPCOMING: "bg-acorn-100 text-acorn-700",
@@ -131,7 +131,7 @@ export default async function TournamentDetailPage({
         </div>
         <div className="flex justify-between px-4 py-3">
           <dt className="text-gray-500">Format</dt>
-          <dd className="font-medium text-gray-800">{formatLabel(tournament.format)}</dd>
+          <dd className="font-medium text-gray-800">{formatDisplayLabel(tournament.format, tournament.stablefordTeamSize)}</dd>
         </div>
         {tournament.format === "SKINS" && (
           <div className="flex justify-between px-4 py-3">
@@ -266,8 +266,8 @@ export default async function TournamentDetailPage({
                   <h2 className="text-base font-semibold text-fairway-900">Arrange Groups</h2>
                   <GroupBuilder
                     // GroupBuilder copies the saved groups into state on mount; remount it when the
-                    // organiser changes who's accepted so it picks up the server's updated groups
-                    key={acceptedPlayers.map((p) => p.id).sort().join(",")}
+                    // organiser changes who's accepted or the format, so it picks up the server's updated groups
+                    key={`${tournament.format}:${tournament.stablefordTeamSize}:${acceptedPlayers.map((p) => p.id).sort().join(",")}`}
                     acceptedPlayers={acceptedPlayers}
                     initialGroups={tournament.groups.map((g) => ({
                       groupNumber: g.groupNumber,
@@ -280,6 +280,7 @@ export default async function TournamentDetailPage({
                     tees={tees}
                     defaultTeeId={defaultTeeId}
                     format={tournament.format}
+                    stablefordTeamSize={tournament.stablefordTeamSize}
                     tournamentId={id}
                   />
                 </div>

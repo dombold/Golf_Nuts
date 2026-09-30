@@ -4,6 +4,8 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { GameFormatSchema } from "@/lib/gameFormats";
 import { isHoleInPlay } from "@/lib/nines";
+import { splitIntoTeams } from "@/lib/teams";
+import { teamSizeFor } from "@/lib/gameFormats";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -75,6 +77,7 @@ const PatchSchema = z.object({
   startingHole: z.union([z.literal(1), z.literal(10)]).optional(),
   status: z.enum(["UPCOMING", "ACTIVE", "COMPLETE"]).optional(),
   skinsCarryOver: z.boolean().optional(),
+  stablefordTeamSize: z.union([z.literal(1), z.literal(2), z.literal(4)]).optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
@@ -93,11 +96,12 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const parsed = PatchSchema.safeParse(body);
   if (!parsed.success) return Response.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const { name, format, date, teeOffTime, courseId, teeId, holesCount, startingHole, status, skinsCarryOver } = parsed.data;
+  const { name, format, date, teeOffTime, courseId, teeId, holesCount, startingHole, status, skinsCarryOver, stablefordTeamSize } = parsed.data;
 
   const isFieldEdit = name !== undefined || format !== undefined || date !== undefined
     || teeOffTime !== undefined || courseId !== undefined || teeId !== undefined
-    || holesCount !== undefined || startingHole !== undefined || skinsCarryOver !== undefined;
+    || holesCount !== undefined || startingHole !== undefined || skinsCarryOver !== undefined
+    || stablefordTeamSize !== undefined;
 
   if (isFieldEdit && tournament.status !== "UPCOMING") {
     return Response.json(
@@ -142,6 +146,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (courseId !== undefined) data.courseId = courseId;
   if (teeId !== undefined) data.teeId = teeId;
   if (skinsCarryOver !== undefined) data.skinsCarryOver = skinsCarryOver;
+  if (stablefordTeamSize !== undefined) data.stablefordTeamSize = stablefordTeamSize;
   if (status !== undefined && status !== tournament.status) {
     data.status = status;
     // Record when the event finished (drives the move to Previous Events); clear it if re-opened
@@ -169,6 +174,25 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
         await tx.tournamentPrizeHole.deleteMany({ where: { id: { in: outOfPlay.map((ph) => ph.id) } } });
       }
     }
+    // Changing the team size (format or Stableford teams) invalidates saved team numbers:
+    // team games get fresh handicap-balanced teams, individual games clear them
+    const oldTeamSize = teamSizeFor(tournament.format, tournament.stablefordTeamSize);
+    const newTeamSize = teamSizeFor(format ?? tournament.format, stablefordTeamSize ?? tournament.stablefordTeamSize);
+    if (newTeamSize !== oldTeamSize) {
+      const groups = await tx.tournamentGroup.findMany({
+        where: { tournamentId: id },
+        select: { members: { select: { id: true, userId: true, user: { select: { handicapIndex: true } } } } },
+      });
+      for (const g of groups) {
+        const teams = newTeamSize > 1
+          ? splitIntoTeams(g.members.map((m) => ({ userId: m.userId, handicap: m.user.handicapIndex })), newTeamSize)
+          : null;
+        for (const m of g.members) {
+          await tx.tournamentGroupMember.update({ where: { id: m.id }, data: { teamNumber: teams?.get(m.userId) ?? null } });
+        }
+      }
+    }
+
     return tx.tournament.update({ where: { id }, data });
   });
 

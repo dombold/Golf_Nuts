@@ -53,7 +53,7 @@ export default async function CountbackPage({ params }: { params: Promise<{ id: 
   const detailed = calcTournamentStandingsDetailed(tournament.rounds, format, true);
   const explanation = tournament.status === "COMPLETE" ? explainWinnerCountback(detailed) : null;
 
-  const nameOf = new Map(detailed.standings.map((s) => [s.playerId, standingLabel(s, format)]));
+  const nameOf = new Map(detailed.standings.map((s) => [s.playerId, standingLabel(s)]));
   const name = (playerId: string) => nameOf.get(playerId) ?? playerId;
   const total = (value: number) => formatStandingScore(value, format);
   const cell = (value: number | undefined) =>
@@ -106,7 +106,7 @@ export default async function CountbackPage({ params }: { params: Promise<{ id: 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2 text-sm text-gray-700">
         <h2 className="text-base font-semibold text-fairway-900">Tied on {tiedScore}</h2>
         <p>
-          {joinNames(tied.map((s) => standingLabel(s, format)))} finished level on{" "}
+          {joinNames(tied.map((s) => standingLabel(s)))} finished level on{" "}
           {stableford ? `${tied[0].score} points` : `${tiedScore} net to par`}, so the winner was decided on countback.
         </p>
         <p>

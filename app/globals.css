@@ -14,11 +14,17 @@
   --color-fairway-100: #e8f5e8;
   --color-fairway-50: #f4faf4;
 
+  /* In-between shades (50/200/400/600/800) are midpoints of their neighbours; pages already use them */
   --color-acorn-900: #4a2a0e;
+  --color-acorn-800: #633d1b;
   --color-acorn-700: #7b4f28;
+  --color-acorn-600: #8e6031;
   --color-acorn-500: #a0703a;
+  --color-acorn-400: #b28352;
   --color-acorn-300: #c4956a;
+  --color-acorn-200: #dab999;
   --color-acorn-100: #f0dcc8;
+  --color-acorn-50: #f8eee4;
 
   --color-cream: #faf8f2;
   --color-scorecard: #ffffff;

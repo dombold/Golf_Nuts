@@ -6,6 +6,7 @@ import HolesPicker from "@/components/HolesPicker";
 import type { HolesCount, StartingHole } from "@/lib/nines";
 import { EVENT_FORMATS } from "@/lib/gameFormats";
 import SkinsCarryOverToggle from "@/components/SkinsCarryOverToggle";
+import FormatPicker from "@/components/FormatPicker";
 
 interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
 interface Course { id: string; name: string; tees: Tee[]; suburb?: string | null; city?: string | null; address?: string | null; phone?: string | null }
@@ -19,6 +20,7 @@ interface TournamentData {
   holesCount: HolesCount;
   startingHole: StartingHole;
   skinsCarryOver: boolean;
+  stablefordTeamSize: number;
   course: Course | null;
   tee: Tee | null;
 }
@@ -32,6 +34,9 @@ export default function EditEventForm({ tournament }: { tournament: TournamentDa
   const [teeOffTime, setTeeOffTime] = useState(tournament.teeOffTime ?? "");
   const [format, setFormat] = useState(tournament.format);
   const [skinsCarryOver, setSkinsCarryOver] = useState(tournament.skinsCarryOver);
+  const [stablefordTeamSize, setStablefordTeamSize] = useState<1 | 2 | 4>(
+    tournament.stablefordTeamSize === 2 || tournament.stablefordTeamSize === 4 ? tournament.stablefordTeamSize : 1
+  );
   const [holesCount, setHolesCount] = useState<HolesCount>(tournament.holesCount);
   const [startingHole, setStartingHole] = useState<StartingHole>(tournament.startingHole);
 
@@ -93,6 +98,7 @@ export default function EditEventForm({ tournament }: { tournament: TournamentDa
           teeId: selectedTee?.id ?? null,
           holesCount,
           ...(format === "SKINS" ? { skinsCarryOver } : {}),
+          ...(format === "STABLEFORD" ? { stablefordTeamSize } : {}),
           startingHole,
         }),
       });
@@ -156,22 +162,13 @@ export default function EditEventForm({ tournament }: { tournament: TournamentDa
       {/* Format */}
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">Format</label>
-        <div className="space-y-2">
-          {EVENT_FORMATS.map((f) => (
-            <button
-              key={f.value}
-              onClick={() => setFormat(f.value)}
-              className={`w-full text-left px-4 py-3 rounded-xl border transition-colors ${
-                format === f.value
-                  ? "border-fairway-600 bg-fairway-50"
-                  : "border-gray-200 bg-white hover:border-fairway-300"
-              }`}
-            >
-              <p className="font-medium text-fairway-900">{f.label}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{f.desc}</p>
-            </button>
-          ))}
-        </div>
+        <FormatPicker
+          formats={EVENT_FORMATS}
+          value={format}
+          onChange={setFormat}
+          stablefordTeamSize={stablefordTeamSize}
+          onStablefordTeamSizeChange={setStablefordTeamSize}
+        />
         {format === "SKINS" && <SkinsCarryOverToggle checked={skinsCarryOver} onChange={setSkinsCarryOver} />}
       </div>
 

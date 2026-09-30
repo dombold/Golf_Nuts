@@ -6,7 +6,6 @@ import {
   calcSkinsGroups,
   calcTournamentStandings,
   formatStandingScore,
-  isAmbroseFormat,
   skinsGroupWinnerLabel,
   tournamentWinner,
   type SkinsGroupResult,
@@ -86,7 +85,7 @@ export default function TournamentLeaderboard({ tournamentId, format, isActive, 
           <thead className="bg-fairway-50">
             <tr>
               <th className="text-left px-4 py-2 text-fairway-800 font-semibold w-8">#</th>
-              <th className="text-left px-4 py-2 text-fairway-800 font-semibold">{isAmbroseFormat(format) ? "Team" : "Player"}</th>
+              <th className="text-left px-4 py-2 text-fairway-800 font-semibold">{entries.some((e) => e.subName) ? "Team" : "Player"}</th>
               <th className="text-right px-4 py-2 text-fairway-800 font-semibold">{format === "STABLEFORD" ? "Points" : "Net"}</th>
               <th className="text-right px-4 py-2 text-fairway-800 font-semibold">Thru</th>
               <th className="text-right px-4 py-2 text-fairway-800 font-semibold hidden sm:table-cell">Group</th>

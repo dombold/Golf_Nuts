@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import HoleMap from "@/components/HoleMap";
 import TournamentLeaderboard from "@/components/tournament/TournamentLeaderboard";
 import { useParams, useRouter } from "next/navigation";
-import { strokesOnHole, ambroseTeamHandicap, calcMatchPlay } from "@/lib/formats";
-import { calcTournamentStandings, formatStandingScore, isAmbroseFormat } from "@/lib/tournamentStandings";
+import { strokesOnHole, ambroseTeamHandicap, calcMatchPlay, stablefordPoints } from "@/lib/formats";
+import { calcTournamentStandings, formatStandingScore } from "@/lib/tournamentStandings";
+import { formatDisplayLabel, isTeamGame } from "@/lib/gameFormats";
+import { joinNames } from "@/lib/teams";
 import { isHoleInPlay } from "@/lib/nines";
 import { apiErrorMessage } from "@/lib/apiError";
 
@@ -20,6 +22,7 @@ interface Round {
   status: string;
   holesCount: number;
   startingHole: number;
+  stablefordTeamSize?: number;
   course: { name: string };
   tee: { name: string; par: number; holes: Hole[] };
   players: Player[];
@@ -37,10 +40,6 @@ function scoreBadgeClass(strokes: number, par: number, handicap: number, strokeI
   return "score-double";
 }
 
-function teamSizeFor(format: string): 2 | 4 {
-  return format === "AMBROSE_2" ? 2 : 4;
-}
-
 /** Holes in play for the round, in playing order */
 function holesInPlay(round: Round): Hole[] {
   return round.tee.holes.filter((h) => isHoleInPlay(h.number, round.holesCount, round.startingHole));
@@ -53,10 +52,12 @@ interface TeamScoreCardProps {
   teamHandicap: number;
   holePar: number;
   holeStrokeIndex: number;
+  /** Team Stableford: show the team's points for this hole */
+  stableford?: boolean;
   onChange: (strokes: number) => void;
 }
 
-function TeamScoreCard({ teamNumber, memberNames, strokes, teamHandicap, holePar, holeStrokeIndex, onChange }: TeamScoreCardProps) {
+function TeamScoreCard({ teamNumber, memberNames, strokes, teamHandicap, holePar, holeStrokeIndex, stableford, onChange }: TeamScoreCardProps) {
   const handi = strokesOnHole(teamHandicap, holeStrokeIndex);
   const netPar = holePar + handi;
   return (
@@ -74,9 +75,16 @@ function TeamScoreCard({ teamNumber, memberNames, strokes, teamHandicap, holePar
           </p>
         </div>
         {strokes > 0 && (
-          <span className={`w-9 h-9 flex items-center justify-center font-bold text-sm ${scoreBadgeClass(strokes, holePar, teamHandicap, holeStrokeIndex)}`}>
-            {strokes}
-          </span>
+          <div className="flex flex-col items-center gap-0.5">
+            <span className={`w-9 h-9 flex items-center justify-center font-bold text-sm ${scoreBadgeClass(strokes, holePar, teamHandicap, holeStrokeIndex)}`}>
+              {strokes}
+            </span>
+            {stableford && (
+              <span className="text-xs font-semibold text-fairway-700">
+                {stablefordPoints(strokes - handi, holePar)} pts
+              </span>
+            )}
+          </div>
         )}
       </div>
       <div className="flex items-center gap-3">
@@ -281,18 +289,19 @@ export default function ScoringPage() {
   const holes = holesInPlay(round);
   const hole = holes.find((h) => h.number === currentHole);
   const lastHoleNumber = holes[holes.length - 1]?.number ?? 18;
-  const isAmbrose = isAmbroseFormat(round.format);
+  // Team games (Ambrose, team Stableford) score one ball per team
+  const isTeam = isTeamGame(round.format, round.stablefordTeamSize);
   const tournament = round.tournamentRounds?.[0]?.tournament;
 
   // Group players by teamNumber for Ambrose; each entry has teamNumber + sorted members
-  const teams = isAmbrose
+  const teams = isTeam
     ? [...new Set(round.players.map((p) => p.teamNumber ?? 0))].sort((a, b) => a - b).map((tn) => ({
         teamNumber: tn,
         members: round.players.filter((p) => (p.teamNumber ?? 0) === tn),
       }))
     : [];
 
-  const allEntered = isAmbrose
+  const allEntered = isTeam
     ? teams.every((team) => (scores[team.members[0]?.id]?.[currentHole]?.strokes ?? 0) > 0)
     : round.players.every((p) => (scores[p.id]?.[currentHole]?.strokes ?? 0) > 0);
 
@@ -308,6 +317,7 @@ export default function ScoringPage() {
       roundNumber: 1,
       round: {
         id: round.id,
+        stablefordTeamSize: round.stablefordTeamSize,
         tee: { holes },
         players: round.players.map((p) => ({
           playingHandicap: p.playingHandicap,
@@ -344,7 +354,7 @@ export default function ScoringPage() {
       <div className="bg-fairway-900 text-white rounded-2xl px-4 py-3 flex items-center justify-between">
         <div>
           <p className="font-bold">{round.course.name}</p>
-          <p className="text-fairway-300 text-xs">{round.tee.name} tees · {round.format.replace(/_/g, " ")}</p>
+          <p className="text-fairway-300 text-xs">{round.tee.name} tees · {formatDisplayLabel(round.format, round.stablefordTeamSize)}</p>
           {round.status === "COMPLETE" && (
             <p className="text-xs text-acorn-400 mt-0.5">Editing saved round</p>
           )}
@@ -386,11 +396,11 @@ export default function ScoringPage() {
           </div>
 
           {/* Score entry — one card per team for Ambrose, one per player otherwise */}
-          {isAmbrose
+          {isTeam
             ? teams.map((team) => {
                 const phs = team.members.map((m) => m.playingHandicap);
-                const teamHCP = ambroseTeamHandicap(phs, teamSizeFor(round.format));
-                const memberNames = team.members.map((m) => m.user.name).join(" & ");
+                const teamHCP = ambroseTeamHandicap(phs);
+                const memberNames = joinNames(team.members.map((m) => m.user.name));
                 const rep = team.members[0];
                 const strokes = scores[rep?.id]?.[currentHole]?.strokes ?? 0;
                 return (
@@ -402,6 +412,7 @@ export default function ScoringPage() {
                     teamHandicap={teamHCP}
                     holePar={hole.par}
                     holeStrokeIndex={hole.strokeIndex}
+                    stableford={round.format === "STABLEFORD"}
                     onChange={(s) => updateTeamScore(team.teamNumber, currentHole, s)}
                   />
                 );
@@ -526,7 +537,7 @@ export default function ScoringPage() {
           {/* Hole dots */}
           <div className="flex gap-1 justify-center flex-wrap">
             {holes.map((h) => {
-              const entered = isAmbrose
+              const entered = isTeam
                 ? teams.every((team) => (scores[team.members[0]?.id]?.[h.number]?.strokes ?? 0) > 0)
                 : round.players.every((p) => (scores[p.id]?.[h.number]?.strokes ?? 0) > 0);
               return (
@@ -578,7 +589,7 @@ export default function ScoringPage() {
               <span className={`text-lg font-bold w-6 ${i === 0 ? "text-fairway-300" : "text-gray-400"}`}>{i + 1}</span>
               <div className="flex-1">
                 <p className={`font-semibold ${i === 0 ? "text-white" : "text-fairway-900"}`}>{entry.name}</p>
-                {entry.subName && isAmbrose && (
+                {entry.subName && isTeam && (
                   <p className={`text-xs ${i === 0 ? "text-fairway-400" : "text-gray-400"}`}>{entry.subName}</p>
                 )}
                 <p className={`text-xs ${i === 0 ? "text-fairway-300" : "text-gray-400"}`}>

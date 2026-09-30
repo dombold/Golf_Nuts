@@ -6,6 +6,8 @@
 import { strokesOnHole, stablefordPoints, ambroseTeamHandicap, calcSkins } from "./formats";
 import { applyCountback, traceCountback, type CountbackTrace } from "./countback";
 import { isHoleInPlay } from "./nines";
+import { isTeamGame } from "./gameFormats";
+import { joinNames } from "./teams";
 
 export interface StandingsHole {
   number: number;
@@ -29,6 +31,8 @@ export interface StandingsRound {
     startingHole?: number;
     /** Skins: whether a halved hole's skin rolls on (defaults to true) */
     skinsCarryOver?: boolean;
+    /** Stableford: players per team (1 = individual) */
+    stablefordTeamSize?: number;
     tee?: { holes: StandingsHole[] } | null;
     players: StandingsPlayer[];
   } | null;
@@ -52,7 +56,6 @@ export interface TournamentWinner {
   countbackLabel?: string;
 }
 
-export const isAmbroseFormat = (f: string) => f === "AMBROSE_2" || f === "AMBROSE_4";
 
 function firstName(name: string) {
   return name.split(" ")[0];
@@ -116,17 +119,17 @@ export function calcTournamentStandingsDetailed(
     if (!round) continue;
     const holeInfos = new Map((round.tee?.holes ?? []).map((h) => [h.number, h]));
 
-    if (isAmbroseFormat(format)) {
-      // One entry per team within each group: best ball per hole, team handicap
+    if (isTeamGame(format, round.stablefordTeamSize)) {
+      // Team games (Ambrose, team Stableford) are scrambles: one entry per team, the team's
+      // score per hole (members share one ball) less the team-handicap strokes
       const teams = new Map<number, StandingsPlayer[]>();
       for (const rp of round.players ?? []) {
         const tn = rp.teamNumber ?? 0;
         teams.set(tn, [...(teams.get(tn) ?? []), rp]);
       }
-      const teamSize = format === "AMBROSE_2" ? 2 : 4;
 
       for (const [tn, players] of teams) {
-        const teamHandicap = ambroseTeamHandicap(players.map((p) => p.playingHandicap), teamSize);
+        const teamHandicap = ambroseTeamHandicap(players.map((p) => p.playingHandicap));
         const values = new Map<number, number>();
         const holeNumbers = new Set(players.flatMap((p) => p.scores.map((s) => s.holeNumber)));
         for (const holeNum of holeNumbers) {
@@ -136,15 +139,21 @@ export function calcTournamentStandingsDetailed(
             ...players.map((p) => p.scores.find((s) => s.holeNumber === holeNum)?.strokes ?? Infinity)
           );
           if (bestBall === Infinity) continue;
-          values.set(holeNum, bestBall - strokesOnHole(teamHandicap, hole.strokeIndex) - hole.par);
+          const net = bestBall - strokesOnHole(teamHandicap, hole.strokeIndex);
+          values.set(holeNum, stableford ? stablefordPoints(net, hole.par) : net - hole.par);
         }
 
         const key = `${round.id}-${tn}`;
         holeValues.set(key, values);
+        // Name teams so they're unique across groups: a group playing as one team is named after the group
+        const multiGroup = rounds.length > 1;
+        const name = teams.size === 1
+          ? (multiGroup ? `Group ${tr.roundNumber}` : tn ? `Team ${tn}` : "Team")
+          : (multiGroup ? `Group ${tr.roundNumber} · Team ${tn || "?"}` : `Team ${tn || "?"}`);
         all.push({
           playerId: key,
-          name: tn ? `Team ${tn}` : `Group ${tr.roundNumber}`,
-          subName: players.map((p) => firstName(p.user.name)).join(" & "),
+          name,
+          subName: joinNames(players.map((p) => firstName(p.user.name))),
           roundId: round.id,
           groupNumber: tr.roundNumber,
           score: total(values),
@@ -212,9 +221,10 @@ export function explainWinnerCountback(detailed: DetailedStandings): CountbackEx
   return { tied, trace, tableHoles };
 }
 
-/** Display name for a standing; Ambrose teams include their members. */
-export function standingLabel(s: Standing, format: string): string {
-  return s.subName && isAmbroseFormat(format) ? `${s.name} (${s.subName})` : s.name;
+/** Display name for a standing; teams (Ambrose, team Stableford) include their members. */
+export function standingLabel(s: Standing): string {
+  // Team entries carry their members as subName
+  return s.subName ? `${s.name} (${s.subName})` : s.name;
 }
 
 /** The single tournament winner from ranked standings, or null if nobody has scored. */
@@ -222,7 +232,7 @@ export function tournamentWinner(standings: Standing[], format: string): Tournam
   const [first, second] = standings;
   if (!first || first.holesPlayed === 0) return null;
 
-  const label = (s: Standing) => standingLabel(s, format);
+  const label = (s: Standing) => standingLabel(s);
   const detail = formatStandingScore(first.score, format);
 
   // A tie that countback couldn't split — share the win

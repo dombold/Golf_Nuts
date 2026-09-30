@@ -1,6 +1,8 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
+import { splitIntoTeams } from "@/lib/teams";
+import { teamSizeFor } from "@/lib/gameFormats";
 
 type PairRow = { user_a: string; user_b: string; count: bigint };
 
@@ -87,7 +89,7 @@ export async function GET(
 
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
-    select: { createdById: true, status: true, teeId: true, course: { select: { tees: { select: { id: true }, take: 1 } } } },
+    select: { createdById: true, status: true, format: true, stablefordTeamSize: true, teeId: true, course: { select: { tees: { select: { id: true }, take: 1 } } } },
   });
   if (!tournament) return Response.json({ error: "Tournament not found" }, { status: 404 });
   if (tournament.createdById !== session.user.id) {
@@ -102,9 +104,10 @@ export async function GET(
 
   const invitations = await prisma.tournamentInvitation.findMany({
     where: { tournamentId, status: "ACCEPTED" },
-    select: { userId: true },
+    select: { userId: true, user: { select: { handicapIndex: true } } },
   });
   const playerIds = invitations.map((i) => i.userId);
+  const handicapOf = new Map(invitations.map((i) => [i.userId, i.user.handicapIndex]));
 
   if (playerIds.length === 0) return Response.json({ groups: [] });
 
@@ -133,6 +136,17 @@ export async function GET(
   }
 
   const groups = buildGroups(playerIds, pairingCount, defaultTeeId);
+
+  // Team games: split each group into handicap-balanced teams
+  const teamSize = teamSizeFor(tournament.format, tournament.stablefordTeamSize);
+  if (teamSize > 1) {
+    return Response.json({
+      groups: groups.map((g) => {
+        const teams = splitIntoTeams(g.members.map((m) => ({ userId: m.userId, handicap: handicapOf.get(m.userId) ?? 0 })), teamSize);
+        return { ...g, members: g.members.map((m) => ({ ...m, teamNumber: teams.get(m.userId) })) };
+      }),
+    });
+  }
 
   return Response.json({ groups });
 }

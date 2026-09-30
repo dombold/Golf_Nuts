@@ -15,7 +15,7 @@ export async function GET() {
     }),
     prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true, email: true },
+      select: { id: true, name: true, email: true, handicapIndex: true },
     }),
   ]);
 

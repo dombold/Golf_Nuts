@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { oddNumberHint as teamOddNumberHint, teamGameLabels, teamWarnings as findTeamWarnings } from "@/lib/teams";
+import { teamSizeFor } from "@/lib/gameFormats";
 
 interface Player {
   id: string;
@@ -32,10 +34,11 @@ interface Props {
   tees: Tee[];
   defaultTeeId: string;
   format: string;
+  /** Stableford: players per team (1 = individual) */
+  stablefordTeamSize?: number;
   tournamentId: string;
 }
 
-const isAmbrose2 = (f: string) => f === "AMBROSE_2";
 
 export default function GroupBuilder({
   acceptedPlayers,
@@ -43,8 +46,10 @@ export default function GroupBuilder({
   tees,
   defaultTeeId,
   format,
+  stablefordTeamSize = 1,
   tournamentId,
 }: Props) {
+  const teamSize = teamSizeFor(format, stablefordTeamSize);
   const router = useRouter();
   const [groups, setGroups] = useState<Group[]>(
     initialGroups.length > 0
@@ -90,7 +95,9 @@ export default function GroupBuilder({
       prev.map((g, i) => {
         if (i !== groupIndex) return g;
         if (g.members.length >= 4) return g;
-        const teamNumber = isAmbrose2(format) ? 1 : undefined;
+        // 2-ball: join whichever team in this group has fewer players
+        const inTeam = (t: number) => g.members.filter((m) => m.teamNumber === t).length;
+        const teamNumber = teamSize === 2 ? (inTeam(1) <= inTeam(2) ? 1 : 2) : undefined;
         return { ...g, members: [...g.members, { userId: playerId, teamNumber }] };
       })
     );
@@ -167,12 +174,25 @@ export default function GroupBuilder({
     }
   }
 
+  // Team games: short or uneven teams are allowed, but the organiser should know
+  const { gameLabel, largerAlternative } = teamGameLabels(format, teamSize);
+  const oddNumberHint = teamSize > 1
+    ? teamOddNumberHint(gameLabel, teamSize, acceptedPlayers.length, { largerAlternative, context: "event" })
+    : null;
+  const teamWarnings = findTeamWarnings(teamSize, groups);
+
   function playerName(id: string) {
     return acceptedPlayers.find((p) => p.id === id)?.name ?? id;
   }
 
   return (
     <div className="space-y-4">
+      {oddNumberHint && (
+        <p className="text-sm text-acorn-800 bg-acorn-50 border border-acorn-200 rounded-xl px-3 py-2">
+          {oddNumberHint}
+        </p>
+      )}
+
       {/* Unassigned players pool */}
       {unassigned.length > 0 && (
         <div className="rounded-xl border border-gray-200 bg-white p-4">
@@ -224,8 +244,8 @@ export default function GroupBuilder({
               <div key={member.userId} className="flex items-center gap-2 bg-fairway-50 rounded-lg px-3 py-2">
                 <span className="flex-1 text-sm text-fairway-900">{playerName(member.userId)}</span>
 
-                {/* Team assignment for 2-ball Ambrose */}
-                {isAmbrose2(format) && (
+                {/* Team assignment for teams of 2 (Ambrose 2-ball, Stableford pairs) */}
+                {teamSize === 2 && (
                   <div className="flex gap-1">
                     {[1, 2].map((t) => (
                       <button
@@ -318,6 +338,15 @@ export default function GroupBuilder({
 
         {saveError && (
           <p className="text-xs text-red-600 text-center">{saveError}</p>
+        )}
+
+        {teamWarnings.length > 0 && (
+          <div role="status" className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 space-y-0.5">
+            <p className="font-semibold">Uneven teams — you can still save and start:</p>
+            <ul className="list-disc list-inside">
+              {teamWarnings.map((w) => <li key={w}>{w}</li>)}
+            </ul>
+          </div>
         )}
 
         {unassigned.length > 0 && (
