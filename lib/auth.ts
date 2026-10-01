@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { z } from "zod";
+import { recordLogin } from "@/lib/loginTracking";
 
 declare module "next-auth" {
   interface Session {
@@ -45,6 +46,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           await prisma.passwordResetToken.delete({ where: { tokenHash } });
           const user = await prisma.user.findUnique({ where: { id: record.userId } });
           if (!user || user.isGuest) return null;
+          await recordLogin(user.id);
           return {
             id: user.id,
             name: user.name,
@@ -72,6 +74,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const valid = await bcrypt.compare(parsed.data.password, user.passwordHash);
         if (!valid) return null;
+        await recordLogin(user.id);
 
         return {
           id: user.id,

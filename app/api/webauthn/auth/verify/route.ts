@@ -3,6 +3,7 @@ import { verifyAuthenticationResponse, type AuthenticatorTransportFuture } from 
 import { RP_ID, ORIGIN, challengeFromResponse, consumeChallenge } from "@/lib/webauthn";
 import { encode } from "next-auth/jwt";
 import { cookies } from "next/headers";
+import { recordLogin } from "@/lib/loginTracking";
 
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
 
@@ -60,6 +61,7 @@ export async function POST(req: Request) {
       lastUsedAt: new Date(),
     },
   });
+  await recordLogin(stored.userId);
 
   const isSecure = ORIGIN.startsWith("https://");
   const cookieName = isSecure

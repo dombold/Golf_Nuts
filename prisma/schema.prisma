@@ -22,6 +22,8 @@ model User {
   guestCreatedById String?
   // Administrators act as organiser on every event and casual round, and can use /admin
   isAdmin        Boolean  @default(false)
+  /// Most recent successful sign-in (password, reset link or passkey). Shown on /admin/activity
+  lastLoginAt    DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
