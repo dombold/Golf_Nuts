@@ -37,7 +37,7 @@ export default function PasskeyManager({ passkeys }: { passkeys: Passkey[] }) {
       if (!optRes.ok) throw new Error("Failed to get registration options");
       const options = await optRes.json();
 
-      const attResp = await startRegistration(options);
+      const attResp = await startRegistration({ optionsJSON: options });
 
       const verRes = await fetch("/api/webauthn/register/verify", {
         method: "POST",

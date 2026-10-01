@@ -61,7 +61,7 @@ function BiometricButton() {
       if (!optRes.ok) throw new Error("Failed to get options");
       const options = await optRes.json();
 
-      const assertion = await startAuthentication(options);
+      const assertion = await startAuthentication({ optionsJSON: options });
 
       const verRes = await fetch("/api/webauthn/auth/verify", {
         method: "POST",

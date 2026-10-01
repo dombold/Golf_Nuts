@@ -2,7 +2,6 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyRegistrationResponse } from "@simplewebauthn/server";
 import { RP_ID, ORIGIN, challengeFromResponse, consumeChallenge } from "@/lib/webauthn";
-import { isoBase64URL } from "@simplewebauthn/server/helpers";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -38,13 +37,7 @@ export async function POST(req: Request) {
     return Response.json({ error: "Not verified" }, { status: 400 });
   }
 
-  const {
-    credentialID,
-    credentialPublicKey,
-    counter,
-    credentialDeviceType,
-    credentialBackedUp,
-  } = verification.registrationInfo;
+  const { credential, credentialDeviceType, credentialBackedUp } = verification.registrationInfo;
 
   const name = typeof body.label === "string" ? body.label.slice(0, 50) : "Biometric";
   const transports: string[] = Array.isArray(body.response?.transports)
@@ -54,9 +47,9 @@ export async function POST(req: Request) {
   await prisma.webAuthnCredential.create({
     data: {
       userId: session.user.id,
-      credentialId: isoBase64URL.fromBuffer(credentialID),
-      publicKey: Buffer.from(credentialPublicKey),
-      counter: BigInt(counter),
+      credentialId: credential.id,
+      publicKey: Buffer.from(credential.publicKey),
+      counter: BigInt(credential.counter),
       deviceType: credentialDeviceType,
       backedUp: credentialBackedUp,
       transports,

@@ -1,9 +1,8 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { generateRegistrationOptions } from "@simplewebauthn/server";
-import { isoBase64URL } from "@simplewebauthn/server/helpers";
+import { generateRegistrationOptions, type AuthenticatorTransportFuture } from "@simplewebauthn/server";
+import { isoUint8Array } from "@simplewebauthn/server/helpers";
 import { saveChallenge, RP_ID, RP_NAME } from "@/lib/webauthn";
-import type { AuthenticatorTransportFuture } from "@simplewebauthn/types";
 
 export async function GET() {
   const session = await auth();
@@ -21,13 +20,13 @@ export async function GET() {
   const options = await generateRegistrationOptions({
     rpName: RP_NAME,
     rpID: RP_ID,
-    userID: userId,
+    // Same UTF-8 bytes v9 used for the user handle, so re-registering a device replaces its passkey
+    userID: isoUint8Array.fromUTF8String(userId),
     userName: session.user.username,
     userDisplayName: session.user.name ?? session.user.username,
     attestationType: "none",
     excludeCredentials: existing.map((c) => ({
-      id: isoBase64URL.toBuffer(c.credentialId),
-      type: "public-key" as const,
+      id: c.credentialId,
       transports: c.transports as AuthenticatorTransportFuture[],
     })),
     authenticatorSelection: {

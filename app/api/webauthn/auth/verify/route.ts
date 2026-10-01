@@ -1,8 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { verifyAuthenticationResponse } from "@simplewebauthn/server";
-import { isoBase64URL } from "@simplewebauthn/server/helpers";
+import { verifyAuthenticationResponse, type AuthenticatorTransportFuture } from "@simplewebauthn/server";
 import { RP_ID, ORIGIN, challengeFromResponse, consumeChallenge } from "@/lib/webauthn";
-import type { AuthenticatorTransportFuture } from "@simplewebauthn/types";
 import { encode } from "next-auth/jwt";
 import { cookies } from "next/headers";
 
@@ -16,17 +14,17 @@ export async function POST(req: Request) {
 
   const credentialId: string = body.response.id;
 
-  const credential = await prisma.webAuthnCredential.findUnique({
+  const stored = await prisma.webAuthnCredential.findUnique({
     where: { credentialId },
     include: { user: true },
   });
-  if (!credential || credential.user.isGuest) {
+  if (!stored || stored.user.isGuest) {
     return Response.json({ error: "Credential not found" }, { status: 400 });
   }
 
   const signedChallenge = challengeFromResponse(body.response);
   const challengeRecord = signedChallenge
-    ? await consumeChallenge(signedChallenge, "authentication", credential.userId, true)
+    ? await consumeChallenge(signedChallenge, "authentication", stored.userId, true)
     : null;
   if (!challengeRecord) {
     return Response.json({ error: "Challenge expired or not found" }, { status: 400 });
@@ -39,11 +37,11 @@ export async function POST(req: Request) {
       expectedChallenge: challengeRecord.challenge,
       expectedOrigin: ORIGIN,
       expectedRPID: RP_ID,
-      authenticator: {
-        credentialID: isoBase64URL.toBuffer(credential.credentialId),
-        credentialPublicKey: new Uint8Array(credential.publicKey),
-        counter: Number(credential.counter),
-        transports: credential.transports as AuthenticatorTransportFuture[] | undefined,
+      credential: {
+        id: stored.credentialId,
+        publicKey: new Uint8Array(stored.publicKey),
+        counter: Number(stored.counter),
+        transports: stored.transports as AuthenticatorTransportFuture[],
       },
       requireUserVerification: true,
     });
@@ -68,7 +66,7 @@ export async function POST(req: Request) {
     ? "__Secure-authjs.session-token"
     : "authjs.session-token";
 
-  const { user } = credential;
+  const { user } = stored;
 
   const token = await encode({
     token: {
