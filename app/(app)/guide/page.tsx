@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { auth } from "@/lib/auth";
+import { isAdmin } from "@/lib/permissions";
 
 const sections = [
   { id: "dashboard", icon: "🏠", title: "Dashboard" },
@@ -13,7 +15,14 @@ const sections = [
   { id: "profile", icon: "👤", title: "Profile & Sign-in" },
 ];
 
-export default function GuidePage() {
+const adminSection = { id: "admin", icon: "🛡️", title: "Administrator Tools" };
+
+export default async function GuidePage() {
+  const session = await auth();
+  // Admin tools are only described to admins — the section isn't rendered for anyone else
+  const admin = !!session?.user && (await isAdmin(session.user.id));
+  const index = admin ? [...sections, adminSection] : sections;
+
   return (
     <div className="space-y-6">
       {/* Page title */}
@@ -28,7 +37,7 @@ export default function GuidePage() {
       <nav className="bg-white rounded-xl border border-fairway-50 p-4">
         <p className="text-sm font-semibold text-fairway-800 mb-2">On this page</p>
         <ul className="space-y-1">
-          {sections.map((s) => (
+          {index.map((s) => (
             <li key={s.id}>
               <a
                 href={`#${s.id}`}
@@ -929,6 +938,162 @@ export default function GuidePage() {
           </div>
         </div>
       </div>
+      {/* Administrator Tools — admins only */}
+      {admin && (
+        <div id="admin" className="bg-white rounded-xl border border-acorn-200 p-4 scroll-mt-20">
+          <h2 className="text-lg font-semibold text-fairway-900 flex flex-wrap items-center gap-2 mb-3">
+            <span>🛡️</span> Administrator Tools
+            <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-acorn-100 text-acorn-800">
+              Admins only
+            </span>
+          </h2>
+          <div className="space-y-3 text-sm text-gray-700 leading-relaxed">
+            <p className="text-xs text-acorn-800 bg-acorn-50 border border-acorn-200 rounded-lg px-3 py-2">
+              Only administrators can see this section. Anything you change on someone else&apos;s
+              event, round or account is recorded in the{" "}
+              <Link href="/admin/audit" className="text-fairway-700 underline">
+                Audit log
+              </Link>
+              .
+            </p>
+            <p>
+              <span className="font-semibold text-fairway-900">Getting there</span> — Tap{" "}
+              <span className="font-semibold">Admin</span> in the menu. It opens on Activity, with tabs
+              for <span className="font-semibold">Activity</span>,{" "}
+              <span className="font-semibold">Rounds</span>,{" "}
+              <span className="font-semibold">Events</span>,{" "}
+              <span className="font-semibold">Members</span>,{" "}
+              <span className="font-semibold">Courses</span> and the{" "}
+              <span className="font-semibold">Audit log</span>. Other members get a &ldquo;not
+              found&rdquo; page if they try to open it.
+            </p>
+            <p>
+              <span className="font-semibold text-fairway-900">Organiser powers everywhere</span> —
+              On every event you have the organiser&apos;s controls, whoever created it:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-gray-600">
+              <li>
+                Edit event details, set players&apos; responses, invite missed players, add guests,
+                arrange groups and start the event. A banner reminds you that you&apos;re managing
+                someone else&apos;s event.
+              </li>
+              <li>
+                Record prize-hole winners, and lock or unlock scores once the event is finished.
+              </li>
+              <li>
+                Edit any scorecard, even when scores are locked. The score page shows{" "}
+                <span className="font-semibold">Admin edit</span> so you know the change is logged.
+              </li>
+              <li>
+                Manage guests on anyone&apos;s casual round, and delete any event from the Events page.
+              </li>
+            </ul>
+            <p>
+              <span className="font-semibold text-fairway-900">
+                <Link href="/admin/activity" className="hover:underline">Activity</Link>
+              </span>{" "}
+              — A feed of what members have been doing over{" "}
+              <span className="font-semibold">Today</span>, the{" "}
+              <span className="font-semibold">Last 24 hours</span> or the{" "}
+              <span className="font-semibold">Last 7 days</span>, with a count for each kind. It covers
+              sign-ups, sign-ins, profile changes, new rounds and events, invitation responses,
+              comments, notification and passkey set-ups, password resets, and admin actions. Times are
+              in AWST. Only each member&apos;s latest sign-in is kept, and members who stay signed in
+              don&apos;t show a new one.
+            </p>
+            <p>
+              <span className="font-semibold text-fairway-900">
+                <Link href="/admin/rounds" className="hover:underline">Rounds</Link>
+              </span>{" "}
+              — Every casual round, in progress and completed, with{" "}
+              <span className="font-semibold">Score</span>,{" "}
+              <span className="font-semibold">View</span> and{" "}
+              <span className="font-semibold">Delete</span>. Event rounds are managed from each
+              event&apos;s own page.
+            </p>
+            <p>
+              <span className="font-semibold text-fairway-900">
+                <Link href="/admin/events" className="hover:underline">Events</Link>
+              </span>{" "}
+              — Every event, including old never-started ones that no longer appear on the Events
+              page. For each one you can:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-gray-600">
+              <li>
+                <span className="font-semibold">Transfer organiser</span> — hand the event to another
+                member.
+              </li>
+              <li>
+                <span className="font-semibold">Reopen</span> a completed event so groups can re-score
+                and finish again.
+              </li>
+              <li>
+                <span className="font-semibold">Delete</span> it. You&apos;re warned first if any
+                scores would be lost.
+              </li>
+            </ul>
+            <p>
+              <span className="font-semibold text-fairway-900">
+                <Link href="/admin/members" className="hover:underline">Members</Link>
+              </span>{" "}
+              — Every registered member with their handicap, rounds played and join date. For each
+              member:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-gray-600">
+              <li>
+                <span className="font-semibold">Edit details</span> — first name, last name, username
+                and email.
+              </li>
+              <li>
+                <span className="font-semibold">Password</span> — emails them a reset link that works
+                once, for one hour. The link is also shown so you can copy it and send it yourself.
+              </li>
+              <li>
+                <span className="font-semibold">Handicap</span> —{" "}
+                <span className="font-semibold">Recalculate</span> from their stored rounds, or{" "}
+                <span className="font-semibold">Rebuild</span> every completed Strokeplay round with
+                the current WHS method first. Tap{" "}
+                <span className="font-semibold">Preview changes</span> to see the before and after,
+                then <span className="font-semibold">Apply</span>. Nothing is saved until you apply.
+              </li>
+              <li>
+                <span className="font-semibold">Make admin</span> /{" "}
+                <span className="font-semibold">Remove admin</span>. There must always be at least one
+                administrator.
+              </li>
+              <li>
+                <span className="font-semibold">Delete</span> — tick one or more members, then confirm.
+                This also deletes the events they organised and any rounds only they played. You
+                can&apos;t select yourself or another admin (remove their admin access first).
+              </li>
+            </ul>
+            <p>
+              The <span className="font-semibold">Handicaps — everyone</span> tool at the bottom of the
+              page runs the same Recalculate or Rebuild for all members at once. Its preview lists only
+              the handicaps that would change.
+            </p>
+            <p>
+              <span className="font-semibold text-fairway-900">
+                <Link href="/admin/courses" className="hover:underline">Courses</Link>
+              </span>{" "}
+              — Scorecards members have sent in for courses with missing data. Administrators are
+              emailed when a new one arrives. Tap{" "}
+              <span className="font-semibold">View scorecard</span> to open the photo or PDF, and{" "}
+              <span className="font-semibold">Mark reviewed</span> once it&apos;s been dealt with.
+              Below that is every course with incomplete tee data and what&apos;s missing. Rounds on
+              those tees don&apos;t count towards handicaps. Completing a course means updating the
+              course data file and re-running the seed, which is done by the developer.
+            </p>
+            <p>
+              <span className="font-semibold text-fairway-900">
+                <Link href="/admin/audit" className="hover:underline">Audit log</Link>
+              </span>{" "}
+              — A record of every action an administrator takes on other people&apos;s events, rounds
+              and accounts: who did it, what they changed and when.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
