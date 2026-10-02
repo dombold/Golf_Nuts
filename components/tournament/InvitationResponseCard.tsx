@@ -12,6 +12,7 @@ interface Props {
   format: string;
   date: string | null;
   organiserName: string;
+  note?: string | null;
 }
 
 export default function InvitationResponseCard({
@@ -21,6 +22,7 @@ export default function InvitationResponseCard({
   format,
   date,
   organiserName,
+  note,
 }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState<"accept" | "decline" | null>(null);
@@ -76,6 +78,13 @@ export default function InvitationResponseCard({
           </>
         )}
       </dl>
+
+      {note && (
+        <div className="rounded-xl bg-white border border-fairway-100 px-4 py-3">
+          <p className="text-xs font-medium text-gray-500 mb-1">Note from {organiserName}</p>
+          <p className="text-sm text-gray-800 whitespace-pre-line break-words">{note}</p>
+        </div>
+      )}
 
       <div className="flex gap-3 pt-1">
         <button

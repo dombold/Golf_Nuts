@@ -331,6 +331,8 @@ model Tournament {
   completedAt DateTime?
   /// Set when the organiser locks scores (players can no longer edit; the organiser still can)
   scoresLockedAt DateTime?
+  /// Optional note from the organiser, shown to invitees (and included in invite notifications)
+  inviteNote  String?
   createdAt   DateTime         @default(now())
 
   createdById String

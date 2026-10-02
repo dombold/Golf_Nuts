@@ -554,7 +554,10 @@ export default function GuidePage() {
               <Link href="/profile" className="text-fairway-700 underline">
                 Profile
               </Link>
-              .
+              . You can also add an optional{" "}
+              <span className="font-semibold">Note for invitees</span> (up to 500 characters), such
+              as the entry fee or where to meet. It&apos;s included in the invite notification and
+              shown on the event page.
             </li>
           </ol>
           <p>
@@ -563,7 +566,7 @@ export default function GuidePage() {
             to respond. While it is upcoming, the organiser can tap{" "}
             <span className="font-semibold">Edit event details</span> to change the name, date,{" "}
             <span className="font-semibold">tee-off time</span>, format (including the 2-ball /
-            4-ball choice and Skins carry-over), course, tee, or holes. Changing the course, tee, or
+            4-ball choice and Skins carry-over), course, tee, holes, or the note for invitees. Changing the course, tee, or
             nine clears any prize holes that no longer apply, and changing to a different team size
             re-sorts any saved teams.
           </p>
@@ -584,6 +587,14 @@ export default function GuidePage() {
             <span className="font-semibold">Pending</span>. When a player answers the invitation
             themselves, their dropdown updates to match. This works until the event starts. Moving a player to Declined or Pending takes them out of their group; a
             group left empty is removed.
+          </p>
+          <p>
+            <span className="font-semibold text-fairway-900">Inviting someone you missed</span> —
+            Below the <span className="font-semibold">Players</span> list, tap{" "}
+            <span className="font-semibold">+ Invite registered player</span> and choose them from the
+            list of members who haven&apos;t been invited yet. They get the usual invite notification
+            (with your note) and appear as <span className="font-semibold">Pending</span> until they
+            respond. This works until the event starts.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Prize holes</span> — Each prize hole is

@@ -43,6 +43,7 @@ export default async function EditTournamentPage({
         format: tournament.format,
         date: tournament.date?.toISOString() ?? null,
         teeOffTime: tournament.teeOffTime ?? null,
+        inviteNote: tournament.inviteNote ?? null,
         holesCount: tournament.holesCount === 9 ? 9 : 18,
         startingHole: tournament.startingHole === 10 ? 10 : 1,
         skinsCarryOver: tournament.skinsCarryOver,

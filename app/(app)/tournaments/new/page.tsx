@@ -10,6 +10,7 @@ import PrizeHolePicker from "@/components/tournament/PrizeHolePicker";
 import type { PrizeHoleInput } from "@/lib/prizeHoles";
 import IncompleteDataNotice, { IncompleteChip } from "@/components/course/IncompleteDataNotice";
 import { displayRating, isIncompleteTee, type TeeDataIssue } from "@/lib/teeDataIssues";
+import { INVITE_NOTE_MAX } from "@/lib/inviteNote";
 
 interface Course { id: string; name: string; tees: Tee[]; suburb?: string | null; city?: string | null; address?: string | null; phone?: string | null }
 interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null; dataIssues: TeeDataIssue[] }
@@ -53,6 +54,7 @@ export default function NewTournamentPage() {
   // Step 5 — Invite players
   const [users, setUsers] = useState<User[]>([]);
   const [inviteeIds, setInviteeIds] = useState<string[]>([]);
+  const [inviteNote, setInviteNote] = useState("");
 
   useEffect(() => {
     fetch("/api/users").then((r) => r.json()).then((d) => setUsers(d.users ?? []));
@@ -127,6 +129,7 @@ export default function NewTournamentPage() {
           date: date || undefined,
           teeOffTime: teeOffTime || undefined,
           inviteeIds,
+          inviteNote: inviteNote.trim() || undefined,
           prizeHoles: selectedPrizeHoles,
         }),
       });
@@ -470,6 +473,26 @@ export default function NewTournamentPage() {
             {users.length === 0 && (
               <p className="text-gray-400 text-sm text-center py-4">No other users registered yet.</p>
             )}
+          </div>
+
+          <div>
+            <label htmlFor="invite-note" className="block text-sm font-medium text-gray-700 mb-1">
+              Note for invitees <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <textarea
+              id="invite-note"
+              value={inviteNote}
+              onChange={(e) => setInviteNote(e.target.value)}
+              maxLength={INVITE_NOTE_MAX}
+              rows={3}
+              aria-describedby="invite-note-hint"
+              placeholder="e.g. $20 entry, meet at the pro shop 15 minutes before tee off"
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-fairway-500 text-sm"
+            />
+            <p id="invite-note-hint" className="flex justify-between text-xs text-gray-400 mt-1">
+              <span>Included in the invite notification and shown on the event page.</span>
+              <span className="shrink-0 ml-2">{inviteNote.length}/{INVITE_NOTE_MAX}</span>
+            </p>
           </div>
 
           <div className="flex gap-3">

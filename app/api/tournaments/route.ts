@@ -7,6 +7,7 @@ import { sendTournamentInviteNotification } from "@/lib/push";
 import { validatePrizeHoles } from "@/lib/prizeHoles";
 import { pruneStaleTournaments } from "@/lib/staleTournaments";
 import { pruneGuests } from "@/lib/guests";
+import { InviteNoteSchema } from "@/lib/inviteNote";
 
 const PrizeHoleSchema = z.object({
   holeNumber: z.number().int().min(1).max(18),
@@ -26,6 +27,7 @@ const CreateSchema = z.object({
   prizeHoles: z.array(PrizeHoleSchema).default([]),
   skinsCarryOver: z.boolean().default(true),
   stablefordTeamSize: z.union([z.literal(1), z.literal(2), z.literal(4)]).default(1),
+  inviteNote: InviteNoteSchema.optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -36,7 +38,7 @@ export async function POST(req: NextRequest) {
   const parsed = CreateSchema.safeParse(body);
   if (!parsed.success) return Response.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const { name, format, courseId, teeId, holesCount, date, teeOffTime, inviteeIds, prizeHoles, skinsCarryOver, stablefordTeamSize } = parsed.data;
+  const { name, format, courseId, teeId, holesCount, date, teeOffTime, inviteeIds, prizeHoles, skinsCarryOver, stablefordTeamSize, inviteNote } = parsed.data;
   const startingHole = holesCount === 18 ? 1 : parsed.data.startingHole;
   const organiserId = session.user.id;
 
@@ -75,6 +77,7 @@ export async function POST(req: NextRequest) {
       stablefordTeamSize: format === "STABLEFORD" ? stablefordTeamSize : 1,
       date: date ? new Date(date) : null,
       teeOffTime: teeOffTime ?? null,
+      inviteNote: inviteNote ?? null,
       createdById: organiserId,
       invitations: {
         create: [
@@ -95,7 +98,7 @@ export async function POST(req: NextRequest) {
   // Fire push notifications to invitees — non-blocking, won't fail the request
   if (otherInvitees.length > 0) {
     void Promise.allSettled(
-      otherInvitees.map((id) => sendTournamentInviteNotification(id, name, tournament.id))
+      otherInvitees.map((id) => sendTournamentInviteNotification(id, name, tournament.id, tournament.inviteNote))
     );
   }
 

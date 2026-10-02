@@ -10,6 +10,7 @@ import TournamentLeaderboard from "@/components/tournament/TournamentLeaderboard
 import PrizeHolesCard from "@/components/tournament/PrizeHolesCard";
 import InviteeStatusControl from "@/components/tournament/InviteeStatusControl";
 import AddEventGuest from "@/components/tournament/AddEventGuest";
+import AddEventPlayer from "@/components/tournament/AddEventPlayer";
 import ScoreLockToggle from "@/components/tournament/ScoreLockToggle";
 import GuestRow from "@/components/guests/GuestRow";
 import { describeHoles } from "@/lib/nines";
@@ -87,6 +88,19 @@ export default async function TournamentDetailPage({
   const acceptedPlayers = tournament.invitations
     .filter((inv) => inv.status === "ACCEPTED")
     .map((inv) => inv.user);
+
+  // Registered members the organiser hasn't invited yet (for "+ Invite registered player")
+  const uninvitedPlayers =
+    isOrganiser && tournament.status === "UPCOMING"
+      ? await prisma.user.findMany({
+          where: { isGuest: false, id: { notIn: tournament.invitations.map((inv) => inv.userId) } },
+          select: { id: true, name: true, handicapIndex: true },
+          orderBy: { name: "asc" },
+        })
+      : [];
+
+  // A pending invitee sees the note on their invitation card; everyone else gets it as its own card
+  const showInvitationCard = tournament.status === "UPCOMING" && !isOwner && myInvitation?.status === "PENDING";
 
   const guestNames = tournament.invitations.filter((inv) => inv.user.isGuest).map((inv) => inv.user.name);
   // Once started, a guest's place is their round player (scores decide remove vs anonymise)
@@ -194,6 +208,13 @@ export default async function TournamentDetailPage({
         </div>
       </dl>
 
+      {tournament.inviteNote && tournament.status === "UPCOMING" && !showInvitationCard && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3">
+          <p className="text-xs font-medium text-gray-500 mb-1">Note from {tournament.createdBy.name}</p>
+          <p className="text-sm text-gray-800 whitespace-pre-line break-words">{tournament.inviteNote}</p>
+        </div>
+      )}
+
       {isOrganiser && !isOwner && (
         <p role="status" className="text-xs text-acorn-700 bg-acorn-50 border border-acorn-200 rounded-lg px-3 py-2">
           Admin: you&apos;re managing {tournament.createdBy.name}&apos;s event. Changes are recorded in the audit log.
@@ -229,7 +250,7 @@ export default async function TournamentDetailPage({
       {tournament.status === "UPCOMING" && (
         <>
           {/* Invitation response (non-organiser, pending) */}
-          {!isOwner && myInvitation?.status === "PENDING" && (
+          {showInvitationCard && (
             <InvitationResponseCard
               tournamentId={id}
               tournamentName={tournament.name}
@@ -237,6 +258,7 @@ export default async function TournamentDetailPage({
               format={tournament.format}
               date={tournament.date?.toISOString() ?? null}
               organiserName={tournament.createdBy.name}
+              note={tournament.inviteNote}
             />
           )}
 
@@ -284,6 +306,7 @@ export default async function TournamentDetailPage({
                     </div>
                   ))}
                 </div>
+                <AddEventPlayer tournamentId={id} players={uninvitedPlayers} />
                 <AddEventGuest tournamentId={id} guestNames={guestNames} />
               </div>
 

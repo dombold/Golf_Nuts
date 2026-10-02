@@ -1,5 +1,6 @@
 import webpush from "web-push";
 import { prisma } from "@/lib/prisma";
+import { notificationNote } from "@/lib/inviteNote";
 
 function getWebPush() {
   webpush.setVapidDetails(
@@ -19,7 +20,8 @@ interface PushPayload {
 export async function sendTournamentInviteNotification(
   userId: string,
   tournamentName: string,
-  tournamentId: string
+  tournamentId: string,
+  note?: string | null
 ) {
   const subscriptions = await prisma.pushSubscription.findMany({
     where: { userId },
@@ -29,7 +31,7 @@ export async function sendTournamentInviteNotification(
 
   const payload: PushPayload = {
     title: "Golf Nuts — Tournament Invite",
-    body: `You've been invited to "${tournamentName}". Accept or decline?`,
+    body: `You've been invited to "${tournamentName}". Accept or decline?` + (note ? `\n\n“${notificationNote(note)}”` : ""),
     tournamentId,
   };
 

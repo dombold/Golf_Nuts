@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { GameFormatSchema } from "@/lib/gameFormats";
+import { InviteNoteSchema } from "@/lib/inviteNote";
 import { isHoleInPlay } from "@/lib/nines";
 import { splitIntoTeams } from "@/lib/teams";
 import { teamSizeFor } from "@/lib/gameFormats";
@@ -91,6 +92,7 @@ const PatchSchema = z.object({
   status: z.enum(["UPCOMING", "ACTIVE", "COMPLETE"]).optional(),
   skinsCarryOver: z.boolean().optional(),
   stablefordTeamSize: z.union([z.literal(1), z.literal(2), z.literal(4)]).optional(),
+  inviteNote: InviteNoteSchema.nullable().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
@@ -109,12 +111,12 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const parsed = PatchSchema.safeParse(body);
   if (!parsed.success) return Response.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const { name, format, date, teeOffTime, courseId, teeId, holesCount, startingHole, status, skinsCarryOver, stablefordTeamSize } = parsed.data;
+  const { name, format, date, teeOffTime, courseId, teeId, holesCount, startingHole, status, skinsCarryOver, stablefordTeamSize, inviteNote } = parsed.data;
 
   const isFieldEdit = name !== undefined || format !== undefined || date !== undefined
     || teeOffTime !== undefined || courseId !== undefined || teeId !== undefined
     || holesCount !== undefined || startingHole !== undefined || skinsCarryOver !== undefined
-    || stablefordTeamSize !== undefined;
+    || stablefordTeamSize !== undefined || inviteNote !== undefined;
 
   if (isFieldEdit && tournament.status !== "UPCOMING") {
     return Response.json(
@@ -165,6 +167,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (teeId !== undefined) data.teeId = teeId;
   if (skinsCarryOver !== undefined) data.skinsCarryOver = skinsCarryOver;
   if (stablefordTeamSize !== undefined) data.stablefordTeamSize = stablefordTeamSize;
+  if (inviteNote !== undefined) data.inviteNote = inviteNote;
   if (status !== undefined && status !== tournament.status) {
     data.status = status;
     // Record when the event finished (drives the move to Previous Events); clear it if re-opened

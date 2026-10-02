@@ -8,6 +8,7 @@ import { EVENT_FORMATS } from "@/lib/gameFormats";
 import FormatPicker from "@/components/FormatPicker";
 import IncompleteDataNotice, { IncompleteChip } from "@/components/course/IncompleteDataNotice";
 import { displayRating, isIncompleteTee, type TeeDataIssue } from "@/lib/teeDataIssues";
+import { INVITE_NOTE_MAX } from "@/lib/inviteNote";
 
 interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null; dataIssues: TeeDataIssue[] }
 interface Course { id: string; name: string; tees: Tee[]; suburb?: string | null; city?: string | null; address?: string | null; phone?: string | null }
@@ -18,6 +19,7 @@ interface TournamentData {
   format: string;
   date: string | null;
   teeOffTime: string | null;
+  inviteNote: string | null;
   holesCount: HolesCount;
   startingHole: StartingHole;
   skinsCarryOver: boolean;
@@ -33,6 +35,7 @@ export default function EditEventForm({ tournament }: { tournament: TournamentDa
     tournament.date ? new Date(tournament.date).toISOString().split("T")[0] : ""
   );
   const [teeOffTime, setTeeOffTime] = useState(tournament.teeOffTime ?? "");
+  const [inviteNote, setInviteNote] = useState(tournament.inviteNote ?? "");
   const [format, setFormat] = useState(tournament.format);
   const [skinsCarryOver, setSkinsCarryOver] = useState(tournament.skinsCarryOver);
   const [stablefordTeamSize, setStablefordTeamSize] = useState<1 | 2 | 4>(
@@ -95,6 +98,7 @@ export default function EditEventForm({ tournament }: { tournament: TournamentDa
           format,
           date: date || null,
           teeOffTime: teeOffTime || null,
+          inviteNote: inviteNote.trim() || null,
           courseId: selectedCourse?.id ?? null,
           teeId: selectedTee?.id ?? null,
           holesCount,
@@ -158,6 +162,27 @@ export default function EditEventForm({ tournament }: { tournament: TournamentDa
           onChange={(e) => setTeeOffTime(e.target.value)}
           className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-fairway-500 text-sm"
         />
+      </div>
+
+      {/* Note for invitees */}
+      <div className="space-y-1">
+        <label htmlFor="invite-note" className="block text-sm font-medium text-gray-700">
+          Note for invitees <span className="text-gray-400 font-normal">(optional)</span>
+        </label>
+        <textarea
+          id="invite-note"
+          value={inviteNote}
+          onChange={(e) => setInviteNote(e.target.value)}
+          maxLength={INVITE_NOTE_MAX}
+          rows={3}
+          aria-describedby="invite-note-hint"
+          placeholder="e.g. $20 entry, meet at the pro shop 15 minutes before tee off"
+          className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-fairway-500 text-sm"
+        />
+        <p id="invite-note-hint" className="flex justify-between text-xs text-gray-400">
+          <span>Shown on the event page and in notifications to players you invite later.</span>
+          <span className="shrink-0 ml-2">{inviteNote.length}/{INVITE_NOTE_MAX}</span>
+        </p>
       </div>
 
       {/* Format */}
