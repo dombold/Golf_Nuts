@@ -44,6 +44,8 @@ model User {
   createdGuests          User[]                   @relation("GuestCreator")
   createdRounds          Round[]                  @relation("RoundCreator")
   adminActions           AdminAuditLog[]
+  scorecardSubmissions   ScorecardSubmission[]    @relation("ScorecardSubmitter")
+  scorecardReviews       ScorecardSubmission[]    @relation("ScorecardReviewer")
 
   @@index([isGuest])
   @@map("users")
@@ -68,10 +70,11 @@ model Course {
   aliases    String[] @default([])
   createdAt  DateTime @default(now())
 
-  tees        Tee[]
-  rounds      Round[]
-  tournaments Tournament[]
-  userCourses UserCourse[]
+  tees                 Tee[]
+  rounds               Round[]
+  tournaments          Tournament[]
+  userCourses          UserCourse[]
+  scorecardSubmissions ScorecardSubmission[]
 
   @@map("courses")
 }
@@ -98,15 +101,56 @@ model Tee {
   slope       Int
   par         Int
   totalMeters Int?
+  /// Scorecard data that is missing or estimated. Non-empty = incomplete: placeholder
+  /// values stand in, and rounds on this tee never count towards a handicap.
+  dataIssues  TeeDataIssue[] @default([])
 
-  course           Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  holes            Hole[]
-  rounds           Round[]
-  tournaments      Tournament[]
-  tournamentGroups TournamentGroup[]
+  course               Course                @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  holes                Hole[]
+  rounds               Round[]
+  tournaments          Tournament[]
+  tournamentGroups     TournamentGroup[]
+  scorecardSubmissions ScorecardSubmission[]
 
   @@unique([courseId, name])
   @@map("tees")
+}
+
+enum TeeDataIssue {
+  STROKE_INDEX // stroke indexes estimated from hole lengths
+  RATING // course rating / slope unknown: placeholder rating = par, slope 113
+  HOLE_LENGTHS // hole lengths missing or unverified
+}
+
+enum ScorecardStatus {
+  PENDING
+  REVIEWED
+}
+
+/// A scorecard photo/PDF sent by a player for a course with incomplete data.
+/// The file lives outside public/ under uploads/scorecards and is only served to admins.
+model ScorecardSubmission {
+  id           String          @id @default(cuid())
+  courseId     String
+  teeId        String?
+  userId       String?
+  fileName     String
+  mimeType     String
+  sizeBytes    Int
+  note         String?
+  status       ScorecardStatus @default(PENDING)
+  createdAt    DateTime        @default(now())
+  reviewedAt   DateTime?
+  reviewedById String?
+
+  course     Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  tee        Tee?   @relation(fields: [teeId], references: [id], onDelete: SetNull)
+  user       User?  @relation("ScorecardSubmitter", fields: [userId], references: [id], onDelete: SetNull)
+  reviewedBy User?  @relation("ScorecardReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([userId, status])
+  @@map("scorecard_submissions")
 }
 
 model Hole {

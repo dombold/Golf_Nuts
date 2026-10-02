@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { updateHandicapIndex } from "@/lib/recalcHandicap";
 import { pruneGuests } from "@/lib/guests";
+import { isIncompleteTee, type TeeDataIssue } from "@/lib/teeDataIssues";
 
 /**
  * Delete an event together with every group's round. Rounds cascade to their players, scores,
@@ -32,6 +33,7 @@ export async function deleteTournamentWithRounds(tournamentId: string): Promise<
 interface WarningRound {
   status: string;
   format: string;
+  tee: { dataIssues: TeeDataIssue[] };
   players: { user: { name: string; isGuest: boolean } }[];
 }
 
@@ -45,7 +47,7 @@ export function eventDeletionWarning(rounds: WarningRound[]): string {
   const handicapNames = [
     ...new Set(
       rounds
-        .filter((r) => r.status === "COMPLETE" && r.format === "STROKEPLAY")
+        .filter((r) => r.status === "COMPLETE" && r.format === "STROKEPLAY" && !isIncompleteTee(r.tee))
         .flatMap((r) => r.players.filter((p) => !p.user.isGuest).map((p) => p.user.name))
     ),
   ].sort();

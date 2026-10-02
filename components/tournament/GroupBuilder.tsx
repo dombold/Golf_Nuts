@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { oddNumberHint as teamOddNumberHint, teamGameLabels, teamWarnings as findTeamWarnings } from "@/lib/teams";
 import { teamSizeFor } from "@/lib/gameFormats";
 import GuestBadge from "@/components/guests/GuestBadge";
+import { isIncompleteTee, type TeeDataIssue } from "@/lib/teeDataIssues";
 
 interface Player {
   id: string;
@@ -28,6 +29,7 @@ interface Group {
 interface Tee {
   id: string;
   name: string;
+  dataIssues: TeeDataIssue[];
 }
 
 interface Props {
@@ -223,10 +225,14 @@ export default function GroupBuilder({
                 <select
                   value={group.teeId}
                   onChange={(e) => setGroupTee(gi, e.target.value)}
+                  aria-label={`Tees for group ${group.groupNumber}`}
                   className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 focus:outline-none focus:ring-2 focus:ring-fairway-400"
                 >
                   {tees.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                      {isIncompleteTee(t) ? " (incomplete data)" : ""}
+                    </option>
                   ))}
                 </select>
               )}
@@ -240,6 +246,12 @@ export default function GroupBuilder({
               )}
             </div>
           </div>
+
+          {tees.find((t) => t.id === group.teeId && isIncompleteTee(t)) && (
+            <p role="status" className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              These tees have incomplete scorecard data — this group&apos;s rounds won&apos;t count towards handicaps.
+            </p>
+          )}
 
           {/* Member slots */}
           <div className="space-y-2">

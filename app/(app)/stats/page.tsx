@@ -4,6 +4,7 @@ import HandicapChart from "./HandicapChart";
 import ExcludeToggle from "./ExcludeToggle";
 import { isHoleInPlay } from "@/lib/nines";
 import { formatDisplayLabel } from "@/lib/gameFormats";
+import { isIncompleteTee } from "@/lib/teeDataIssues";
 
 export default async function StatsPage() {
   const session = await auth();
@@ -29,7 +30,7 @@ export default async function StatsPage() {
       },
       include: {
         course: { select: { name: true } },
-        tee: { select: { holes: { select: { number: true, par: true } } } },
+        tee: { select: { dataIssues: true, holes: { select: { number: true, par: true } } } },
         players: {
           where: { userId },
           include: { scores: true },
@@ -57,8 +58,10 @@ export default async function StatsPage() {
       date: round.date,
       course: round.course.name,
       format: formatDisplayLabel(round.format, round.stablefordTeamSize),
-      // Only Strokeplay counts toward handicap (WHS), so only those rounds get the include/exclude toggle
-      countsForHandicap: round.format === "STROKEPLAY",
+      // Only Strokeplay on a fully-rated tee counts toward handicap (WHS), so only those rounds get the
+      // include/exclude toggle
+      countsForHandicap: round.format === "STROKEPLAY" && !isIncompleteTee(round.tee),
+      incompleteCourse: isIncompleteTee(round.tee),
       gross,
       holesCount: round.holesCount,
       toPar: gross - playedPar,
@@ -165,6 +168,14 @@ export default async function StatsPage() {
                       <td className="px-3 py-1.5 text-center">
                         {r.countsForHandicap ? (
                           <ExcludeToggle roundId={r.roundId} excluded={r.excluded} />
+                        ) : r.incompleteCourse ? (
+                          <span
+                            className="text-xs font-medium text-amber-800"
+                            title="This course's scorecard data is incomplete, so rounds here don't count toward your handicap"
+                          >
+                            Not counted
+                            <span className="sr-only"> — course scorecard data incomplete</span>
+                          </span>
                         ) : (
                           <span className="text-gray-400" title="Only Strokeplay rounds count toward your handicap">
                             <span aria-hidden="true">—</span>

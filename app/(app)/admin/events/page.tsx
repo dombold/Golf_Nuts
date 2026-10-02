@@ -27,7 +27,12 @@ export default async function AdminEventsPage({ searchParams }: { searchParams: 
         rounds: {
           select: {
             round: {
-              select: { status: true, format: true, players: { select: { user: { select: { name: true, isGuest: true } } } } },
+              select: {
+                status: true,
+                format: true,
+                tee: { select: { dataIssues: true } },
+                players: { select: { user: { select: { name: true, isGuest: true } } } },
+              },
             },
           },
         },

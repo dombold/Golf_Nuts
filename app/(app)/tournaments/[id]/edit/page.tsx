@@ -62,6 +62,7 @@ export default async function EditTournamentPage({
                 slope: t.slope,
                 par: t.par,
                 totalMeters: t.totalMeters,
+                dataIssues: t.dataIssues,
               })),
             }
           : null,
@@ -73,6 +74,7 @@ export default async function EditTournamentPage({
               slope: tournament.tee.slope,
               par: tournament.tee.par,
               totalMeters: tournament.tee.totalMeters,
+              dataIssues: tournament.tee.dataIssues,
             }
           : null,
       }}

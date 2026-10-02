@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { updateHandicapIndex } from "@/lib/recalcHandicap";
+import { isIncompleteTee } from "@/lib/teeDataIssues";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -19,12 +20,19 @@ export async function PATCH(
 
   const roundPlayer = await prisma.roundPlayer.findUnique({
     where: { roundId_userId: { roundId, userId: session.user.id } },
-    select: { id: true, round: { select: { format: true } } },
+    select: { id: true, round: { select: { format: true, tee: { select: { dataIssues: true } } } } },
   });
   if (!roundPlayer) return Response.json({ error: "Not found" }, { status: 404 });
   // Only Strokeplay counts under WHS — other formats (team Stableford, Ambrose, Skins…) never can
   if (roundPlayer.round.format !== "STROKEPLAY") {
     return Response.json({ error: "Only Strokeplay rounds count toward handicap" }, { status: 409 });
+  }
+  // Placeholder ratings / estimated stroke indexes can't produce a valid differential
+  if (!parsed.data.exclude && isIncompleteTee(roundPlayer.round.tee)) {
+    return Response.json(
+      { error: "This course's scorecard data is incomplete, so rounds here can't count toward handicap" },
+      { status: 409 }
+    );
   }
 
   await prisma.roundPlayer.update({

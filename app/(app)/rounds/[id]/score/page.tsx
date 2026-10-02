@@ -13,6 +13,7 @@ import { isHoleInPlay } from "@/lib/nines";
 import { apiErrorMessage } from "@/lib/apiError";
 import GuestBadge from "@/components/guests/GuestBadge";
 import { formatMissing, missingScores, type MissingScores } from "@/lib/roundCompletion";
+import { isIncompleteTee, type TeeDataIssue } from "@/lib/teeDataIssues";
 
 interface Hole { id: string; number: number; par: number; strokeIndex: number; distance?: number; teeLat?: number | null; teeLng?: number | null; greenLat?: number | null; greenLng?: number | null; }
 interface ScoreEntry { strokes: number; penalties: number; putts?: number; fairwayHit?: boolean; gir?: boolean }
@@ -27,7 +28,7 @@ interface Round {
   startingHole: number;
   stablefordTeamSize?: number;
   course: { name: string };
-  tee: { name: string; par: number; holes: Hole[] };
+  tee: { name: string; par: number; dataIssues: TeeDataIssue[]; holes: Hole[] };
   players: Player[];
   prizeHoles?: PrizeHole[];
   tournamentRounds?: { tournament?: { id: string; status: string; prizeHoles?: PrizeHole[] } }[];
@@ -430,6 +431,9 @@ export default function ScoringPage() {
         <div>
           <p className="font-bold">{round.course.name}</p>
           <p className="text-fairway-300 text-xs">{round.tee.name} tees · {formatDisplayLabel(round.format, round.stablefordTeamSize)}</p>
+          {isIncompleteTee(round.tee) && (
+            <p className="text-xs text-amber-300 mt-0.5">Incomplete course data — not counted for handicap</p>
+          )}
           {access?.isAdmin ? (
             <p className="text-xs text-acorn-400 mt-0.5">
               Admin edit{access.locked ? " — scores are locked for players" : ""} · recorded in the audit log

@@ -29,7 +29,7 @@ export async function requireAdmin(): Promise<{ userId: string } | { response: R
 }
 
 export interface AuditTarget {
-  type: "tournament" | "round" | "user" | "guest" | "handicap";
+  type: "tournament" | "round" | "user" | "guest" | "handicap" | "scorecard";
   id?: string | null;
   /** Who normally owns the target. When the actor is the owner nothing is logged — it's ordinary use. */
   ownerId?: string | null;

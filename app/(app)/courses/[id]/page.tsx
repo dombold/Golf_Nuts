@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import TeeSelector from "./TeeSelector";
+import IncompleteDataNotice from "@/components/course/IncompleteDataNotice";
+import { courseDataIssues, isIncompleteTee } from "@/lib/teeDataIssues";
 
 export default async function CourseDetailPage({
   params,
@@ -20,6 +22,8 @@ export default async function CourseDetailPage({
     },
   });
   if (!course) notFound();
+
+  const incompleteTees = course.tees.filter(isIncompleteTee);
 
   return (
     <div className="space-y-6">
@@ -53,6 +57,15 @@ export default async function CourseDetailPage({
           </div>
         )}
       </div>
+
+      {incompleteTees.length > 0 && (
+        <IncompleteDataNotice
+          courseId={course.id}
+          issues={courseDataIssues(incompleteTees)}
+          // Name the tees only when some of the course's tees are complete
+          teeName={incompleteTees.length < course.tees.length ? incompleteTees.map((t) => t.name).join(", ") : undefined}
+        />
+      )}
 
       <Link
         href={`/rounds/new?courseId=${course.id}`}

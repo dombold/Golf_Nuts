@@ -63,3 +63,6 @@ next-env.d.ts
 
 /app/generated/prisma
 .env
+
+# uploaded files kept out of public/ (scorecards — served to admins only)
+/uploads

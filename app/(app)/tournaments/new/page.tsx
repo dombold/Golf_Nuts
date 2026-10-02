@@ -8,9 +8,11 @@ import { EVENT_FORMATS } from "@/lib/gameFormats";
 import FormatPicker from "@/components/FormatPicker";
 import PrizeHolePicker from "@/components/tournament/PrizeHolePicker";
 import type { PrizeHoleInput } from "@/lib/prizeHoles";
+import IncompleteDataNotice, { IncompleteChip } from "@/components/course/IncompleteDataNotice";
+import { displayRating, isIncompleteTee, type TeeDataIssue } from "@/lib/teeDataIssues";
 
 interface Course { id: string; name: string; tees: Tee[]; suburb?: string | null; city?: string | null; address?: string | null; phone?: string | null }
-interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
+interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null; dataIssues: TeeDataIssue[] }
 interface User { id: string; name: string; email: string; handicapIndex?: number }
 interface TeeHole { id: string; number: number; par: number; strokeIndex: number }
 
@@ -240,6 +242,9 @@ export default function NewTournamentPage() {
                     {(course.suburb || course.city) && (
                       <p className="text-xs text-gray-500 mt-0.5">{course.suburb ?? course.city}</p>
                     )}
+                    {course.tees.some(isIncompleteTee) && (
+                      <p className="text-xs text-amber-800 mt-0.5">Incomplete scorecard data</p>
+                    )}
                   </button>
                 ))}
               </div>
@@ -283,10 +288,21 @@ export default function NewTournamentPage() {
                         : "border-gray-100 bg-white hover:border-fairway-200"
                     }`}
                   >
-                    {tee.name} — CR {tee.rating} / Length {tee.totalMeters != null ? `${tee.totalMeters}m` : "—"} / Par {tee.par}
+                    {tee.name}
+                    {isIncompleteTee(tee) && <IncompleteChip />} — CR {displayRating(tee)} / Length{" "}
+                    {tee.totalMeters != null ? `${tee.totalMeters}m` : "—"} / Par {tee.par}
                   </button>
                 ))}
               </div>
+              {selectedTee && isIncompleteTee(selectedTee) && (
+                <IncompleteDataNotice
+                  key={selectedTee.id}
+                  courseId={selectedCourse.id}
+                  issues={selectedTee.dataIssues}
+                  teeId={selectedTee.id}
+                  teeName={selectedTee.name}
+                />
+              )}
             </div>
           )}
 

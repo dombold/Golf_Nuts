@@ -343,6 +343,16 @@ export default function GuidePage() {
             full hole-by-hole breakdown of distances and pars, plus the club&apos;s address, postcode,
             and phone number where available. Tap the phone number to call directly.
           </p>
+          <p>
+            <span className="font-semibold text-fairway-900">Incomplete courses</span> — Some smaller
+            clubs don&apos;t publish a full scorecard. Their tees are marked{" "}
+            <span className="font-semibold text-amber-800">Incomplete</span>, with a note saying what is
+            missing — stroke indexes, the course rating and slope, or hole lengths. You can still play
+            any format there, but net and Stableford results are approximate and the rounds never count
+            towards your handicap. If you have a copy of the club&apos;s scorecard, tap{" "}
+            <span className="font-semibold text-fairway-900">Send scorecard</span> on that note to send a
+            photo or PDF to the administrator, who can then complete the course.
+          </p>
         </div>
       </div>
 

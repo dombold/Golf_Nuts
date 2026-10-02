@@ -47,7 +47,7 @@ export default async function TournamentsPage() {
       round: {
         include: {
           course: { select: { name: true } },
-          tee: { select: { holes: { select: { number: true, strokeIndex: true, par: true } } } },
+          tee: { select: { dataIssues: true, holes: { select: { number: true, strokeIndex: true, par: true } } } },
           players: {
             include: {
               user: { select: { id: true, name: true, isGuest: true } },

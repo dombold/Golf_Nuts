@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { IncompleteChip } from "@/components/course/IncompleteDataNotice";
+import { displayRating, isIncompleteTee, type TeeDataIssue } from "@/lib/teeDataIssues";
 
 interface Hole {
   id: string;
@@ -17,6 +19,7 @@ interface Tee {
   slope: number;
   par: number;
   totalMeters: number | null;
+  dataIssues: TeeDataIssue[];
   holes: Hole[];
 }
 
@@ -44,9 +47,12 @@ export default function TeeSelector({ tees }: { tees: Tee[] }) {
                   : "bg-white border-fairway-100 text-fairway-900 hover:bg-fairway-50"
               }`}
             >
-              <span className="font-semibold">{tee.name} Tees</span>
+              <span className="font-semibold">
+                {tee.name} Tees
+                {isIncompleteTee(tee) && <IncompleteChip />}
+              </span>
               <span className={`text-sm ${isSelected ? "text-fairway-300" : "text-gray-400"}`}>
-                CR {tee.rating} / Length {tee.totalMeters != null ? `${tee.totalMeters}m` : "—"} / Par {tee.par}
+                CR {displayRating(tee)} / Length {tee.totalMeters != null ? `${tee.totalMeters}m` : "—"} / Par {tee.par}
               </span>
             </button>
           );
@@ -64,8 +70,12 @@ export default function TeeSelector({ tees }: { tees: Tee[] }) {
                 <tr className="bg-fairway-50 text-fairway-700">
                   <th className="px-3 py-2 text-left">Hole</th>
                   <th className="px-3 py-2 text-center">Par</th>
-                  <th className="px-3 py-2 text-center">SI</th>
-                  <th className="px-3 py-2 text-center">Meters</th>
+                  <th className="px-3 py-2 text-center">
+                    SI{selectedTee.dataIssues.includes("STROKE_INDEX") && <span className="font-normal"> (est.)</span>}
+                  </th>
+                  <th className="px-3 py-2 text-center">
+                    Meters{selectedTee.dataIssues.includes("HOLE_LENGTHS") && <span className="font-normal"> (unverified)</span>}
+                  </th>
                 </tr>
               </thead>
               <tbody>

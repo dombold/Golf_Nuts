@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { canOrganise, logTournamentAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { calcPlayingHandicap } from "@/lib/handicap";
+import { isIncompleteTee } from "@/lib/teeDataIssues";
 import { NextRequest } from "next/server";
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -74,7 +75,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
                 tee.par
               ),
               teamNumber: member.teamNumber ?? null,
-              excludeFromHandicap: tournament.format !== "STROKEPLAY",
+              // Only strokeplay on a fully-rated tee can count towards a handicap
+              excludeFromHandicap: tournament.format !== "STROKEPLAY" || isIncompleteTee(tee),
             })),
           },
         },

@@ -137,3 +137,41 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
     `,
   });
 }
+
+const escapeHtml = (s: string) =>
+  s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+
+/** Tell an administrator that a member has sent in a scorecard for a course with incomplete data. */
+export async function sendScorecardSubmittedEmail(
+  to: string,
+  { courseName, teeName, submittedBy, note }: { courseName: string; teeName: string | null; submittedBy: string; note: string | null }
+) {
+  const appUrl = process.env.NEXTAUTH_URL ?? "";
+  const reviewUrl = `${appUrl}/admin/courses`;
+  const course = teeName ? `${courseName} (${teeName} tees)` : courseName;
+  await getTransport().sendMail({
+    from: process.env.SMTP_FROM,
+    to,
+    subject: `Golf Nuts — scorecard received for ${courseName}`,
+    text: [
+      `${submittedBy} has sent a scorecard for ${course}, which has incomplete course data.`,
+      ...(note ? ["", `Note: ${note}`] : []),
+      "",
+      `Review it in Admin → Courses: ${reviewUrl}`,
+    ].join("\n"),
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;">
+        <h2 style="color:#1a4731;margin-bottom:8px;">Scorecard received</h2>
+        <p style="color:#374151;margin-bottom:16px;">
+          <strong>${escapeHtml(submittedBy)}</strong> has sent a scorecard for
+          <strong>${escapeHtml(course)}</strong>, which has incomplete course data.
+        </p>
+        ${note ? `<p style="color:#374151;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 16px;margin-bottom:16px;">${escapeHtml(note)}</p>` : ""}
+        <a href="${reviewUrl}"
+           style="display:inline-block;background:#15803d;color:#fff;font-weight:600;text-decoration:none;padding:12px 24px;border-radius:8px;">
+          Review in Admin
+        </a>
+      </div>
+    `,
+  });
+}

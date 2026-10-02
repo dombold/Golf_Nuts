@@ -1,8 +1,12 @@
 export type HolesCount = 9 | 18;
 export type StartingHole = 1 | 10;
 
-/** Tee names like "Red/Blue" describe two named nines; returns null for a plain tee name. */
+/**
+ * Tee names like "Red/Blue" describe two named nines; returns null for a plain tee name.
+ * A "/" inside brackets names a layout, not the nines — "Blue (Island/Lake)" is a plain tee name.
+ */
 export function parseNineNames(teeName: string): { front: string; back: string } | null {
+  if (teeName.includes("(")) return null;
   const parts = teeName.split("/");
   return parts.length === 2 ? { front: parts[0].trim(), back: parts[1].trim() } : null;
 }

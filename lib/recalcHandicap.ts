@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { calcHandicapIndex, scoreDifferential } from "@/lib/handicap";
 import { isHoleInPlay } from "@/lib/nines";
+import { isIncompleteTee } from "@/lib/teeDataIssues";
 
 /**
  * Recalculates a user's handicap index from their full HandicapHistory,
- * excluding any rounds the user has opted out of.
+ * excluding any rounds the user has opted out of and rounds on tees with incomplete
+ * scorecard data (Tee.dataIssues).
  *
  * Every history row holds an 18-hole Score Differential — 9-hole rounds are converted
  * when recorded, using the WHS expected-score method — so rows are used as-is.
@@ -28,10 +30,10 @@ export async function recalcHandicap(
     }),
   ]);
 
-  // Only STROKEPLAY rounds count under WHS — look up the format for each roundId
+  // Only STROKEPLAY rounds on fully-rated tees count — look up each roundId
   const roundIds = allHistory.map((h) => h.roundId).filter((id): id is string => id !== null);
   const strokeplayRounds = await prisma.round.findMany({
-    where: { id: { in: roundIds }, format: "STROKEPLAY" },
+    where: { id: { in: roundIds }, format: "STROKEPLAY", tee: { dataIssues: { isEmpty: true } } },
     select: { id: true },
   });
   const strokeplayIds = new Set(strokeplayRounds.map((r) => r.id));
@@ -63,7 +65,8 @@ export interface RoundDifferential {
   /** When the round was first recorded, if it already had a history row */
   recordedAt: Date | null;
   isNineHole: boolean;
-  /** null when the round doesn't produce a differential (too few holes played) */
+  /** null when the round doesn't produce a differential (too few holes played, or the tee's
+   *  scorecard data is incomplete) — recording it then removes any existing history row */
   result: { differential: number; ags: number } | null;
 }
 
@@ -84,6 +87,7 @@ export async function computeRoundDifferential(roundId: string, userId: string):
           select: {
             rating: true,
             slope: true,
+            dataIssues: true,
             holes: { select: { number: true, par: true, strokeIndex: true } },
           },
         },
@@ -110,6 +114,10 @@ export async function computeRoundDifferential(roundId: string, userId: string):
     .map((h) => ({ ...h, strokes: strokesByHole.get(h.number) ?? null }));
 
   const index = existing?.index ?? rp.user.handicapIndex;
+  const isNineHole = round.holesCount === 9;
+  // Placeholder ratings / estimated stroke indexes: never counts towards a handicap
+  if (isIncompleteTee(round.tee)) return { index, recordedAt: existing?.createdAt ?? null, isNineHole, result: null };
+
   const result = scoreDifferential({
     holesCount: round.holesCount as 9 | 18,
     courseRating: round.tee.rating,
@@ -117,7 +125,7 @@ export async function computeRoundDifferential(roundId: string, userId: string):
     handicapIndex: index,
     holes,
   });
-  return { index, recordedAt: existing?.createdAt ?? null, isNineHole: round.holesCount === 9, result };
+  return { index, recordedAt: existing?.createdAt ?? null, isNineHole, result };
 }
 
 /**

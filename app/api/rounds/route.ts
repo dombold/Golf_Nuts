@@ -6,6 +6,7 @@ import { z } from "zod";
 import { GameFormatSchema, teamSizeFor } from "@/lib/gameFormats";
 import { splitIntoTeams } from "@/lib/teams";
 import { GuestInputSchema, createGuest, pruneGuests, validateGuestName } from "@/lib/guests";
+import { isIncompleteTee } from "@/lib/teeDataIssues";
 
 const CreateRoundSchema = z
   .object({
@@ -120,7 +121,8 @@ export async function POST(req: NextRequest) {
               tee.rating,
               tee.par
             ),
-            excludeFromHandicap: format !== "STROKEPLAY",
+            // Only strokeplay on a fully-rated tee can count towards a handicap
+            excludeFromHandicap: format !== "STROKEPLAY" || isIncompleteTee(tee),
             teamNumber: teamOf.get(p.id) ?? null,
           })),
         },

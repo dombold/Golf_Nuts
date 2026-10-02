@@ -10,9 +10,11 @@ import { ambroseTeamHandicap } from "@/lib/formats";
 import FormatPicker from "@/components/FormatPicker";
 import AddGuestForm from "@/components/guests/AddGuestForm";
 import GuestBadge from "@/components/guests/GuestBadge";
+import IncompleteDataNotice, { IncompleteChip } from "@/components/course/IncompleteDataNotice";
+import { displayRating, isIncompleteTee, type TeeDataIssue } from "@/lib/teeDataIssues";
 
 interface Course { id: string; name: string; suburb: string | null; city: string | null; address?: string | null; phone?: string | null; tees: Tee[] }
-interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null }
+interface Tee { id: string; name: string; rating: number; slope: number; par: number; totalMeters: number | null; dataIssues: TeeDataIssue[] }
 interface User { id: string; name: string; email: string; handicapIndex?: number; isGuest?: boolean }
 
 /** Guests exist only in the wizard until Tee Off; this prefix marks their stand-in ids. */
@@ -285,6 +287,9 @@ function NewRoundForm() {
                     {(course.suburb || course.city) && (
                       <p className="text-xs text-gray-500 mt-0.5">{course.suburb ?? course.city}</p>
                     )}
+                    {course.tees.some(isIncompleteTee) && (
+                      <p className="text-xs text-amber-800 mt-0.5">Incomplete scorecard data</p>
+                    )}
                   </button>
                 ))}
               </div>
@@ -335,11 +340,21 @@ function NewRoundForm() {
                       }`}
                     >
                       <span className="font-medium">{tee.name}</span>
-                      <span className="text-gray-500 ml-2">CR {tee.rating} / Length {tee.totalMeters != null ? `${tee.totalMeters}m` : "—"} / Par {tee.par}</span>
+                      {isIncompleteTee(tee) && <IncompleteChip />}
+                      <span className="text-gray-500 ml-2">CR {displayRating(tee)} / Length {tee.totalMeters != null ? `${tee.totalMeters}m` : "—"} / Par {tee.par}</span>
                     </button>
                   ))
                 )}
               </div>
+              {selectedTee && isIncompleteTee(selectedTee) && (
+                <IncompleteDataNotice
+                  key={selectedTee.id}
+                  courseId={selectedCourse.id}
+                  issues={selectedTee.dataIssues}
+                  teeId={selectedTee.id}
+                  teeName={selectedTee.name}
+                />
+              )}
             </div>
           )}
 

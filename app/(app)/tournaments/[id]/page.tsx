@@ -35,7 +35,7 @@ export default async function TournamentDetailPage({
     where: { id },
     include: {
       createdBy: { select: { id: true, name: true, username: true } },
-      course: { select: { id: true, name: true, tees: { select: { id: true, name: true } } } },
+      course: { select: { id: true, name: true, tees: { select: { id: true, name: true, dataIssues: true } } } },
       tee: { select: { id: true, name: true } },
       invitations: {
         include: {

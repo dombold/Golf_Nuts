@@ -8,30 +8,42 @@
  *
  * Safe to re-run — upserts by externalId (course), [courseId, name] (tee),
  * and [teeId, number] (hole). Will update stale data on subsequent runs.
+ *
+ * Incomplete scorecards: write unknown values as null in the JSON (course_rating,
+ * slope_rating, a hole's handicap or meters). The seed flags the tee in Tee.dataIssues,
+ * stores a placeholder rating (= par, slope 113) and estimates missing stroke indexes from
+ * hole lengths. A tee's optional "missing_data" list adds issues for data that is present but
+ * unverified. Flagged tees never count towards handicaps. Fill in the nulls and re-run the
+ * seed to clear the flags.
  */
 
 import * as fs from "fs";
 import * as path from "path";
 import * as dotenv from "dotenv";
 import { PrismaClient } from "../app/generated/prisma/client";
+import type { TeeDataIssue } from "../app/generated/prisma/enums";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { estimateStrokeIndexes, hasMissingStrokeIndexes } from "../lib/strokeIndex";
+import { PLACEHOLDER_SLOPE } from "../lib/teeDataIssues";
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 interface ApiHole {
   par: number;
-  handicap?: number;
-  meters?: number;
+  handicap?: number | null;
+  meters?: number | null;
 }
 
 interface ApiTee {
   tee_name: string;
   tee_color?: string;
-  course_rating: number;
-  slope_rating: number;
+  course_rating: number | null;
+  slope_rating: number | null;
   par_total: number;
   total_meters?: number;
   holes?: ApiHole[];
+  /** Issues for data that is present but unverified, e.g. ["hole_lengths"] */
+  missing_data?: string[];
 }
 
 interface CourseEntry {
@@ -59,11 +71,32 @@ function flattenTees(tees: ApiTee[] | undefined): ApiTee[] {
   const best = new Map<string, ApiTee>();
   for (const t of tees) {
     const key = t.tee_name.toLowerCase();
-    if (!best.has(key) || t.course_rating > best.get(key)!.course_rating) {
+    if (!best.has(key) || (t.course_rating ?? 0) > (best.get(key)!.course_rating ?? 0)) {
       best.set(key, t);
     }
   }
   return [...best.values()];
+}
+
+const ISSUE_KEYS: Record<string, TeeDataIssue> = {
+  stroke_index: "STROKE_INDEX",
+  rating: "RATING",
+  hole_lengths: "HOLE_LENGTHS",
+};
+
+/** What is missing or estimated on this tee, derived from nulls plus explicit missing_data. */
+function teeDataIssues(tee: ApiTee): TeeDataIssue[] {
+  const holes = (tee.holes ?? []).map((h) => ({ par: h.par, meters: h.meters ?? null, strokeIndex: h.handicap ?? null }));
+  const issues = new Set<TeeDataIssue>();
+  if (tee.course_rating == null || tee.slope_rating == null) issues.add("RATING");
+  if (hasMissingStrokeIndexes(holes)) issues.add("STROKE_INDEX");
+  if (holes.some((h) => h.meters == null)) issues.add("HOLE_LENGTHS");
+  for (const key of tee.missing_data ?? []) {
+    const issue = ISSUE_KEYS[key];
+    if (!issue) throw new Error(`Unknown missing_data value "${key}" on tee ${tee.tee_name}`);
+    issues.add(issue);
+  }
+  return Object.values(ISSUE_KEYS).filter((i) => issues.has(i));
 }
 
 async function main() {
@@ -127,43 +160,35 @@ async function main() {
           tee.total_meters ??
           (tee.holes ? tee.holes.reduce((sum, h) => sum + (h.meters ?? 0), 0) || null : null);
 
+        const dataIssues = teeDataIssues(tee);
+        const teeFields = {
+          color: tee.tee_color ?? null,
+          // Placeholder rating when unknown — the tee is flagged, so it never counts for handicaps
+          rating: tee.course_rating ?? tee.par_total,
+          slope: tee.slope_rating ?? PLACEHOLDER_SLOPE,
+          par: tee.par_total,
+          totalMeters,
+          dataIssues,
+        };
+
         const upsertedTee = await prisma.tee.upsert({
           where: { courseId_name: { courseId: course.id, name: tee.tee_name } },
-          create: {
-            courseId: course.id,
-            name: tee.tee_name,
-            color: tee.tee_color ?? null,
-            rating: tee.course_rating,
-            slope: tee.slope_rating,
-            par: tee.par_total,
-            totalMeters,
-          },
-          update: {
-            color: tee.tee_color ?? null,
-            rating: tee.course_rating,
-            slope: tee.slope_rating,
-            par: tee.par_total,
-            totalMeters,
-          },
+          create: { courseId: course.id, name: tee.tee_name, ...teeFields },
+          update: teeFields,
         });
 
-        // Upsert holes
-        for (let i = 0; i < (tee.holes ?? []).length; i++) {
-          const h = tee.holes![i];
+        // Upsert holes (missing stroke indexes estimated from hole lengths)
+        const holes = tee.holes ?? [];
+        const strokeIndexes = estimateStrokeIndexes(
+          holes.map((h) => ({ par: h.par, meters: h.meters ?? null, strokeIndex: h.handicap ?? null }))
+        );
+        for (let i = 0; i < holes.length; i++) {
+          const h = holes[i];
+          const holeFields = { par: h.par, strokeIndex: strokeIndexes[i], distance: h.meters ?? null };
           await prisma.hole.upsert({
             where: { teeId_number: { teeId: upsertedTee.id, number: i + 1 } },
-            create: {
-              teeId: upsertedTee.id,
-              number: i + 1,
-              par: h.par,
-              strokeIndex: h.handicap ?? 0,
-              distance: h.meters ?? null,
-            },
-            update: {
-              par: h.par,
-              strokeIndex: h.handicap ?? 0,
-              distance: h.meters ?? null,
-            },
+            create: { teeId: upsertedTee.id, number: i + 1, ...holeFields },
+            update: holeFields,
           });
         }
       }
