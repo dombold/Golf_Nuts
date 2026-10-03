@@ -444,8 +444,8 @@
   },
   {
     "id": 9208,
-    "name": "Armadale Public Golf Course",
-    "suburb": "Armadale",
+    "name": "The Springs Club",
+    "suburb": "Forrestdale",
     "city": "Perth",
     "region": "Metro Perth",
     "state": "WA",
@@ -456,7 +456,7 @@
     "phone": "+61 8 9498 2795",
     "latitude": -32.15824,
     "longitude": 115.958885,
-    "notes": "9 holes played as 18 (par 68), renovated with new greens, tees, bunkers and water; Black/Blue/White/Red/Yellow tees",
+    "notes": "Formerly Armadale Public Golf Course; 9 holes played as 18 (par 68), renovated 2016 with new greens, tees, bunkers and water; Black/Blue/White/Red/Yellow tees; course ratings not yet published",
     "tees": [
       {
         "tee_name": "Black",
