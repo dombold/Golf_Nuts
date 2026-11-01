@@ -1,4 +1,3 @@
-import React from "react";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import {
@@ -20,6 +19,7 @@ import { joinNames } from "@/lib/teams";
 import DeleteRoundButton from "@/components/DeleteRoundButton";
 import GuestBadge from "@/components/guests/GuestBadge";
 import GuestRow from "@/components/guests/GuestRow";
+import FullScorecard, { type ScoreColumn } from "@/components/scorecard/FullScorecard";
 import { auth } from "@/lib/auth";
 import { isAdmin } from "@/lib/permissions";
 
@@ -235,22 +235,7 @@ export default async function RoundSummaryPage({
     return players[result === "player1" ? 0 : 1].name.split(" ")[0];
   };
 
-  const totalPar = playedHoles.reduce((sum, h) => sum + h.par, 0);
-  const frontNineHoles = playedHoles.filter((h) => h.number <= 9);
-  const backNineHoles = playedHoles.filter((h) => h.number >= 10);
-  const frontPar = frontNineHoles.reduce((s, h) => s + h.par, 0);
-  const backPar = backNineHoles.reduce((s, h) => s + h.par, 0);
-  // Scorecard columns: one per team in team games (every member carries the same scramble score),
-  // otherwise one per player
-  interface ScoreColumn {
-    key: string;
-    label: string;
-    sub?: string;
-    guest?: boolean;
-    /** Round-player id — only player columns can win a skin */
-    playerId?: string;
-    strokes: (holeNumber: number) => number | undefined;
-  }
+  // Scorecard columns: one per team in team games, otherwise one per player
   const columns: ScoreColumn[] = teamGame
     ? teams.map((t) => ({
         key: t.teamId,
@@ -265,8 +250,6 @@ export default async function RoundSummaryPage({
         playerId: p.id,
         strokes: (n) => p.scores.find((s) => s.holeNumber === n)?.strokes,
       }));
-  const columnTotal = (c: ScoreColumn, holes: { number: number }[]) =>
-    holes.reduce((sum, h) => sum + (c.strokes(h.number) ?? 0), 0);
 
   return (
     <div className="space-y-6">
@@ -339,114 +322,14 @@ export default async function RoundSummaryPage({
         })}
       </div>
 
-      {/* Full scorecard */}
-      <div className="bg-white rounded-xl shadow-sm border border-fairway-50 overflow-hidden">
-        <div className="bg-fairway-900 text-white px-4 py-3">
-          <h2 className="font-semibold">Full Scorecard — Par {totalPar}</h2>
-          {format === "SKINS" && (
-            <p className="text-xs text-fairway-300 mt-0.5">
-              {round.skinsCarryOver ? "Halved holes carry over" : "No carry-over"} ·{" "}
-              <span className="text-green-400 font-bold">✓</span> won the skin
-            </p>
-          )}
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="bg-fairway-100 text-fairway-700">
-                <th className="px-2 py-2 text-left sticky left-0 bg-fairway-100">Hole</th>
-                <th className="px-2 py-2 text-center">Par</th>
-                {columns.map((c) => (
-                  <th key={c.key} scope="col" className="px-2 py-2 text-center align-bottom">
-                    {c.label}
-                    {c.guest && <span className="sr-only"> (guest)</span>}
-                    {c.sub && <span className="block text-[10px] font-normal text-fairway-600">{c.sub}</span>}
-                  </th>
-                ))}
-                {match && <th className="px-2 py-2 text-center">Hole won</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {playedHoles.map((hole, i) => (
-                <React.Fragment key={hole.id}>
-                  <tr className={i % 2 === 0 ? "" : "bg-fairway-50/40"}>
-                    <td className="px-2 py-1.5 font-medium text-fairway-800 sticky left-0 bg-inherit">{hole.number}</td>
-                    <td className="px-2 py-1.5 text-center text-gray-600">{hole.par}</td>
-                    {columns.map((c) => {
-                      const strokes = c.strokes(hole.number);
-                      const skin = skinWins.get(hole.number);
-                      const wonSkin = !!c.playerId && skin?.winnerId === c.playerId;
-                      return (
-                        <td key={c.key} className="px-2 py-1.5 text-center whitespace-nowrap">
-                          {strokes ? (
-                            <>
-                            <span className={`inline-flex items-center justify-center w-6 h-6 text-xs font-bold rounded ${
-                              strokes <= hole.par - 2 ? "bg-fairway-900 text-white rounded-full" :
-                              strokes === hole.par - 1 ? "bg-fairway-500 text-white rounded-full" :
-                              strokes === hole.par ? "" :
-                              strokes === hole.par + 1 ? "bg-amber-500 text-white" :
-                              "bg-red-600 text-white"
-                            }`}>
-                              {strokes}
-                            </span>
-                            {wonSkin && skin && (
-                              <span
-                                className="ml-0.5 text-green-600 font-bold"
-                                aria-label={skin.value > 1 ? `won ${skin.value} skins` : "won the skin"}
-                                title={skin.value > 1 ? `Won ${skin.value} skins` : "Won the skin"}
-                              >
-                                ✓{skin.value > 1 && <span className="text-[10px]">{skin.value}</span>}
-                              </span>
-                            )}
-                            </>
-                          ) : "—"}
-                        </td>
-                      );
-                    })}
-                    {match && (
-                      <td className="px-2 py-1.5 text-center text-fairway-800 font-medium">{matchHoleLabel(hole.number)}</td>
-                    )}
-                  </tr>
-                  {hole.number === 9 && frontNineHoles.length > 0 && (
-                    <tr className="bg-fairway-200/60 font-semibold text-fairway-900 border-t-2 border-fairway-300">
-                      <td className="px-2 py-1.5 sticky left-0 bg-fairway-200/60">Out</td>
-                      <td className="px-2 py-1.5 text-center">{frontPar}</td>
-                      {columns.map((c) => (
-                        <td key={c.key} className="px-2 py-1.5 text-center">
-                          {columnTotal(c, frontNineHoles) || "—"}
-                        </td>
-                      ))}
-                      {match && <td />}
-                    </tr>
-                  )}
-                  {hole.number === backNineHoles[backNineHoles.length - 1]?.number && backNineHoles.length > 0 && (
-                    <tr className="bg-fairway-200/60 font-semibold text-fairway-900 border-t-2 border-fairway-300">
-                      <td className="px-2 py-1.5 sticky left-0 bg-fairway-200/60">In</td>
-                      <td className="px-2 py-1.5 text-center">{backPar}</td>
-                      {columns.map((c) => (
-                        <td key={c.key} className="px-2 py-1.5 text-center">
-                          {columnTotal(c, backNineHoles) || "—"}
-                        </td>
-                      ))}
-                      {match && <td />}
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-              <tr className="bg-fairway-100 font-bold text-fairway-900">
-                <td className="px-2 py-2 sticky left-0 bg-fairway-100">Total</td>
-                <td className="px-2 py-2 text-center">{totalPar}</td>
-                {columns.map((c) => (
-                  <td key={c.key} className="px-2 py-2 text-center">
-                    {columnTotal(c, playedHoles) || "—"}
-                  </td>
-                ))}
-                {match && <td />}
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <FullScorecard
+        holes={playedHoles}
+        columns={columns}
+        skinWins={skinWins}
+        matchHoleLabel={match ? matchHoleLabel : undefined}
+        showSkinsLegend={format === "SKINS"}
+        skinsCarryOver={round.skinsCarryOver}
+      />
 
       {canManageGuests && guestPlayers.length > 0 && (
         <div className="space-y-2">

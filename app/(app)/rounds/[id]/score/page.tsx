@@ -5,13 +5,14 @@ import Link from "next/link";
 import HoleMap from "@/components/HoleMap";
 import TournamentLeaderboard from "@/components/tournament/TournamentLeaderboard";
 import { useParams, useRouter } from "next/navigation";
-import { strokesOnHole, ambroseTeamHandicap, calcMatchPlay, matchPlayAllowances, stablefordPoints } from "@/lib/formats";
+import { strokesOnHole, ambroseTeamHandicap, calcMatchPlay, calcSkins, matchPlayAllowances, stablefordPoints } from "@/lib/formats";
 import { calcTournamentStandings, formatStandingScore } from "@/lib/tournamentStandings";
 import { formatDisplayLabel, isTeamGame } from "@/lib/gameFormats";
 import { joinNames } from "@/lib/teams";
 import { isHoleInPlay } from "@/lib/nines";
 import { apiErrorMessage } from "@/lib/apiError";
 import GuestBadge from "@/components/guests/GuestBadge";
+import FullScorecard, { type ScoreColumn } from "@/components/scorecard/FullScorecard";
 import { formatMissing, missingScores, type MissingScores } from "@/lib/roundCompletion";
 import { isIncompleteTee, type TeeDataIssue } from "@/lib/teeDataIssues";
 
@@ -27,6 +28,7 @@ interface Round {
   holesCount: number;
   startingHole: number;
   stablefordTeamSize?: number;
+  skinsCarryOver?: boolean;
   course: { name: string };
   tee: { name: string; par: number; dataIssues: TeeDataIssue[]; holes: Hole[] };
   players: Player[];
@@ -133,7 +135,7 @@ export default function ScoringPage() {
   const [saveError, setSaveError] = useState("");
   // Finish Round was tapped with holes still to score — who's missing what
   const [missing, setMissing] = useState<MissingScores[] | null>(null);
-  const [tab, setTab] = useState<"score" | "leaderboard">("score");
+  const [tab, setTab] = useState<"score" | "card" | "leaderboard">("score");
   const firstLoadRef = useRef(true);
   const [popupDismissedForHole, setPopupDismissedForHole] = useState<number | null>(null);
   // Whether this viewer may enter scores (players, or the event organiser; players are shut out once scores are locked)
@@ -424,6 +426,54 @@ export default function ScoringPage() {
       )
     : null;
 
+  // Full card: built from local scores so it includes unsaved entries and live updates
+  const cardColumns: ScoreColumn[] = isTeam
+    ? teams.map((team) => ({
+        key: `team-${team.teamNumber}`,
+        label: joinNames(team.members.map((m) => m.user.name.split(" ")[0])),
+        sub: `Team ${team.teamNumber}`,
+        strokes: (n) => scores[team.members[0]?.id]?.[n]?.strokes || undefined,
+      }))
+    : round.players.map((p) => ({
+        key: p.id,
+        label: p.user.name.split(" ")[0],
+        guest: p.user.isGuest,
+        playerId: p.id,
+        strokes: (n) => scores[p.id]?.[n]?.strokes || undefined,
+      }));
+  const matchHoleLabel = (holeNumber: number) => {
+    const result = match?.holes.find((h) => h.holeNumber === holeNumber)?.result;
+    if (!result) return "—";
+    if (result === "halved") return "½";
+    return round.players[result === "player1" ? 0 : 1].user.name.split(" ")[0];
+  };
+  const skinWins = new Map<number, { winnerId: string; value: number }>();
+  if (round.format === "SKINS") {
+    const skins = calcSkins(
+      round.players.map((p) => ({
+        playerId: p.id,
+        name: p.user.name,
+        playingHandicap: p.playingHandicap,
+        holes: holes.map((h) => ({
+          holeNumber: h.number,
+          par: h.par,
+          strokeIndex: h.strokeIndex,
+          strokes: scores[p.id]?.[h.number]?.strokes ?? 0,
+        })),
+      })),
+      { carryOver: round.skinsCarryOver }
+    );
+    for (const skin of skins.skins) {
+      if (skin.winnerId) skinWins.set(skin.holeNumber, { winnerId: skin.winnerId, value: skin.value });
+    }
+  }
+
+  const tabs = [
+    { id: "score", label: "Enter Scores" },
+    { id: "card", label: "View Card" },
+    { id: "leaderboard", label: "Leaderboard" },
+  ] as const;
+
   return (
     <div className="space-y-4 max-w-xl">
       {/* Header */}
@@ -451,20 +501,40 @@ export default function ScoringPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex bg-fairway-50 rounded-xl p-1">
-        <button
-          onClick={() => setTab("score")}
-          className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${tab === "score" ? "bg-white text-fairway-900 shadow-sm" : "text-gray-500"}`}
-        >
-          Scorecard
-        </button>
-        <button
-          onClick={() => setTab("leaderboard")}
-          className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${tab === "leaderboard" ? "bg-white text-fairway-900 shadow-sm" : "text-gray-500"}`}
-        >
-          Leaderboard
-        </button>
+      <div role="tablist" aria-label="Round views" className="flex gap-1 bg-fairway-100 rounded-xl p-1">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            onClick={() => setTab(t.id)}
+            className={`flex-1 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500 focus-visible:ring-offset-1 ${
+              tab === t.id
+                ? "bg-fairway-700 text-white font-semibold shadow-sm"
+                : "text-fairway-800 font-medium hover:bg-fairway-200 active:bg-fairway-300"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
+
+      {tab === "card" && (
+        <FullScorecard
+          holes={holes}
+          columns={cardColumns}
+          skinWins={skinWins}
+          matchHoleLabel={match ? matchHoleLabel : undefined}
+          showSkinsLegend={round.format === "SKINS"}
+          skinsCarryOver={round.skinsCarryOver}
+          currentHole={currentHole}
+          onHoleClick={(n) => {
+            changeHole(n);
+            setTab("score");
+          }}
+        />
+      )}
 
       {tab === "score" && hole && (
         <div className="space-y-4">
