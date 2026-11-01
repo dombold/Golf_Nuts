@@ -21,7 +21,7 @@
     "framer-motion": "^12.38.0",
     "idb": "^8.0.3",
     "jsonwebtoken": "^9.0.3",
-    "next": "^16.2.4",
+    "next": "^16.4.2",
     "next-auth": "^5.0.0-beta.30",
     "nodemailer": "^10.0.12",
     "pg": "^8.20.0",
@@ -30,13 +30,14 @@
     "react-dom": "19.2.4",
     "recharts": "^3.8.0",
     "web-push": "^3.6.7",
-    "zod": "^4.3.6"
+    "zod": "^4.6.7"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
   },
   "overrides": {
     "hono": "4.12.16",
+    "eslint-plugin-react-hooks": "7.0.1",
     "@hono/node-server": "2.0.1",
     "defu": "6.1.7",
     "effect": "3.21.2",
