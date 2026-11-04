@@ -12,6 +12,8 @@ import InviteeStatusControl from "@/components/tournament/InviteeStatusControl";
 import AddEventGuest from "@/components/tournament/AddEventGuest";
 import AddEventPlayer from "@/components/tournament/AddEventPlayer";
 import ScoreLockToggle from "@/components/tournament/ScoreLockToggle";
+import EventPolls from "@/components/tournament/EventPolls";
+import { summarisePoll } from "@/lib/polls";
 import GuestRow from "@/components/guests/GuestRow";
 import { describeHoles } from "@/lib/nines";
 import { formatDisplayLabel } from "@/lib/gameFormats";
@@ -76,6 +78,16 @@ export default async function TournamentDetailPage({
         select: { holeNumber: true, type: true, winnerId: true, winner: { select: { name: true } } },
         orderBy: { holeNumber: "asc" },
       },
+      polls: {
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          question: true,
+          closedAt: true,
+          options: { orderBy: { position: "asc" }, select: { id: true, label: true } },
+          votes: { select: { userId: true, optionId: true, recordedById: true, user: { select: { name: true } } } },
+        },
+      },
     },
   });
 
@@ -98,6 +110,19 @@ export default async function TournamentDetailPage({
           orderBy: { name: "asc" },
         })
       : [];
+
+  // Polls: only invitees who haven't declined can vote, and only their votes count
+  const eligibleVoterIds = new Set(
+    tournament.invitations.filter((inv) => inv.status !== "DECLINED").map((inv) => inv.userId)
+  );
+  const polls = tournament.polls.map((poll) => summarisePoll(poll, eligibleVoterIds, userId));
+  // Players the organiser can record a vote for (guests included — they can't sign in to vote)
+  const pollVoters = tournament.invitations
+    .filter((inv) => inv.status !== "DECLINED")
+    .map((inv) => ({ id: inv.userId, name: inv.user.name, isGuest: inv.user.isGuest }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const canVoteInPolls =
+    tournament.status !== "COMPLETE" && (myInvitation?.status === "ACCEPTED" || myInvitation?.status === "PENDING");
 
   // A pending invitee sees the note on their invitation card; everyone else gets it as its own card
   const showInvitationCard = tournament.status === "UPCOMING" && !isOwner && myInvitation?.status === "PENDING";
@@ -213,6 +238,17 @@ export default async function TournamentDetailPage({
           <p className="text-xs font-medium text-gray-500 mb-1">Note from {tournament.createdBy.name}</p>
           <p className="text-sm text-gray-800 whitespace-pre-line break-words">{tournament.inviteNote}</p>
         </div>
+      )}
+
+      {(polls.length > 0 || (isOrganiser && tournament.status !== "COMPLETE")) && (
+        <EventPolls
+          tournamentId={id}
+          polls={polls}
+          canManage={isOrganiser}
+          canVote={canVoteInPolls}
+          players={isOrganiser ? pollVoters : []}
+          complete={tournament.status === "COMPLETE"}
+        />
       )}
 
       {isOrganiser && !isOwner && (

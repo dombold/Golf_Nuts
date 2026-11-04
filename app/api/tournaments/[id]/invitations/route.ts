@@ -17,7 +17,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id: tournamentId } = await params;
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
-    select: { createdById: true, status: true, name: true, inviteNote: true },
+    select: {
+      createdById: true,
+      status: true,
+      name: true,
+      inviteNote: true,
+      // Open polls, so a late invitee's notification mentions them
+      polls: { where: { closedAt: null }, orderBy: { createdAt: "asc" }, select: { question: true } },
+    },
   });
   if (!tournament) return Response.json({ error: "Tournament not found" }, { status: 404 });
   if (!(await canOrganise(tournament.createdById, session.user.id))) return Response.json({ error: "Forbidden" }, { status: 403 });
@@ -42,7 +49,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   await logTournamentAction(session.user.id, "tournament.invite", { id: tournamentId, createdById: tournament.createdById }, "Invited a player");
 
   // Push is best-effort — never fail the invite over it
-  void sendTournamentInviteNotification(userId, tournament.name, tournamentId, tournament.inviteNote).catch(() => {});
+  void sendTournamentInviteNotification(
+    userId,
+    tournament.name,
+    tournamentId,
+    tournament.inviteNote,
+    tournament.polls.map((p) => p.question)
+  ).catch(() => {});
 
   return Response.json({ invitation: { userId, status: "PENDING" } }, { status: 201 });
 }

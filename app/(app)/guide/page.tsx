@@ -617,6 +617,19 @@ export default async function GuidePage() {
             each hole&apos;s winner from the player list.
           </p>
           <p>
+            <span className="font-semibold text-fairway-900">Polls</span> — When players need to
+            choose something, like lunch, the organiser taps{" "}
+            <span className="font-semibold">+ Add a poll</span> on the event page, writes a question
+            and adds 2 to 10 options. Invited players get a notification, then tap an option to vote
+            and can change their vote at any time. Everyone can see how many votes each option has
+            and who chose it. If a player tells the organiser their choice, or is a guest, the
+            organiser can tap <span className="font-semibold">Record a vote for someone</span> to
+            vote (or clear a vote) for them. Those votes show &ldquo;(by organiser)&rdquo; until the
+            player votes themselves. The organiser can <span className="font-semibold">Close</span> a poll
+            to stop voting (and reopen it), or delete it. An event can have up to 5 polls, and they
+            become read-only once the event is complete.
+          </p>
+          <p>
             <span className="font-semibold text-fairway-900">Arranging groups</span> — Once
             players have accepted, the organiser assigns them into groups on the tournament page.
             Use the <span className="font-semibold">+ Add player</span> dropdown to manually fill
@@ -832,6 +845,7 @@ export default async function GuidePage() {
           <p>
             Golf Nuts can send a push notification directly to your phone when you are invited to a
             tournament. You can then accept or decline the invitation without even opening the app.
+            You&apos;ll also get one when the organiser of an event you&apos;re invited to adds a poll.
           </p>
 
           <p>

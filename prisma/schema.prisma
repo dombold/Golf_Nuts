@@ -40,6 +40,8 @@ model User {
   webAuthnCredentials    WebAuthnCredential[]
   webAuthnChallenges     WebAuthnChallenge[]
   prizeHoleWins          TournamentPrizeHole[]    @relation("PrizeHoleWins")
+  pollVotes              TournamentPollVote[]     @relation("PollVoter")
+  pollVotesRecorded      TournamentPollVote[]     @relation("PollVoteRecorder")
   guestCreatedBy         User?                    @relation("GuestCreator", fields: [guestCreatedById], references: [id], onDelete: SetNull)
   createdGuests          User[]                   @relation("GuestCreator")
   createdRounds          Round[]                  @relation("RoundCreator")
@@ -346,6 +348,7 @@ model Tournament {
   invitations TournamentInvitation[]
   groups      TournamentGroup[]
   prizeHoles  TournamentPrizeHole[]
+  polls       TournamentPoll[]
 
   @@map("tournaments")
 }
@@ -477,4 +480,55 @@ model AdminAuditLog {
 
   @@index([createdAt])
   @@map("admin_audit_log")
+}
+
+/// Organiser's single-choice poll on an event (e.g. lunch choice)
+model TournamentPoll {
+  id           String    @id @default(cuid())
+  tournamentId String
+  question     String
+  /// Set when the organiser closes the poll; cleared on reopen
+  closedAt     DateTime?
+  createdAt    DateTime  @default(now())
+
+  tournament Tournament             @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  options    TournamentPollOption[]
+  votes      TournamentPollVote[]
+
+  @@index([tournamentId])
+  @@map("tournament_polls")
+}
+
+model TournamentPollOption {
+  id       String @id @default(cuid())
+  pollId   String
+  label    String
+  position Int
+
+  poll  TournamentPoll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes TournamentPollVote[]
+
+  @@index([pollId])
+  @@map("tournament_poll_options")
+}
+
+/// One vote per player per poll; voting again changes the chosen option
+model TournamentPollVote {
+  id        String   @id @default(cuid())
+  pollId    String
+  optionId  String
+  userId    String
+  /// Set when the organiser recorded this vote for the player; null when the player voted themselves
+  recordedById String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  poll       TournamentPoll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option     TournamentPollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user       User                 @relation("PollVoter", fields: [userId], references: [id], onDelete: Cascade)
+  recordedBy User?                @relation("PollVoteRecorder", fields: [recordedById], references: [id], onDelete: SetNull)
+
+  @@unique([pollId, userId])
+  @@index([optionId])
+  @@map("tournament_poll_votes")
 }

@@ -26,10 +26,14 @@ self.addEventListener("push", (event) => {
       icon: "/golf_nuts_badge.jpg",
       badge: "/golf_nuts_badge.jpg",
       data: { tournamentId: data.tournamentId },
-      actions: [
-        { action: "accept", title: "Accept" },
-        { action: "decline", title: "Decline" },
-      ],
+      // Only invitations get Accept / Decline; other notifications (e.g. a new poll) just open the event
+      actions:
+        data.kind === "invite" || !data.kind
+          ? [
+              { action: "accept", title: "Accept" },
+              { action: "decline", title: "Decline" },
+            ]
+          : [],
     })
   );
 });
