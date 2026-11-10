@@ -23,7 +23,7 @@
     "jsonwebtoken": "^9.0.3",
     "next": "^16.4.2",
     "next-auth": "^5.0.0-beta.30",
-    "nodemailer": "^10.0.12",
+    "nodemailer": "^10.5.0",
     "pg": "^8.20.0",
     "prisma": "^7.5.0",
     "react": "19.2.4",
@@ -45,7 +45,10 @@
     "brace-expansion": "1.1.21",
     "nodemailer": "$nodemailer",
     "deepmerge-ts": "^8.0.2",
-    "mysql2": "^3.24.4"
+    "mysql2": "^3.24.4",
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.1"
+    }
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
