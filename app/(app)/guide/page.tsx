@@ -13,7 +13,11 @@ const sections = [
   { id: "countback", icon: "🔢", title: "Tie-Breaking (Countback)" },
   { id: "notifications", icon: "🔔", title: "Notifications" },
   { id: "profile", icon: "👤", title: "Profile & Sign-in" },
+  { id: "install", icon: "📲", title: "Install the App" },
+  { id: "contribute", icon: "💡", title: "Suggestions & Contributing" },
 ];
+
+const REPO_URL = "https://github.com/dombold/Golf_Nuts";
 
 const adminSection = { id: "admin", icon: "🛡️", title: "Administrator Tools" };
 
@@ -285,10 +289,34 @@ export default async function GuidePage() {
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Saving and moving on</span> — Tap{" "}
-            <span className="font-semibold">Save &amp; Hole N →</span> (N is the next hole). Scores
-            are saved to the server immediately. If a save fails — for example with no phone signal
-            — you stay on the hole and a message asks you to try again, so nothing is lost. You can
-            go back to any previous hole at any time and change a score.
+            <span className="font-semibold">Save &amp; Hole N →</span> (N is the next hole). The
+            hole&apos;s scores are kept on your phone and sent straight away. You can go back to any
+            previous hole at any time and change a score.
+          </p>
+          <p>
+            <span className="font-semibold text-fairway-900">No signal?</span> Keep scoring. When
+            there&apos;s no coverage, Save still moves you to the next hole and the scores wait on
+            your phone. A yellow note shows how many holes are waiting, such as &ldquo;No signal · 3
+            holes saved on this phone&rdquo;. They send automatically once you&apos;re back in
+            coverage, and the note disappears. Saved holes are kept even if you close the app or
+            your phone restarts. Scores only send while Golf Nuts is open, so open it again once
+            you have signal.
+          </p>
+          <p>
+            If the app is closed with no signal, you can still reopen a round you&apos;ve already
+            had open with signal on that phone.{" "}
+            <a href="#install" className="text-fairway-700 underline">Installing the app</a> makes
+            reopening it easiest.
+          </p>
+          <p>
+            <span className="font-semibold text-fairway-900">Scoring on more than one phone</span>{" "}
+            — Anyone in the group can enter scores, and a score saved on another phone shows up on
+            yours within about 10 seconds. If two phones enter different scores for the same hole,
+            the one entered <span className="font-semibold">most recently</span> is kept, even if
+            the other phone had no signal and sends its score later. That phone then shows the kept
+            score with a note, such as &ldquo;Hole 4 (Sam): kept 5, a newer score from another
+            phone&rdquo;. Tapping Save only sends scores you changed, so it won&apos;t undo a
+            playing partner&apos;s correction.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Leaderboard tab</span> — Tap{" "}
@@ -315,7 +343,9 @@ export default async function GuidePage() {
             final hole, tap <span className="font-semibold">Finish Round</span> instead of Save
             &amp; Hole. Every player (or team) needs a score on every hole first — if any are
             missing, a warning lists who is missing which holes, with a button to jump to the first
-            one. In Match Play the holes after the match is decided aren&apos;t needed. You will then
+            one. In Match Play the holes after the match is decided aren&apos;t needed. Any holes
+            still waiting on your phone must be sent first, so finish the round once you have
+            signal. You will then
             be taken to the round summary, and your Handicap Index is recalculated automatically if
             it was a Strokeplay round.
           </p>
@@ -871,7 +901,9 @@ export default async function GuidePage() {
             </li>
             <li>
               <span className="font-semibold">iPhone / iPad (Safari)</span> — you must first add
-              Golf Nuts to your home screen (see the Dashboard section above). Once installed, the
+              Golf Nuts to your home screen (see{" "}
+              <a href="#install" className="text-fairway-700 underline">Install the App</a>{" "}
+              below). Once installed, the
               notification will appear — tap it to open the tournament page and respond there.
               Action buttons are not supported on iOS.
             </li>
@@ -920,14 +952,24 @@ export default async function GuidePage() {
             <span className="font-semibold">Use Biometrics</span> on the login page. Register each
             phone or computer you use separately.
           </p>
+        </div>
+      </div>
 
-          <div className="mt-4 pt-4 border-t border-fairway-50">
-            <p className="font-semibold text-fairway-900 mb-2">📲 Add Golf Nuts to your home screen</p>
-            <p className="mb-3">
-              Golf Nuts works like a native app when installed on your phone — full screen, no browser
-              bar, and quick to launch from your home screen.
-            </p>
+      {/* Install the App */}
+      <div id="install" className="bg-white rounded-xl border border-fairway-50 p-4 scroll-mt-20">
+        <h2 className="text-lg font-semibold text-fairway-900 flex items-center gap-2 mb-3">
+          <span>📲</span> Install the App
+        </h2>
+        <div className="space-y-3 text-sm text-gray-700 leading-relaxed">
+          <p>
+            Add Golf Nuts to your home screen and it works like a regular app: full screen, no
+            browser bar, and one tap to open. Installing it also lets you get{" "}
+            <a href="#notifications" className="text-fairway-700 underline">notifications</a> on an
+            iPhone, and makes it easy to reopen a round when you have{" "}
+            <a href="#scoring" className="text-fairway-700 underline">no signal</a>.
+          </p>
 
+          <div>
             <div className="space-y-3">
               <div className="bg-gray-50 rounded-lg p-3">
                 <p className="font-semibold text-fairway-800 mb-1">Android (Chrome)</p>
@@ -952,6 +994,55 @@ export default async function GuidePage() {
           </div>
         </div>
       </div>
+
+      {/* Suggestions & Contributing */}
+      <div id="contribute" className="bg-white rounded-xl border border-fairway-50 p-4 scroll-mt-20">
+        <h2 className="text-lg font-semibold text-fairway-900 flex items-center gap-2 mb-3">
+          <span>💡</span> Suggestions &amp; Contributing
+        </h2>
+        <div className="space-y-3 text-sm text-gray-700 leading-relaxed">
+          <p>
+            Golf Nuts is open source under the{" "}
+            <a
+              href={`${REPO_URL}/blob/main/LICENSE`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-fairway-700 underline"
+            >
+              MIT License
+            </a>
+            . Its code is on GitHub, so anyone can see how it works and help make it better.
+          </p>
+          <ul className="list-disc list-inside space-y-1 text-gray-600">
+            <li>
+              <span className="font-semibold">Suggest a change or report a problem</span> — open an{" "}
+              <a
+                href={`${REPO_URL}/issues`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-fairway-700 underline"
+              >
+                issue on GitHub
+              </a>{" "}
+              and describe what you&apos;d like or what went wrong. You&apos;ll need a free GitHub
+              account.
+            </li>
+            <li>
+              <span className="font-semibold">Contribute code</span> — fork the repository, make
+              your change and open a pull request.
+            </li>
+          </ul>
+          <a
+            href={REPO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block px-3 py-2 bg-fairway-700 text-white rounded-lg text-sm font-semibold hover:bg-fairway-800 active:bg-fairway-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500 focus-visible:ring-offset-2"
+          >
+            View Golf Nuts on GitHub ↗
+          </a>
+        </div>
+      </div>
+
       {/* Administrator Tools — admins only */}
       {admin && (
         <div id="admin" className="bg-white rounded-xl border border-acorn-200 p-4 scroll-mt-20">

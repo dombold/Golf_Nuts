@@ -241,6 +241,9 @@ model Score {
   putts         Int?
   fairwayHit    Boolean?
   gir           Boolean?
+  /// When the score was entered on the phone (server clock, UTC). A save entered earlier than this
+  /// is ignored, so a phone that was offline can't overwrite a newer correction. Null = before this existed.
+  enteredAt     DateTime?
 
   roundPlayer RoundPlayer @relation(fields: [roundPlayerId], references: [id], onDelete: Cascade)
 

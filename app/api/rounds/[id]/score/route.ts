@@ -15,7 +15,36 @@ const ScoreSchema = z.object({
   putts: z.int().min(0).max(20).optional(),
   fairwayHit: z.boolean().optional(),
   gir: z.boolean().optional(),
+  // How long ago the score was entered on the phone (scores saved offline are sent later).
+  // A duration rather than a time, so a phone with its clock set wrong can't skew the comparison.
+  enteredMsAgo: z.int().min(0).max(7 * 24 * 60 * 60 * 1000).optional(),
 });
+
+type ScoreData = { strokes: number; penalties: number; putts?: number; fairwayHit?: boolean; gir?: boolean; enteredAt: Date };
+
+/**
+ * Save a score unless the stored one was entered later (e.g. a teammate's correction that reached
+ * the server before this phone got signal back). Returns the score now stored and whether this save lost.
+ */
+async function saveIfNewer(roundPlayerId: string, holeNumber: number, data: ScoreData) {
+  const key = { roundPlayerId, holeNumber };
+  // Single conditional UPDATE, so two phones saving at once can't both win
+  const updated = await prisma.score.updateMany({
+    where: { ...key, OR: [{ enteredAt: null }, { enteredAt: { lte: data.enteredAt } }] },
+    data,
+  });
+  if (updated.count === 0) {
+    try {
+      const score = await prisma.score.create({ data: { ...key, ...data } });
+      return { score, stale: false };
+    } catch (e) {
+      // P2002: the row exists, so the update above skipped it because it's newer
+      if ((e as { code?: string }).code !== "P2002") throw e;
+    }
+  }
+  const score = await prisma.score.findUniqueOrThrow({ where: { roundPlayerId_holeNumber: key } });
+  return { score, stale: updated.count === 0 };
+}
 
 export async function POST(
   req: NextRequest,
@@ -31,7 +60,8 @@ export async function POST(
     return Response.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { roundPlayerId, holeNumber, strokes, penalties, putts, fairwayHit, gir } = parsed.data;
+  const { roundPlayerId, holeNumber, strokes, penalties, putts, fairwayHit, gir, enteredMsAgo } = parsed.data;
+  const enteredAt = new Date(Date.now() - (enteredMsAgo ?? 0));
 
   const round = await prisma.round.findUnique({
     where: { id: roundId },
@@ -57,11 +87,9 @@ export async function POST(
     return Response.json({ error: { message: "That hole isn't part of this round" } }, { status: 400 });
   }
 
-  const score = await prisma.score.upsert({
-    where: { roundPlayerId_holeNumber: { roundPlayerId, holeNumber } },
-    update: { strokes, penalties, putts, fairwayHit, gir },
-    create: { roundPlayerId, holeNumber, strokes, penalties, putts, fairwayHit, gir },
-  });
+  const { score, stale } = await saveIfNewer(roundPlayerId, holeNumber, { strokes, penalties, putts, fairwayHit, gir, enteredAt });
+  // A newer score is already stored — nothing changed, so tell the phone which one was kept
+  if (stale) return Response.json({ score, stale: true });
 
   if (access.isAdmin) {
     await logAdminAction(

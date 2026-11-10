@@ -11,7 +11,9 @@ A full-stack golf scoring app for a group of friends — rounds, handicaps and e
   - **Match Play** — two players, casual rounds only; the higher handicap receives the difference on the hardest holes; live match status and a "wins 3&2" result (holes after the match is decided don't count) with a hole-by-hole column
 - **Round wizard** — course and tee search, format picker (Strokeplay by default, with each format's options inside its card), player search (selected players listed above the search box), and a **Teams** step for team games that auto-splits players by handicap and lets you move them
 - **Handicap strokes in games** — full playing handicap placed by stroke index; a plus handicap gives strokes back on the easiest holes
-- **Scorecards** — a round can only be finished once every player (or team) has a score on every hole (Match Play: until the match is decided); a warning lists the missing holes with a jump to the first; per-hole strokes, penalties, putts, fairways hit and GIR; one card per team for team games (showing Stableford points); hole info and a Google Maps hole view; failed saves keep you on the hole with a retry message; finished rounds can be edited; Out/In subtotals and a ✓ beside each hole's skin winner on the round summary
+- **Scorecards** — a round can only be finished once every player (or team) has a score on every hole (Match Play: until the match is decided); a warning lists the missing holes with a jump to the first; per-hole strokes, penalties, putts, fairways hit and GIR; one card per team for team games (showing Stableford points); hole info and a Google Maps hole view; scores entered on another phone in the group appear within about 10 seconds; finished rounds can be edited; Out/In subtotals and a ✓ beside each hole's skin winner on the round summary
+- **Offline scoring** — tapping Save keeps the hole's scores on the phone first, so scoring carries on with no signal and the app moves to the next hole. A note shows how many holes are waiting, and they send automatically when signal returns: on reconnecting, when the app is reopened, and every 10 seconds while the score page is open. Scores survive the app being closed or the phone restarting. The score page reopens with no signal if it was opened once with signal. **Finish Round** waits until everything has been sent. A score the server refuses (e.g. the event's scores were locked) is dropped, with a message naming the hole and the reason. Scores only send while the app is open, because iOS doesn't allow web apps to sync in the background
+- **Newest score wins** — when two phones score the same hole, the score entered most recently is kept, even if an offline phone sends an older score later; that phone then shows the kept score with a note. Save only sends scores changed on that phone, so re-saving a hole can't undo a teammate's correction. Phones send how long ago each score was entered rather than a clock time, so a phone with the wrong time can't skew the result
 - **Handicap (WHS)** — score differentials use an adjusted score capped at **net double bogey** (unplayed holes count as net par; 14 of 18 or 7 of 9 holes needed); 9-hole rounds count straight away using the **2024 expected-score** method; index = best N of the last 20 with the WHS adjustments; recalculated when a round is finished, edited, deleted or excluded; only Strokeplay counts
 - **Courses** — all WA courses pre-loaded and searched inline; full tee data (rating, slope, par, hole distances in metres), tees sorted longest first; course pages show address, postcode and phone
 - **Tournaments / events**
@@ -27,7 +29,7 @@ A full-stack golf scoring app for a group of friends — rounds, handicaps and e
 - **Auth** — email/password login; **passkey (biometric) login** via WebAuthn; password reset by emailed link (signs you in, and allows a new password without the old one for 15 minutes); welcome email on registration
 - **Profile** — avatar upload, profile details, password, notification and passkey settings
 - **Push notifications** — tournament invitations with Accept / Decline actions (Android Chrome; iOS when installed as a PWA)
-- **PWA** — installable, with a service worker and an in-app install prompt
+- **PWA** — installable, with an in-app install prompt; the service worker caches pages as they are visited (live data from `/api` is never cached), which lets the score page reopen offline
 
 ## Tech Stack
 
@@ -129,6 +131,7 @@ lib/
   gameFormats.ts        # Format lists, labels, team sizes (single source for pickers and validation)
   handicap.ts           # WHS: course handicap, net double bogey, differentials, index table
   nines.ts              # 9-hole helpers (holes in play, nine names)
+  offlineScores.ts      # Offline scoring (client): on-phone score queue in localStorage, sending/retry, cached round data
   prisma.ts             # Prisma client instance
   prizeHoles.ts         # Prize-hole rules
   push.ts               # Web push (VAPID)
@@ -156,6 +159,15 @@ node .claude/skills/workflow-test/scripts/run-workflow-test.mjs
 
 It reads its test account from `.claude/workflow-test.json` and the port from `.claude/deploy.json`. It reuses a dev server already running on port 3001, or starts one and stops it afterwards. The full run creates a round and a test event in the local database. Run `--steps=G,H` for a subset; login always runs.
 
+Test accounts are not kept in any database: they were removed from local and production in November 2026. Before a test run, create what it needs in the **local** database:
+
+- **Workflow test** — register the account from `.claude/workflow-test.json` at `/register`.
+- **Game-format test** — `npx tsx scripts/test-game-formats.ts` plays every format through the API and checks the results. It creates its own `test_*` players (`@golftest.local`, the same ones as `scripts/create-test-users.ts`). `--clean` deletes its rounds and events but not the players.
+
+Both scripts are local only (`scripts/` is gitignored). Delete test accounts again when you're finished.
+
+When testing on a local production build (`next start`), override `NEXTAUTH_URL=http://localhost:3001 AUTH_TRUST_HOST=true`, since `.env.development.local` doesn't apply to `next start`. Also set `SMTP_HOST=127.0.0.1 SMTP_PORT=9` so no real emails are sent. Offline scoring can be tested in Puppeteer with `page.setOfflineMode(true)`. The service worker has its own network connection, so switch it offline too, through a CDP session on its target (`Network.emulateNetworkConditions`).
+
 Before merging, also run:
 
 ```bash
@@ -165,6 +177,14 @@ npx tsc --noEmit && npm run lint && npm run build
 ## Deployment
 
 Production runs `next start -p 3001` under PM2 (its `ecosystem.config.js` lives on the server, not in the repo). A deploy pulls `main`, installs dependencies, runs `npx prisma generate` and `npx prisma migrate deploy` (after a database backup when there are new migrations), builds, and restarts the PM2 process.
+
+## Contributing
+
+Suggestions and bug reports are welcome as [GitHub issues](https://github.com/dombold/Golf_Nuts/issues). To contribute code, fork the repository and open a pull request. Before submitting, run the checks in [Testing](#testing).
+
+## License
+
+Golf Nuts is released under the [MIT License](LICENSE). The licence covers the code only: the Golf Nuts name and badge logo are not included, and course data is not part of the repository.
 
 ## Notes
 

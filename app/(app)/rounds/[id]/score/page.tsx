@@ -10,11 +10,11 @@ import { calcTournamentStandings, formatStandingScore } from "@/lib/tournamentSt
 import { formatDisplayLabel, isTeamGame } from "@/lib/gameFormats";
 import { joinNames } from "@/lib/teams";
 import { isHoleInPlay } from "@/lib/nines";
-import { apiErrorMessage } from "@/lib/apiError";
 import GuestBadge from "@/components/guests/GuestBadge";
 import FullScorecard, { type ScoreColumn } from "@/components/scorecard/FullScorecard";
 import { formatMissing, missingScores, type MissingScores } from "@/lib/roundCompletion";
 import { isIncompleteTee, type TeeDataIssue } from "@/lib/teeDataIssues";
+import { cachedRound, cacheRound, flushOutbox, pendingHoleCount, pendingScores, queueScores, sendScore, type FlushResult, type QueuedScore } from "@/lib/offlineScores";
 
 interface Hole { id: string; number: number; par: number; strokeIndex: number; distance?: number; teeLat?: number | null; teeLng?: number | null; greenLat?: number | null; greenLng?: number | null; }
 interface ScoreEntry { strokes: number; penalties: number; putts?: number; fairwayHit?: boolean; gir?: boolean }
@@ -140,10 +140,22 @@ export default function ScoringPage() {
   const [popupDismissedForHole, setPopupDismissedForHole] = useState<number | null>(null);
   // Whether this viewer may enter scores (players, or the event organiser; players are shut out once scores are locked)
   const [access, setAccess] = useState<ScoreAccessInfo | null>(null);
+  // Offline scoring: holes saved on this phone but not yet sent, and whether the last request had no signal
+  const [pendingHoles, setPendingHoles] = useState(0);
+  const [offline, setOffline] = useState(false);
+  const roundRef = useRef<Round | null>(null);
+  // Scores changed on this phone since the last Save ("playerId:hole"). Only these are sent, and only
+  // these keep their local value when the server's copy arrives — everything else shows the server's.
+  const dirtyRef = useRef(new Set<string>());
+  // Bumped whenever the server's scores change from here, so an older in-flight load can be ignored
+  const sendSeqRef = useRef(0);
+  // Info (not an error): a teammate's newer score was kept instead of this phone's
+  const [notice, setNotice] = useState("");
 
   const applyRoundData = useCallback((data: { round?: Round; access?: ScoreAccessInfo | null }) => {
     if (data.access) setAccess(data.access);
     if (data.round) {
+      roundRef.current = data.round;
       // Flatten prize holes from the tournament relation onto the round
       data.round.prizeHoles =
         data.round.tournamentRounds?.[0]?.tournament?.prizeHoles ?? [];
@@ -161,6 +173,17 @@ export default function ScoringPage() {
           };
         }
       }
+      // Scores saved on this phone but not sent yet win over the server's copy
+      for (const q of pendingScores(data.round.id)) {
+        if (!existing[q.roundPlayerId]) continue;
+        existing[q.roundPlayerId][q.holeNumber] = {
+          strokes: q.strokes,
+          penalties: q.penalties,
+          putts: q.putts,
+          fairwayHit: q.fairwayHit,
+          gir: q.gir,
+        };
+      }
       if (firstLoadRef.current) {
         firstLoadRef.current = false;
         const loaded = data.round;
@@ -169,32 +192,126 @@ export default function ScoringPage() {
         );
         if (nextHole) setCurrentHole(nextHole.number);
       }
+      // The server's copy wins, except for edits on this phone that haven't been saved yet
       setScores((prev) => {
         const merged = { ...existing };
-        for (const pid of Object.keys(prev)) {
-          merged[pid] = { ...existing[pid], ...prev[pid] };
+        for (const key of dirtyRef.current) {
+          const [pid, hole] = key.split(":");
+          const local = prev[pid]?.[Number(hole)];
+          if (local && merged[pid]) merged[pid] = { ...merged[pid], [Number(hole)]: local };
         }
         return merged;
       });
     }
   }, []);
 
-  const fetchRound = useCallback(
-    () => fetch(`/api/rounds/${id}/score`).then((r) => r.json()).then(applyRoundData),
-    [id, applyRoundData]
+  /** Load the round. With no signal, fall back to the copy kept on this phone. */
+  const fetchRound = useCallback(() => {
+    const seq = sendSeqRef.current;
+    return fetch(`/api/rounds/${id}/score`)
+        .then(async (res) => {
+          const data = await res.json();
+          setOffline(false);
+          // Scores were sent while this was loading, so it's out of date — the next load will catch up
+          if (seq !== sendSeqRef.current && roundRef.current) return;
+          if (res.ok) cacheRound(id, data);
+          applyRoundData(data);
+        })
+        .catch(() => {
+          setOffline(true);
+          if (!roundRef.current) {
+            const saved = cachedRound<{ round?: Round; access?: ScoreAccessInfo | null }>(id);
+            if (saved) applyRoundData(saved);
+          }
+        });
+  }, [id, applyRoundData]);
+
+  /** Show the score that was kept when a teammate's newer score beat this phone's */
+  const applySuperseded = useCallback((superseded: FlushResult["superseded"]) => {
+    if (superseded.length === 0) return;
+    setScores((prev) => {
+      const next = { ...prev };
+      for (const { score: s } of superseded) {
+        next[s.roundPlayerId] = {
+          ...(next[s.roundPlayerId] ?? {}),
+          [s.holeNumber]: {
+            strokes: s.strokes,
+            penalties: s.penalties,
+            putts: s.putts ?? undefined,
+            fairwayHit: s.fairwayHit ?? undefined,
+            gir: s.gir ?? undefined,
+          },
+        };
+      }
+      return next;
+    });
+    const names = new Map(roundRef.current?.players.map((p) => [p.id, p.user.name.split(" ")[0]]) ?? []);
+    setNotice(
+      superseded
+        .map(({ score: s }) => `Hole ${s.holeNumber}${names.has(s.roundPlayerId) ? ` (${names.get(s.roundPlayerId)})` : ""}: kept ${s.strokes}, a newer score from another phone.`)
+        .join(" ")
+    );
+  }, []);
+
+  /** Show why a queued score was refused for good (e.g. the event's scores were locked) */
+  const describeRejections = useCallback((rejected: FlushResult["rejected"]) => {
+    const names = new Map(roundRef.current?.players.map((p) => [p.id, p.user.name.split(" ")[0]]) ?? []);
+    return rejected
+      .map(({ entry, message }) => `Hole ${entry.holeNumber}${names.has(entry.roundPlayerId) ? ` (${names.get(entry.roundPlayerId)})` : ""} wasn't saved: ${message}`)
+      .join(" ");
+  }, []);
+
+  /** Send any scores saved on this phone. Safe to call often — only one send runs at a time. */
+  const syncScores = useCallback(
+    (): Promise<FlushResult> =>
+      flushOutbox(id).then((result) => {
+        if (result.sent > 0 || result.superseded.length > 0) sendSeqRef.current++;
+        setPendingHoles(pendingHoleCount(id));
+        applySuperseded(result.superseded);
+        if (result.sent > 0 || result.rejected.length > 0 || result.superseded.length > 0) setOffline(false);
+        if (result.offline) setOffline(true);
+        if (result.rejected.length > 0) setSaveError(describeRejections(result.rejected));
+        else if (result.signedOut) setSaveError("You've been signed out — sign in again to send the scores saved on this phone.");
+        return result;
+      }),
+    [id, describeRejections, applySuperseded]
   );
 
-  useEffect(() => { fetchRound(); }, [fetchRound]);
+  // Send anything left over from last time first, so the loaded round includes it
+  useEffect(() => {
+    syncScores().finally(fetchRound);
+  }, [syncScores, fetchRound]);
 
-  // Poll for live updates every 10s while the round is in play and the tab is visible
+  // Keep a copy of this page so it can be reopened with no signal (the service worker caches it)
+  useEffect(() => {
+    if (!navigator.serviceWorker?.controller) return;
+    fetch(window.location.pathname).catch(() => { /* offline — nothing to cache */ });
+  }, []);
+
+  // Send queued scores as soon as signal returns or the app comes back to the foreground
+  useEffect(() => {
+    const onOnline = () => { syncScores().finally(fetchRound); };
+    const onOffline = () => setOffline(true);
+    const onVisible = () => { if (!document.hidden) onOnline(); };
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [syncScores, fetchRound]);
+
+  // Every 10s while the tab is visible: send queued scores, then pull live updates (in play only)
   const isComplete = round?.status === "COMPLETE";
   useEffect(() => {
-    if (isComplete) return;
     const interval = setInterval(() => {
-      if (!document.hidden) fetchRound().catch(() => { /* offline — try again next tick */ });
+      if (document.hidden) return;
+      syncScores().finally(() => { if (!isComplete) fetchRound(); });
     }, 10000);
     return () => clearInterval(interval);
-  }, [fetchRound, isComplete]);
+  }, [syncScores, fetchRound, isComplete]);
 
   // Show prize hole popup when on a designated hole (unless already dismissed)
   const prizeHolePopup = popupDismissedForHole === currentHole
@@ -210,6 +327,7 @@ export default function ScoringPage() {
 
   function updateScore(roundPlayerId: string, holeNumber: number, field: keyof ScoreEntry, value: number | boolean) {
     setMissing(null);
+    dirtyRef.current.add(`${roundPlayerId}:${holeNumber}`);
     setScores((prev) => ({
       ...prev,
       [roundPlayerId]: {
@@ -224,6 +342,9 @@ export default function ScoringPage() {
 
   function updateTeamScore(teamNumber: number, holeNumber: number, strokes: number) {
     setMissing(null);
+    for (const player of round!.players) {
+      if ((player.teamNumber ?? 0) === teamNumber) dirtyRef.current.add(`${player.id}:${holeNumber}`);
+    }
     setScores((prev) => {
       const next = { ...prev };
       for (const player of round!.players) {
@@ -238,45 +359,59 @@ export default function ScoringPage() {
     });
   }
 
-  /** Save the current hole for every player. Returns false (and shows an error) if any save failed. */
+  /**
+   * Save the current hole's changed scores. Scores are kept on this phone first, then sent; with
+   * no signal they stay queued and send automatically later, so the player can carry on.
+   * Unchanged scores aren't re-sent, so tapping Save can't overwrite a teammate's newer correction.
+   * Returns false (and shows an error) only if the server refused a score.
+   */
   async function saveHole(): Promise<boolean> {
     if (!round) return false;
     setSaving(true);
     setSaveError("");
+    setNotice("");
     const hole = round.tee.holes.find((h) => h.number === currentHole);
     if (!hole) { setSaving(false); return false; }
 
-    const responses = await Promise.all(
-      round.players.map((player) => {
-        const s = scores[player.id]?.[currentHole];
-        if (!s || s.strokes < 1) return null;
-        return fetch(`/api/rounds/${id}/score`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            roundPlayerId: player.id,
-            holeNumber: currentHole,
-            strokes: s.strokes,
-            penalties: s.penalties ?? 0,
-            putts: s.putts,
-            fairwayHit: s.fairwayHit,
-            gir: s.gir,
-          }),
-        }).catch(() => undefined);
-      })
-    );
-    setSaving(false);
+    const enteredAt = Date.now();
+    const entries: QueuedScore[] = round.players.flatMap((player) => {
+      const s = scores[player.id]?.[currentHole];
+      if (!s || s.strokes < 1 || !dirtyRef.current.has(`${player.id}:${currentHole}`)) return [];
+      return [{
+        roundPlayerId: player.id,
+        holeNumber: currentHole,
+        strokes: s.strokes,
+        penalties: s.penalties ?? 0,
+        putts: s.putts,
+        fairwayHit: s.fairwayHit,
+        gir: s.gir,
+        enteredAt,
+      }];
+    });
 
-    const failed = responses.find((res) => res !== null && !res?.ok);
-    if (failed !== undefined) {
-      setSaveError(
-        failed
-          ? await apiErrorMessage(failed, `Hole ${currentHole} didn't save — please try again.`)
-          : `No connection — hole ${currentHole} isn't saved yet. Try again when you have signal.`
-      );
-      return false;
+    const clearDirty = (list: QueuedScore[]) => list.forEach((e) => dirtyRef.current.delete(`${e.roundPlayerId}:${e.holeNumber}`));
+
+    if (!queueScores(id, entries)) {
+      // Storage unavailable (e.g. a private window): send directly, as before
+      const results = await Promise.all(entries.map((e) => sendScore(id, e)));
+      setSaving(false);
+      clearDirty(entries.filter((_, i) => results[i].kind === "sent" || results[i].kind === "superseded"));
+      if (results.some((r) => r.kind === "sent" || r.kind === "superseded")) sendSeqRef.current++;
+      applySuperseded(results.flatMap((r, i) => (r.kind === "superseded" ? [{ entry: entries[i], score: r.score }] : [])));
+      const rejected = results.flatMap((r, i) => (r.kind === "rejected" ? [{ entry: entries[i], message: r.message }] : []));
+      if (rejected.length > 0) { setSaveError(describeRejections(rejected)); return false; }
+      if (results.some((r) => r.kind !== "sent" && r.kind !== "superseded")) {
+        setSaveError(`No connection — hole ${currentHole} isn't saved yet. Try again when you have signal.`);
+        return false;
+      }
+      return true;
     }
-    return true;
+
+    // Queued on the phone now — the queue keeps them until the server has them
+    clearDirty(entries);
+    const result = await syncScores();
+    setSaving(false);
+    return !result.rejected.some((r) => r.entry.holeNumber === currentHole);
   }
 
   async function saveAndNext() {
@@ -287,6 +422,11 @@ export default function ScoringPage() {
 
   async function finishRound() {
     if (!round || !(await saveHole())) return;
+    const waiting = pendingHoleCount(id);
+    if (waiting > 0) {
+      setSaveError(`${waiting} hole${waiting === 1 ? " is" : "s are"} still waiting to send — finish the round when you have signal.`);
+      return;
+    }
     if (round.status !== "COMPLETE") {
       // Every card must be complete first (the server enforces this too)
       const stillMissing = missingScores({
@@ -323,7 +463,9 @@ export default function ScoringPage() {
   if (!round) {
     return (
       <div className="flex items-center justify-center min-h-40">
-        <p className="text-gray-400">Loading scorecard…</p>
+        <p className="text-gray-400">
+          {offline ? "No signal — this round can't load until you're back in coverage." : "Loading scorecard…"}
+        </p>
       </div>
     );
   }
@@ -498,6 +640,17 @@ export default function ScoringPage() {
           <p className="text-2xl font-bold">{currentHole}<span className="text-fairway-400 text-base">/{lastHoleNumber}</span></p>
           <p className="text-fairway-300 text-xs">hole</p>
         </div>
+      </div>
+
+      {/* Offline status — always mounted so screen readers announce changes */}
+      <div role="status" aria-live="polite">
+        {(pendingHoles > 0 || (offline && round.status !== "COMPLETE")) && (
+          <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+            {pendingHoles > 0
+              ? `${offline ? "No signal · " : ""}${pendingHoles} hole${pendingHoles === 1 ? "" : "s"} saved on this phone — they'll send automatically.`
+              : "No signal — keep scoring, your holes are saved on this phone."}
+          </p>
+        )}
       </div>
 
       {/* Tabs */}
@@ -697,6 +850,12 @@ export default function ScoringPage() {
           {saveError && (
             <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
               {saveError}
+            </p>
+          )}
+
+          {notice && (
+            <p role="status" className="text-sm text-fairway-900 bg-fairway-50 border border-fairway-200 rounded-xl px-3 py-2">
+              {notice}
             </p>
           )}
 
