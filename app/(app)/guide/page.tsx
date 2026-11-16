@@ -223,7 +223,11 @@ export default async function GuidePage() {
                 are removed, and a partner left on their own joins the other team in the group — so a
                 2-player Ambrose group of four becomes a single team of three (handicap ÷ 6). Holes
                 already entered take the merged team&apos;s best score. Every other group carries on
-                unchanged.
+                unchanged. See{" "}
+                <a href="#late-withdrawals" className="text-fairway-700 underline">
+                  Late withdrawals
+                </a>{" "}
+                under Tournaments.
               </p>
             </div>
           </div>
@@ -701,6 +705,16 @@ export default async function GuidePage() {
             groups are saved, tap <span className="font-semibold">Start Round</span>. This creates
             a live round for each group simultaneously. Each group scores their own round
             independently via the Score tab.
+          </p>
+          <p id="late-withdrawals" className="scroll-mt-20">
+            <span className="font-semibold text-fairway-900">Late withdrawals</span> — If a player
+            pulls out after the event has started, the organiser taps{" "}
+            <span className="font-semibold">Withdraw a player…</span> under that group on the event
+            page, while the group is still playing. The player&apos;s scores are removed and
+            they&apos;re marked as not playing. In 2-ball games (Ambrose or Stableford) a partner left
+            on their own joins the other team in the group — a group of four becomes a team of three —
+            and holes already entered take the merged team&apos;s best score. Other groups aren&apos;t
+            affected. Once a group has finished, ask an administrator to make the change.
           </p>
           <p>
             <span className="font-semibold text-fairway-900">Live leaderboard</span> — While the
