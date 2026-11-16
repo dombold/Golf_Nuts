@@ -6,12 +6,12 @@ A full-stack golf scoring app for a group of friends — rounds, handicaps and e
 
 - **Game formats** — Strokeplay, Stableford, Match Play, Skins and Ambrose, over 18 holes or 9 (front or back nine, labelled with the course's nine names where the tee has them)
   - **Stableford** — individual, or a **2-ball / 4-ball** team scramble with an Ambrose-style team handicap and points on the team's net score
-  - **Ambrose** — one choice with a **2-ball / 4-ball** option; team handicap = sum of the team's handicaps ÷ (2 × players in the team), so short teams (e.g. threes) are handled fairly
+  - **Ambrose** — one choice with a **2-ball / 4-ball** option; team handicap = sum of the team's playing handicaps (each player's Course Handicap for the tee, not their Handicap Index) ÷ (2 × players in the team), so short teams (e.g. threes) are handled fairly
   - **Skins** — optional **carry over halved holes** (on: a tied hole's skin rolls on; off: every skin is worth 1)
   - **Match Play** — two players, casual rounds only; the higher handicap receives the difference on the hardest holes; live match status and a "wins 3&2" result (holes after the match is decided don't count) with a hole-by-hole column
 - **Round wizard** — course and tee search, format picker (Strokeplay by default, with each format's options inside its card), player search (selected players listed above the search box), and a **Teams** step for team games that auto-splits players by handicap and lets you move them
 - **Handicap strokes in games** — full playing handicap placed by stroke index; a plus handicap gives strokes back on the easiest holes
-- **Scorecards** — a round can only be finished once every player (or team) has a score on every hole (Match Play: until the match is decided); a warning lists the missing holes with a jump to the first; per-hole strokes, penalties, putts, fairways hit and GIR; one card per team for team games (showing Stableford points); hole info and a Google Maps hole view; scores entered on another phone in the group appear within about 10 seconds; finished rounds can be edited; Out/In subtotals and a ✓ beside each hole's skin winner on the round summary
+- **Scorecards** — a round can only be finished once every player (or team) has a score on every hole (Match Play: until the match is decided); a warning lists the missing holes with a jump to the first; per-hole strokes, penalties, putts, fairways hit and GIR; one card per team for team games (showing Stableford points); hole info and a Google Maps satellite view of the hole (for holes an administrator has entered tee and green coordinates for); scores entered on another phone in the group appear within about 10 seconds; finished rounds can be edited; Out/In subtotals and a ✓ beside each hole's skin winner on the round summary
 - **Offline scoring** — tapping Save keeps the hole's scores on the phone first, so scoring carries on with no signal and the app moves to the next hole. A note shows how many holes are waiting, and they send automatically when signal returns: on reconnecting, when the app is reopened, and every 10 seconds while the score page is open. Scores survive the app being closed or the phone restarting. The score page reopens with no signal if it was opened once with signal. **Finish Round** waits until everything has been sent. A score the server refuses (e.g. the event's scores were locked) is dropped, with a message naming the hole and the reason. Scores only send while the app is open, because iOS doesn't allow web apps to sync in the background
 - **Newest score wins** — when two phones score the same hole, the score entered most recently is kept, even if an offline phone sends an older score later; that phone then shows the kept score with a note. Save only sends scores changed on that phone, so re-saving a hole can't undo a teammate's correction. Phones send how long ago each score was entered rather than a clock time, so a phone with the wrong time can't skew the result
 - **Handicap (WHS)** — score differentials use an adjusted score capped at **net double bogey** (unplayed holes count as net par; 14 of 18 or 7 of 9 holes needed); 9-hole rounds count straight away using the **2024 expected-score** method; index = best N of the last 20 with the WHS adjustments; recalculated when a round is finished, edited, deleted or excluded; only Strokeplay counts
@@ -23,12 +23,16 @@ A full-stack golf scoring app for a group of friends — rounds, handicaps and e
   - Prize holes per nine (one Longest Drive on a par 5, up to two Nearest the Pin on par 3s), with scorer pop-ups and organiser-recorded winners
   - **Live tournament-wide leaderboard** on every player's scoring screen and the event page (points or net to par, players or teams, with a Thru column)
   - **One overall winner** with **countback** (back 9, last 6, last 3, then hole by hole) and a page explaining the steps; **Skins events have a winner per group** instead
+  - **Late withdrawals** — while a group is still playing, the organiser can withdraw a player from it (their scores are removed and their invitation is set to Declined). In 2-ball games a partner left on their own joins the group's smallest other team, so a group of four becomes a team of three, and holes already entered take the merged team's best score. Other groups are unaffected
   - Auto-completes when the last group finishes (the organiser can't close it early while a group is still playing); once complete the organiser can **lock scores** so players can't change them (the organiser can still correct any group's card, and unlock again); completed events move to **Previous Events** a day later; events that never started are hidden a week after their date
 - **Guest players** — organisers add unregistered players (name + Handicap Index) to an event or casual round. Names can't clash with a member or another guest, guests can't sign in, and a member in their group scores for them. They are tagged "Guest" in results and have no handicap history. When a guest registers, the organiser assigns their scores to the new account, which moves their rounds, group places and prize wins and counts completed Strokeplay rounds towards the new member's handicap. Guests with no scores can be removed; guests with scores can be anonymised to "Guest N", and unclaimed guests are anonymised automatically after 12 months
 - **Stats & charts** — handicap trend chart, average score (18- and 9-hole rounds separately), fairways and GIR, recent rounds with score to par and an include/exclude handicap switch
 - **Auth** — email/password login; **passkey (biometric) login** via WebAuthn; password reset by emailed link (signs you in, and allows a new password without the old one for 15 minutes); welcome email on registration
 - **Profile** — avatar upload, profile details, password, notification and passkey settings
 - **Push notifications** — tournament invitations with Accept / Decline actions (Android Chrome; iOS when installed as a PWA)
+- **What's New** — a version history page (`/whats-new`) with every release since launch, tagged New / Improved / Fixed; the current version shows in the profile menu and at the top of the Guide
+- **Suggestions** — members post ideas and problem reports (`/suggestions`), vote 👍 (one per person; the most votes rise to the top) and discuss them in comments; authors can edit or delete their own; administrators set a status (Planned, Done with the version it shipped in, or Not planned)
+- **Administrators** — organiser controls on every event and round, plus an admin area: Activity, Rounds, Events, Teammates, Members, **Courses** (find any course and enter hole coordinates for the satellite maps; scorecards sent in for courses with incomplete data) and an **Audit log** of changes made to other people's things
 - **PWA** — installable, with an in-app install prompt; the service worker caches pages as they are visited (live data from `/api` is never cached), which lets the score page reopen offline
 
 ## Tech Stack
@@ -99,7 +103,7 @@ See [.env.example](.env.example) for all required variables:
 - `NEXTAUTH_SECRET` — random 32-character secret for session signing
 - `NEXTAUTH_URL` — base URL of the app (e.g. `http://localhost:3001` in development); also used as the passkey origin and in email links
 - `WEBAUTHN_RP_ID` — passkey relying-party ID: the app's domain without scheme or port (e.g. `localhost` in development)
-- `GOOGLE_MAPS_API_KEY` — Google Maps API key (server-side only)
+- `GOOGLE_MAPS_API_KEY` — Google Maps **Static Maps API** key, used server-side only by `/api/maps/hole-image` for the satellite hole view. The Google Cloud project needs billing enabled (usage stays within the free monthly allowance); without it Google rejects every request and players see "Map unavailable"
 - `SMTP_*` — SMTP credentials for transactional emails (password reset and welcome email)
 - `VAPID_PUBLIC_KEY` — VAPID public key for web push notifications (generate once with `web-push`)
 - `VAPID_PRIVATE_KEY` — VAPID private key for web push notifications
@@ -116,14 +120,17 @@ app/
   api/            # API route handlers
   generated/      # Prisma-generated client (gitignored; `npx prisma generate`)
 components/
+  admin/          # Admin area UI (course search, confirm actions, tabs)
   push/           # Push notification toggle
+  suggestions/    # Suggestions board (form, cards, voting, comments, admin status)
   tournament/     # Event UI (group builder, leaderboard, prize holes, invitee status, results summary)
   FormatPicker.tsx          # Game format picker (Ambrose / Stableford 2-ball·4-ball, Skins carry-over)
   HolesPicker.tsx           # 9/18-hole and front/back nine selector
   SkinsCarryOverToggle.tsx  # "Carry over halved holes" checkbox
-data/             # Course JSON used by the seed (gitignored)
+data/             # Course JSON used by the seed (tracked; a deploy re-seeds when it changes)
 lib/
   apiError.ts           # Reads error messages from API responses (client)
+  changelog.ts          # Release history for What's New, and APP_VERSION
   auth.ts               # NextAuth config (credentials + reset-token sign-in, reset window)
   countback.ts          # Countback tie-breaking, with a step-by-step trace for the explanation page
   email.ts              # Nodemailer transactional email (welcome, password reset)
@@ -137,6 +144,7 @@ lib/
   push.ts               # Web push (VAPID)
   recalcHandicap.ts     # Records round differentials and rebuilds a player's index
   staleTournaments.ts   # Hides / prunes never-started events past their date
+  suggestions.ts        # Suggestions board rules (limits, statuses, sort order)
   teams.ts              # Team splits by handicap, uneven-team warnings and hints
   tournamentStandings.ts# Tournament standings, winners, Skins group results, countback explanation
   webauthn.ts           # Passkey (WebAuthn) settings and challenge handling
@@ -174,13 +182,17 @@ Before merging, also run:
 npx tsc --noEmit && npm run lint && npm run build
 ```
 
+## Releases and versions
+
+The app version lives in [lib/changelog.ts](lib/changelog.ts), the release history shown on the What's New page, and is mirrored in `package.json`. Every user-visible change adds a line to the top release (or a new release) and bumps the version before deploying. Release notes are written for players: what they can now do, leaving out dependency bumps, refactors and deploy fixes; security patches are rolled up as "Security updates".
+
 ## Deployment
 
 Production runs `next start -p 3001` under PM2 (its `ecosystem.config.js` lives on the server, not in the repo). A deploy pulls `main`, installs dependencies, runs `npx prisma generate` and `npx prisma migrate deploy` (after a database backup when there are new migrations), builds, and restarts the PM2 process.
 
 ## Contributing
 
-Suggestions and bug reports are welcome as [GitHub issues](https://github.com/dombold/Golf_Nuts/issues). To contribute code, fork the repository and open a pull request. Before submitting, run the checks in [Testing](#testing).
+Members can post ideas and report problems on the in-app **Suggestions** page, where the group votes on them. Technical bug reports are also welcome as [GitHub issues](https://github.com/dombold/Golf_Nuts/issues). To contribute code, fork the repository and open a pull request. Before submitting, run the checks in [Testing](#testing).
 
 ## License
 

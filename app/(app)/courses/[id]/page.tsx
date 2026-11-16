@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { isAdmin } from "@/lib/permissions";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import TeeSelector from "./TeeSelector";
@@ -24,6 +26,8 @@ export default async function CourseDetailPage({
   if (!course) notFound();
 
   const incompleteTees = course.tees.filter(isIncompleteTee);
+  const session = await auth();
+  const admin = !!session?.user && (await isAdmin(session.user.id));
 
   return (
     <div className="space-y-6">
@@ -74,12 +78,14 @@ export default async function CourseDetailPage({
         ⛳ Start a round here
       </Link>
 
-      <Link
-        href={`/courses/${course.id}/edit`}
-        className="block w-full text-center border border-fairway-200 text-fairway-700 py-2.5 rounded-xl text-sm font-medium hover:bg-fairway-50 transition-colors"
-      >
-        Edit hole coordinates
-      </Link>
+      {admin && (
+        <Link
+          href={`/courses/${course.id}/edit`}
+          className="block w-full text-center border border-fairway-200 text-fairway-700 py-2.5 rounded-xl text-sm font-medium hover:bg-fairway-50 transition-colors"
+        >
+          📍 Edit hole coordinates
+        </Link>
+      )}
 
       <TeeSelector tees={course.tees} />
     </div>

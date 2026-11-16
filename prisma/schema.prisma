@@ -48,6 +48,9 @@ model User {
   adminActions           AdminAuditLog[]
   scorecardSubmissions   ScorecardSubmission[]    @relation("ScorecardSubmitter")
   scorecardReviews       ScorecardSubmission[]    @relation("ScorecardReviewer")
+  suggestions            Suggestion[]             @relation("SuggestionAuthor")
+  suggestionVotes        SuggestionVote[]
+  suggestionComments     SuggestionComment[]
 
   @@index([isGuest])
   @@map("users")
@@ -534,4 +537,59 @@ model TournamentPollVote {
   @@unique([pollId, userId])
   @@index([optionId])
   @@map("tournament_poll_votes")
+}
+
+enum SuggestionStatus {
+  OPEN
+  PLANNED
+  DONE
+  NOT_PLANNED
+}
+
+/** A member's idea or problem report for the app, voted on by everyone (/suggestions). */
+model Suggestion {
+  id          String           @id @default(cuid())
+  authorId    String
+  title       String
+  body        String
+  status      SuggestionStatus @default(OPEN)
+  /** The app version that delivered it (status DONE), linking to What's New */
+  doneVersion String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  author   User                @relation("SuggestionAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  votes    SuggestionVote[]
+  comments SuggestionComment[]
+
+  @@index([authorId])
+  @@map("suggestions")
+}
+
+/** Upvote only — one per member per suggestion. */
+model SuggestionVote {
+  id           String   @id @default(cuid())
+  suggestionId String
+  userId       String
+  createdAt    DateTime @default(now())
+
+  suggestion Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([suggestionId, userId])
+  @@map("suggestion_votes")
+}
+
+model SuggestionComment {
+  id           String   @id @default(cuid())
+  suggestionId String
+  userId       String
+  body         String
+  createdAt    DateTime @default(now())
+
+  suggestion Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([suggestionId])
+  @@map("suggestion_comments")
 }

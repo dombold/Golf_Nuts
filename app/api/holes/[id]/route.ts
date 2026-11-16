@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { z } from "zod";
@@ -14,11 +14,12 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  // Hole coordinates (for the satellite hole maps) are maintained by administrators
+  const admin = await requireAdmin();
+  if ("response" in admin) return admin.response;
 
   const { id } = await params;
-  const body = await req.json();
+  const body = await req.json().catch(() => null);
   const parsed = UpdateHoleSchema.safeParse(body);
   if (!parsed.success) {
     return Response.json({ error: parsed.error.flatten() }, { status: 400 });

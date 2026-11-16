@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { logout } from "@/app/actions/auth";
+import { APP_VERSION } from "@/lib/changelog";
 
 const navLinks = [
   { href: "/dashboard", label: "Home", icon: "🏠" },
@@ -90,6 +91,23 @@ export default function NavBar({
                 >
                   <span>👤</span>
                   View Profile
+                </Link>
+                <Link
+                  href="/whats-new"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:bg-gray-50"
+                >
+                  <span aria-hidden="true">✨</span>
+                  <span className="flex-1">What&apos;s New</span>
+                  <span className="text-xs text-gray-400">v{APP_VERSION}</span>
+                </Link>
+                <Link
+                  href="/suggestions"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:bg-gray-50"
+                >
+                  <span aria-hidden="true">💡</span>
+                  Suggestions
                 </Link>
 
                 {isAdmin && (

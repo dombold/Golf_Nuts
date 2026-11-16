@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import ConfirmAction from "@/components/admin/ConfirmAction";
+import AdminCourseSearch from "@/components/admin/AdminCourseSearch";
 import { shortDataIssueLabels } from "@/lib/teeDataIssues";
 import type { Prisma } from "@/app/generated/prisma/client";
 
@@ -107,6 +108,16 @@ export default async function AdminCoursesPage() {
 
   return (
     <div className="space-y-6">
+      <section aria-labelledby="find-course-heading" className="space-y-2">
+        <h2 id="find-course-heading" className="text-lg font-semibold text-fairway-900">
+          Find a course
+        </h2>
+        <p className="text-sm text-gray-500">
+          Open any course, or add tee and green coordinates for each hole so players see a satellite map of the hole while scoring.
+        </p>
+        <AdminCourseSearch />
+      </section>
+
       <section aria-labelledby="scorecards-heading" className="space-y-2">
         <h2 id="scorecards-heading" className="text-lg font-semibold text-fairway-900">
           Scorecards sent in{pending.length > 0 ? ` (${pending.length} to review)` : ""}

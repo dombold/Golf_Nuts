@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { isAdmin } from "@/lib/permissions";
+import { APP_VERSION } from "@/lib/changelog";
 
 const sections = [
   { id: "dashboard", icon: "🏠", title: "Dashboard" },
@@ -35,6 +36,12 @@ export default async function GuidePage() {
         <p className="text-sm text-gray-500 mt-1">
           Everything you need to know to get the most out of Golf Nuts.
         </p>
+        <Link
+          href="/whats-new"
+          className="inline-block mt-2 text-sm font-medium text-fairway-700 hover:text-fairway-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500 rounded"
+        >
+          ✨ What&apos;s new in v{APP_VERSION} →
+        </Link>
       </div>
 
       {/* Quick-jump index */}
@@ -1033,6 +1040,57 @@ export default async function GuidePage() {
         </h2>
         <div className="space-y-3 text-sm text-gray-700 leading-relaxed">
           <p>
+            Got an idea to make Golf Nuts better, or found something that isn&apos;t working? Post it on
+            the <span className="font-semibold">Suggestions</span> page — everyone in the group can see
+            it, vote for it and talk it over. Find it in your profile menu (tap your initials, top
+            right), at the top of{" "}
+            <Link href="/whats-new" className="text-fairway-700 underline">
+              What&apos;s New
+            </Link>
+            , or with the button below.
+          </p>
+          <ul className="list-disc list-inside space-y-1 text-gray-600">
+            <li>
+              <span className="font-semibold">Post a suggestion</span> — tap{" "}
+              <span className="font-semibold">+ New suggestion</span>, give it a short title and, if
+              you like, a few details. Your own vote is added automatically.
+            </li>
+            <li>
+              <span className="font-semibold">Vote</span> — tap 👍 on the suggestions you&apos;d most
+              like to see; tap it again to take your vote back. You get one vote per suggestion, and
+              the most popular rise to the top of the list.
+            </li>
+            <li>
+              <span className="font-semibold">Comment</span> — tap{" "}
+              <span className="font-semibold">💬 comments</span> under a suggestion to add your
+              thoughts or ask a question.
+            </li>
+            <li>
+              <span className="font-semibold">Change your mind</span> — you can edit or delete your
+              own suggestions and comments.
+            </li>
+          </ul>
+          <div className="bg-fairway-50/60 rounded-lg p-3 space-y-2">
+            <p className="font-semibold text-fairway-900">What happens next</p>
+            <p>
+              An administrator marks each suggestion as it moves along:{" "}
+              <span className="font-semibold">Planned</span> when it&apos;s on the way,{" "}
+              <span className="font-semibold">Done</span> once it&apos;s in the app — with a link to
+              the version in What&apos;s New where you can read about it — or{" "}
+              <span className="font-semibold">Not planned</span>. Done and Not planned suggestions
+              move to the <span className="font-semibold">Done &amp; closed</span> list at the bottom
+              of the page.
+            </p>
+          </div>
+          <Link
+            href="/suggestions"
+            className="inline-block px-3 py-2 bg-fairway-700 text-white rounded-lg text-sm font-semibold hover:bg-fairway-800 active:bg-fairway-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500 focus-visible:ring-offset-2"
+          >
+            💡 Open Suggestions →
+          </Link>
+
+          <p className="font-semibold text-fairway-900 pt-2">Contributing</p>
+          <p>
             Golf Nuts is open source under the{" "}
             <a
               href={`${REPO_URL}/blob/main/LICENSE`}
@@ -1046,7 +1104,8 @@ export default async function GuidePage() {
           </p>
           <ul className="list-disc list-inside space-y-1 text-gray-600">
             <li>
-              <span className="font-semibold">Suggest a change or report a problem</span> — open an{" "}
+              <span className="font-semibold">Technical issues</span> — if you have a GitHub account
+              you can also open an{" "}
               <a
                 href={`${REPO_URL}/issues`}
                 target="_blank"
@@ -1055,8 +1114,7 @@ export default async function GuidePage() {
               >
                 issue on GitHub
               </a>{" "}
-              and describe what you&apos;d like or what went wrong. You&apos;ll need a free GitHub
-              account.
+              describing what went wrong.
             </li>
             <li>
               <span className="font-semibold">Contribute code</span> — fork the repository, make
@@ -1067,7 +1125,7 @@ export default async function GuidePage() {
             href={REPO_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block px-3 py-2 bg-fairway-700 text-white rounded-lg text-sm font-semibold hover:bg-fairway-800 active:bg-fairway-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500 focus-visible:ring-offset-2"
+            className="inline-block px-3 py-2 border border-fairway-300 text-fairway-800 rounded-lg text-sm font-semibold hover:bg-fairway-50 active:bg-fairway-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fairway-500 focus-visible:ring-offset-2"
           >
             View Golf Nuts on GitHub ↗
           </a>
@@ -1102,6 +1160,19 @@ export default async function GuidePage() {
               <span className="font-semibold">Courses</span> and the{" "}
               <span className="font-semibold">Audit log</span>. Other members get a &ldquo;not
               found&rdquo; page if they try to open it.
+            </p>
+            <p>
+              <span className="font-semibold text-fairway-900">Suggestions</span> — On the{" "}
+              <Link href="/suggestions" className="text-fairway-700 underline">
+                Suggestions
+              </Link>{" "}
+              page each suggestion has a 🛡️ <span className="font-semibold">Status</span> control.
+              Set it to <span className="font-semibold">Planned</span>,{" "}
+              <span className="font-semibold">Done</span> (enter the version it shipped in, e.g.
+              1.7.0, so players can read about it in What&apos;s New) or{" "}
+              <span className="font-semibold">Not planned</span>, then tap{" "}
+              <span className="font-semibold">Save</span>. You can also edit or delete any suggestion
+              or comment — tidy duplicates by keeping the one with the most votes.
             </p>
             <p>
               <span className="font-semibold text-fairway-900">Organiser powers everywhere</span> —
@@ -1212,7 +1283,15 @@ export default async function GuidePage() {
               <span className="font-semibold text-fairway-900">
                 <Link href="/admin/courses" className="hover:underline">Courses</Link>
               </span>{" "}
-              — Scorecards members have sent in for courses with missing data. Administrators are
+              — <span className="font-semibold">Find a course</span> at the top searches every course
+              by name. Each result shows how many holes are mapped; tap{" "}
+              <span className="font-semibold">📍 Coordinates</span> to enter the latitude and longitude
+              of each hole&apos;s tee and green (right-click the spot in Google Maps to copy them).
+              Once a hole has both, players see a satellite map of it while scoring. Each tee set has
+              its own holes, so map the tees your group plays.
+            </p>
+            <p>
+              Below the search are scorecards members have sent in for courses with missing data. Administrators are
               emailed when a new one arrives. Tap{" "}
               <span className="font-semibold">View scorecard</span> to open the photo or PDF, and{" "}
               <span className="font-semibold">Mark reviewed</span> once it&apos;s been dealt with.
