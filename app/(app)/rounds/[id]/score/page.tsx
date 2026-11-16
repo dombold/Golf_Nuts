@@ -15,6 +15,9 @@ import FullScorecard, { type ScoreColumn } from "@/components/scorecard/FullScor
 import { formatMissing, missingScores, type MissingScores } from "@/lib/roundCompletion";
 import { isIncompleteTee, type TeeDataIssue } from "@/lib/teeDataIssues";
 import { cachedRound, cacheRound, flushOutbox, pendingHoleCount, pendingScores, queueScores, sendScore, type FlushResult, type QueuedScore } from "@/lib/offlineScores";
+import PrizeHoleMascot from "@/components/scorecard/PrizeHoleMascot";
+import BirdieCelebration from "@/components/scorecard/BirdieCelebration";
+import { celebrationsForHole, type Celebration } from "@/lib/celebrations";
 
 interface Hole { id: string; number: number; par: number; strokeIndex: number; distance?: number; teeLat?: number | null; teeLng?: number | null; greenLat?: number | null; greenLng?: number | null; }
 interface ScoreEntry { strokes: number; penalties: number; putts?: number; fairwayHit?: boolean; gir?: boolean }
@@ -138,6 +141,10 @@ export default function ScoringPage() {
   const [tab, setTab] = useState<"score" | "card" | "leaderboard">("score");
   const firstLoadRef = useRef(true);
   const [popupDismissedForHole, setPopupDismissedForHole] = useState<number | null>(null);
+  // Birdie-or-better fireworks for the hole just saved (raw strokes, not handicap adjusted)
+  const [celebration, setCelebration] = useState<{ holeNumber: number; par: number; items: Celebration[] } | null>(null);
+  const celebratingRef = useRef(false);
+  const finishAfterCelebrationRef = useRef(false);
   // Whether this viewer may enter scores (players, or the event organiser; players are shut out once scores are locked)
   const [access, setAccess] = useState<ScoreAccessInfo | null>(null);
   // Offline scoring: holes saved on this phone but not yet sent, and whether the last request had no signal
@@ -389,6 +396,21 @@ export default function ScoringPage() {
       }];
     });
 
+    // Only scores this phone just entered or changed are celebrated — not re-saves or live updates
+    const found = celebrationsForHole(
+      hole.par,
+      isTeamGame(round.format, round.stablefordTeamSize),
+      entries.flatMap((e) => {
+        const player = round.players.find((p) => p.id === e.roundPlayerId);
+        return player ? [{ name: player.user.name, teamNumber: player.teamNumber ?? null, strokes: e.strokes }] : [];
+      })
+    );
+    const celebrate = () => {
+      if (found.length === 0) return;
+      celebratingRef.current = true;
+      setCelebration({ holeNumber: hole.number, par: hole.par, items: found });
+    };
+
     const clearDirty = (list: QueuedScore[]) => list.forEach((e) => dirtyRef.current.delete(`${e.roundPlayerId}:${e.holeNumber}`));
 
     if (!queueScores(id, entries)) {
@@ -404,6 +426,7 @@ export default function ScoringPage() {
         setSaveError(`No connection — hole ${currentHole} isn't saved yet. Try again when you have signal.`);
         return false;
       }
+      celebrate();
       return true;
     }
 
@@ -411,7 +434,9 @@ export default function ScoringPage() {
     clearDirty(entries);
     const result = await syncScores();
     setSaving(false);
-    return !result.rejected.some((r) => r.entry.holeNumber === currentHole);
+    const ok = !result.rejected.some((r) => r.entry.holeNumber === currentHole);
+    if (ok) celebrate();
+    return ok;
   }
 
   async function saveAndNext() {
@@ -422,6 +447,11 @@ export default function ScoringPage() {
 
   async function finishRound() {
     if (!round || !(await saveHole())) return;
+    // A last-hole birdie gets its fireworks first; closing them carries on finishing the round
+    if (celebratingRef.current) {
+      finishAfterCelebrationRef.current = true;
+      return;
+    }
     const waiting = pendingHoleCount(id);
     if (waiting > 0) {
       setSaveError(`${waiting} hole${waiting === 1 ? " is" : "s are"} still waiting to send — finish the round when you have signal.`);
@@ -454,6 +484,15 @@ export default function ScoringPage() {
       }
     }
     router.push(`/rounds/${id}/summary`);
+  }
+
+  function closeCelebration() {
+    setCelebration(null);
+    celebratingRef.current = false;
+    if (finishAfterCelebrationRef.current) {
+      finishAfterCelebrationRef.current = false;
+      finishRound();
+    }
   }
 
   function dismissPrizeHolePopup() {
@@ -939,17 +978,30 @@ export default function ScoringPage() {
         </div>
       )}
 
+      {/* Birdie-or-better fireworks (sits above the next hole's prize popup) */}
+      {celebration && (
+        <BirdieCelebration
+          holeNumber={celebration.holeNumber}
+          par={celebration.par}
+          celebrations={celebration.items}
+          onClose={closeCelebration}
+        />
+      )}
+
       {/* Prize Hole Popup */}
       {prizeHolePopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="prize-hole-title"
+        >
           <div className="absolute inset-0 bg-black/40" onClick={dismissPrizeHolePopup} />
-          <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center space-y-4">
-            <div className="text-4xl">
-              {prizeHolePopup.type === "LONGEST_DRIVE" ? "🏌️" : "🎯"}
-            </div>
+          <div className="gn-pop relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center space-y-4">
+            <PrizeHoleMascot type={prizeHolePopup.type} className="w-40 h-40 mx-auto" />
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-fairway-500 mb-1">Prize Hole</p>
-              <h2 className="text-xl font-bold text-fairway-900">
+              <h2 id="prize-hole-title" className="text-xl font-bold text-fairway-900">
                 {prizeHolePopup.type === "LONGEST_DRIVE" ? "Longest Drive" : "Nearest to Pin"}
               </h2>
               <p className="text-sm text-gray-500 mt-1">Hole {prizeHolePopup.holeNumber}</p>

@@ -95,3 +95,28 @@ export function teamGameLabels(format: string, teamSize: number): { gameLabel: s
   }
   return { gameLabel: `${teamSize}-ball Stableford`, largerAlternative: teamSize === 2 ? "4-ball Stableford" : undefined };
 }
+
+/** Members of one event group, grouped by team number (null/undefined → team 0), teams in order. */
+export function teamsInGroup<T extends { teamNumber?: number | null }>(members: T[]): [number, T[]][] {
+  const teams = new Map<number, T[]>();
+  for (const m of members) {
+    const t = m.teamNumber ?? 0;
+    teams.set(t, [...(teams.get(t) ?? []), m]);
+  }
+  return [...teams].sort((a, b) => a[0] - b[0]);
+}
+
+/**
+ * One-line summary of a group for event lists: first names, split into teams for 2-player
+ * team games ("Team 1: Al, Bob · Team 2: Cy, Di"). A 4-player team is the whole group.
+ */
+export function describeGroupLine(
+  players: { name: string; teamNumber?: number | null }[],
+  teamSize: number
+): string {
+  const first = (p: { name: string }) => p.name.split(" ")[0];
+  if (teamSize !== 2) return players.map(first).join(", ");
+  return teamsInGroup(players)
+    .map(([t, members]) => `${t ? `Team ${t}` : "No team"}: ${members.map(first).join(", ")}`)
+    .join(" · ");
+}

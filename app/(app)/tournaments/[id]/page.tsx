@@ -16,8 +16,10 @@ import EventPolls from "@/components/tournament/EventPolls";
 import { summarisePoll } from "@/lib/polls";
 import GuestRow from "@/components/guests/GuestRow";
 import { describeHoles } from "@/lib/nines";
-import { formatDisplayLabel } from "@/lib/gameFormats";
+import { formatDisplayLabel, teamSizeFor } from "@/lib/gameFormats";
 import { unfinishedGroupsMessage } from "@/lib/roundCompletion";
+import { describeGroupLine } from "@/lib/teams";
+import EventGroupsView from "@/components/tournament/EventGroupsView";
 
 const STATUS_STYLES: Record<string, string> = {
   UPCOMING: "bg-acorn-100 text-acorn-700",
@@ -130,6 +132,9 @@ export default async function TournamentDetailPage({
   const guestNames = tournament.invitations.filter((inv) => inv.user.isGuest).map((inv) => inv.user.name);
   // Once started, a guest's place is their round player (scores decide remove vs anonymise)
   const startedGuests = tournament.rounds.flatMap((tr) => tr.round.players.filter((rp) => rp.user.isGuest));
+
+  const teamSize = teamSizeFor(tournament.format, tournament.stablefordTeamSize);
+  const groupsSaved = tournament.groups.length > 0;
 
   const tees = tournament.course?.tees ?? [];
   const defaultTeeId = tournament.teeId ?? tees[0]?.id ?? "";
@@ -301,7 +306,34 @@ export default async function TournamentDetailPage({
           {/* Accepted non-organiser — waiting */}
           {!isOwner && myInvitation?.status === "ACCEPTED" && (
             <div className="rounded-xl border border-fairway-200 bg-fairway-50 px-4 py-3 text-sm text-fairway-700">
-              You&apos;re in! The organiser will arrange groups before the round starts.
+              {groupsSaved
+                ? "You're in! Check your group below."
+                : "You're in! The organiser will arrange groups before the round starts."}
+            </div>
+          )}
+
+          {/* Saved groups and teams, read-only, for everyone who can't edit them */}
+          {!isOrganiser && groupsSaved && (
+            <div className="space-y-2">
+              <h2 className="text-base font-semibold text-fairway-900">Groups</h2>
+              <p className="text-xs text-gray-500">
+                {teamSize > 1 ? "Groups and teams" : "Groups"} may change until the round starts.
+              </p>
+              <EventGroupsView
+                groups={tournament.groups.map((g) => ({
+                  groupNumber: g.groupNumber,
+                  teeName: g.tee.name,
+                  members: g.members.map((m) => ({
+                    id: m.user.id,
+                    name: m.user.name,
+                    isGuest: m.user.isGuest,
+                    teamNumber: m.teamNumber,
+                  })),
+                }))}
+                teamSize={teamSize}
+                currentUserId={userId}
+                showTees={tees.length > 1}
+              />
             </div>
           )}
 
@@ -428,7 +460,7 @@ export default async function TournamentDetailPage({
                       Group {tr.roundNumber}
                     </p>
                     <p className="text-xs text-gray-400">
-                      {tr.round.players.map((p) => p.user.name.split(" ")[0]).join(", ")}
+                      {describeGroupLine(tr.round.players.map((p) => ({ name: p.user.name, teamNumber: p.teamNumber })), teamSize)}
                     </p>
                   </div>
                   {tr.round.status === "COMPLETE" ? (
@@ -496,7 +528,7 @@ export default async function TournamentDetailPage({
                   <div>
                     <p className="text-sm font-medium text-fairway-800">Group {tr.roundNumber}</p>
                     <p className="text-xs text-gray-400">
-                      {tr.round.players.map((p) => p.user.name.split(" ")[0]).join(", ")}
+                      {describeGroupLine(tr.round.players.map((p) => ({ name: p.user.name, teamNumber: p.teamNumber })), teamSize)}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
