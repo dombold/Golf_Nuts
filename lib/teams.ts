@@ -115,8 +115,50 @@ export function describeGroupLine(
   teamSize: number
 ): string {
   const first = (p: { name: string }) => p.name.split(" ")[0];
-  if (teamSize !== 2) return players.map(first).join(", ");
-  return teamsInGroup(players)
+  const teams = teamsInGroup(players);
+  // A 4-player team, or a pair group merged into one team after a late withdrawal
+  if (teamSize !== 2 || teams.length === 1) return players.map(first).join(", ");
+  return teams
     .map(([t, members]) => `${t ? `Team ${t}` : "No team"}: ${members.map(first).join(", ")}`)
     .join(" · ");
+}
+
+/**
+ * Late withdrawal from a team game: who is left stranded and where they should go.
+ * When the withdrawn player's team is left with a single player, that player joins the
+ * smallest other team in the group (lowest team number on a tie) — e.g. a 2-ball group of
+ * four losing one player becomes one 3-ball team. Returns null when nobody is stranded
+ * (the team still has 2+ players, or there's no other team to join).
+ */
+export function strandedPartnerMove(
+  players: { userId: string; teamNumber?: number | null }[],
+  withdrawnUserId: string
+): { userId: string; fromTeam: number; toTeam: number } | null {
+  const withdrawn = players.find((p) => p.userId === withdrawnUserId);
+  if (!withdrawn) return null;
+  const remaining = players.filter((p) => p.userId !== withdrawnUserId);
+  const fromTeam = withdrawn.teamNumber ?? 0;
+  const left = remaining.filter((p) => (p.teamNumber ?? 0) === fromTeam);
+  if (left.length !== 1) return null;
+  const others = teamsInGroup(remaining).filter(([t]) => t !== fromTeam);
+  if (others.length === 0) return null;
+  const [toTeam] = others.reduce((best, cur) => (cur[1].length < best[1].length ? cur : best));
+  return { userId: left[0].userId, fromTeam, toTeam };
+}
+
+/**
+ * When teams merge mid-round, give every member of the merged team the team's best score
+ * on each hole already entered (team scores are stored against each member). Returns
+ * holeNumber → strokes for holes where at least one member has a score.
+ */
+export function mergeBestBallScores(scoresByPlayer: { holeNumber: number; strokes: number }[][]): Map<number, number> {
+  const best = new Map<number, number>();
+  for (const scores of scoresByPlayer) {
+    for (const s of scores) {
+      if (s.strokes <= 0) continue;
+      const cur = best.get(s.holeNumber);
+      if (cur === undefined || s.strokes < cur) best.set(s.holeNumber, s.strokes);
+    }
+  }
+  return best;
 }

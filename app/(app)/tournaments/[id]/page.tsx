@@ -16,10 +16,11 @@ import EventPolls from "@/components/tournament/EventPolls";
 import { summarisePoll } from "@/lib/polls";
 import GuestRow from "@/components/guests/GuestRow";
 import { describeHoles } from "@/lib/nines";
-import { formatDisplayLabel, teamSizeFor } from "@/lib/gameFormats";
+import { formatDisplayLabel, isTeamGame, teamSizeFor } from "@/lib/gameFormats";
 import { unfinishedGroupsMessage } from "@/lib/roundCompletion";
 import { describeGroupLine } from "@/lib/teams";
 import EventGroupsView from "@/components/tournament/EventGroupsView";
+import WithdrawPlayerButton from "@/components/tournament/WithdrawPlayerButton";
 
 const STATUS_STYLES: Record<string, string> = {
   UPCOMING: "bg-acorn-100 text-acorn-700",
@@ -454,7 +455,8 @@ export default async function TournamentDetailPage({
             <h2 className="text-base font-semibold text-fairway-900">Groups</h2>
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm divide-y divide-gray-50">
               {tournament.rounds.map((tr) => (
-                <div key={tr.id} className="px-4 py-3 flex items-center justify-between">
+                <div key={tr.id} className="px-4 py-3 space-y-2">
+                <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-fairway-800">
                       Group {tr.roundNumber}
@@ -478,6 +480,21 @@ export default async function TournamentDetailPage({
                       Score →
                     </Link>
                   )}
+                </div>
+                {/* Late withdrawal: the organiser can remove a player from a group still playing */}
+                {isOrganiser && tr.round.status === "ACTIVE" && tr.round.players.length > 1 && (
+                  <WithdrawPlayerButton
+                    roundId={tr.round.id}
+                    groupNumber={tr.roundNumber}
+                    teamGame={isTeamGame(tournament.format, tournament.stablefordTeamSize)}
+                    players={tr.round.players.map((p) => ({
+                      userId: p.userId,
+                      name: p.user.name,
+                      teamNumber: p.teamNumber,
+                      playingHandicap: p.playingHandicap,
+                    }))}
+                  />
+                )}
                 </div>
               ))}
             </div>

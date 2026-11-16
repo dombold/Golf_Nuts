@@ -208,6 +208,15 @@ export default async function GuidePage() {
                 warns about any short or uneven teams, but lets you go ahead. The same applies to
                 Stableford 2-ball / 4-ball.
               </p>
+              <p className="font-semibold text-fairway-900 pt-1">Late withdrawals</p>
+              <p>
+                If a player pulls out after the event has started, the organiser can use{" "}
+                <span className="font-semibold">Withdraw a player…</span> on that group. Their scores
+                are removed, and a partner left on their own joins the other team in the group — so a
+                2-player Ambrose group of four becomes a single team of three (handicap ÷ 6). Holes
+                already entered take the merged team&apos;s best score. Every other group carries on
+                unchanged.
+              </p>
             </div>
           </div>
 
