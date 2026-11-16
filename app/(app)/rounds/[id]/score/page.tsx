@@ -15,7 +15,6 @@ import FullScorecard, { type ScoreColumn } from "@/components/scorecard/FullScor
 import { formatMissing, missingScores, type MissingScores } from "@/lib/roundCompletion";
 import { isIncompleteTee, type TeeDataIssue } from "@/lib/teeDataIssues";
 import { cachedRound, cacheRound, flushOutbox, pendingHoleCount, pendingScores, queueScores, sendScore, type FlushResult, type QueuedScore } from "@/lib/offlineScores";
-import PrizeHoleMascot from "@/components/scorecard/PrizeHoleMascot";
 import BirdieCelebration from "@/components/scorecard/BirdieCelebration";
 import { celebrationsForHole, type Celebration } from "@/lib/celebrations";
 
@@ -997,8 +996,10 @@ export default function ScoringPage() {
           aria-labelledby="prize-hole-title"
         >
           <div className="absolute inset-0 bg-black/40" onClick={dismissPrizeHolePopup} />
-          <div className="gn-pop relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center space-y-4">
-            <PrizeHoleMascot type={prizeHolePopup.type} className="w-40 h-40 mx-auto" />
+          <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center space-y-4">
+            <div className="text-4xl" aria-hidden="true">
+              {prizeHolePopup.type === "LONGEST_DRIVE" ? "🏌️" : "🎯"}
+            </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-fairway-500 mb-1">Prize Hole</p>
               <h2 id="prize-hole-title" className="text-xl font-bold text-fairway-900">

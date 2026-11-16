@@ -65,47 +65,9 @@ html { scroll-behavior: smooth; }
 /* Mobile tap highlight removal */
 * { -webkit-tap-highlight-color: transparent; }
 
-/* ── Prize-hole popup mascot (components/scorecard/PrizeHoleMascot.tsx) ──
-   transform/opacity only; pivots are set inline per element. Swing and ball share a 2.4s loop. */
+/* ── Birdie popup (components/scorecard/BirdieCelebration.tsx) — transform/opacity only ── */
 @keyframes gn-pop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-@keyframes gn-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
-@keyframes gn-swing {
-  0%, 40% { transform: rotate(125deg); }   /* top of backswing */
-  58%     { transform: rotate(0deg); }     /* impact */
-  72%     { transform: rotate(-115deg); }  /* follow-through */
-  88%     { transform: rotate(-115deg); }
-  100%    { transform: rotate(125deg); }
-}
-@keyframes gn-ball-flight {
-  0%, 57% { transform: translate(0, 0); opacity: 1; }
-  66%     { transform: translate(18px, -50px); opacity: 1; }
-  76%     { transform: translate(40px, -68px); opacity: 1; }
-  86%     { transform: translate(58px, -68px); opacity: 0; }
-  92%     { transform: translate(0, 0); opacity: 0; }
-  100%    { transform: translate(0, 0); opacity: 1; }
-}
-@keyframes gn-trail { 0%, 57% { opacity: 0; } 70% { opacity: 0.8; } 90%, 100% { opacity: 0; } }
-@keyframes gn-flag-wave { 0%, 100% { transform: scaleX(1) skewY(0deg); } 50% { transform: scaleX(0.82) skewY(6deg); } }
-@keyframes gn-wave { 0%, 100% { transform: rotate(-12deg); } 50% { transform: rotate(18deg); } }
-@keyframes gn-roll {
-  0%      { transform: translateX(0); opacity: 0; }
-  8%      { opacity: 1; }
-  60%     { transform: translateX(84px); }
-  66%     { transform: translateX(80px); }   /* small bounce back off the lip */
-  72%, 90% { transform: translateX(82px); opacity: 1; }
-  100%    { transform: translateX(82px); opacity: 0; }
-}
-@keyframes gn-sparkle { 0%, 100% { opacity: 0; transform: scale(0.4); } 50% { opacity: 1; transform: scale(1); } }
-
-.gn-pop         { animation: gn-pop 200ms ease-out both; }
-.gn-bob         { animation: gn-bob 1.6s ease-in-out infinite; }
-.gn-swing       { animation: gn-swing 2.4s ease-in-out infinite; }
-.gn-ball-flight { animation: gn-ball-flight 2.4s linear infinite; }
-.gn-trail       { animation: gn-trail 2.4s linear infinite; }
-.gn-flag-wave   { animation: gn-flag-wave 1.2s ease-in-out infinite; }
-.gn-wave        { animation: gn-wave 0.9s ease-in-out infinite; }
-.gn-roll        { animation: gn-roll 3s ease-out infinite; }
-.gn-sparkle     { animation: gn-sparkle 1.8s ease-in-out infinite; }
+.gn-pop { animation: gn-pop 200ms ease-out both; }
 
 /* Birdie fireworks (components/scorecard/BirdieCelebration.tsx): particles fly out along --dx/--dy */
 @keyframes gn-burst {
@@ -118,8 +80,5 @@ html { scroll-behavior: smooth; }
 
 @media (prefers-reduced-motion: reduce) {
   .gn-fireworks { display: none; }
-  .gn-pop, .gn-bob, .gn-swing, .gn-ball-flight, .gn-trail,
-  .gn-flag-wave, .gn-wave, .gn-roll, .gn-sparkle { animation: none; }
-  .gn-trail { opacity: 0.8; }
-  .gn-roll { transform: translateX(82px); }
+  .gn-pop { animation: none; }
 }
