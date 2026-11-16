@@ -187,6 +187,14 @@ export default async function GuidePage() {
                 — which is the same as the average handicap halved. It uses the team&apos;s actual
                 size, so a short team is handled fairly.
               </p>
+              <p>
+                Each player&apos;s handicap here is their{" "}
+                <span className="font-semibold">Course Handicap</span> for the tee being played, not
+                their Handicap Index: Handicap Index × Slope ÷ 113 + Course Rating − Par, rounded. It is
+                worked out when the round or event starts. For example, a 33.3 index off a tee with
+                slope 111, rating 68.6 and par 71 is 33.3 × 111 ÷ 113 + (68.6 − 71) = 30.3 →{" "}
+                <span className="font-semibold">30</span>.
+              </p>
               <div className="space-y-1 text-gray-600">
                 <p>2-player team: (H1 + H2) ÷ 4</p>
                 <p>3-player team: (H1 + H2 + H3) ÷ 6</p>
